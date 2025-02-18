@@ -13,10 +13,10 @@
 OpenSceneFlow is a codebase for point cloud scene flow estimation. 
 It is also an official implementation of the following paper (sored by the time of publication):
 
-<!-- - **Flow4D: Leveraging 4D Voxel Network for LiDAR Scene Flow Estimation**  
+- **Flow4D: Leveraging 4D Voxel Network for LiDAR Scene Flow Estimation**  
 *Jaeyeul Kim, Jungwan Woo, Ukcheol Shin, Jean Oh, Sunghoon Im*  
 IEEE Robotics and Automation Letters (**RA-L**) 2025  
-[ Backbone ] [ Supervised ] - [ [arXiv](https://arxiv.org/abs/2407.07995) ] [ [Project](https://github.com/dgist-cvlab/Flow4D) ] &rarr; [here](#flow4d) -->
+[ Backbone ] [ Supervised ] - [ [arXiv](https://arxiv.org/abs/2407.07995) ] [ [Project](https://github.com/dgist-cvlab/Flow4D) ] &rarr; [here](#flow4d)
 
 - **SSF: Sparse Long-Range Scene Flow for Autonomous Driving**  
 *Ajinkya Khoche, Qingwen Zhang, Laura Pereira Sánchez, Aron Asefaw, Sina Sharif Mansouri and Patric Jensfelt*  
@@ -41,14 +41,13 @@ International Conference on Robotics and Automation (**ICRA**) 2024
 - [x] [ZeroFlow](https://arxiv.org/abs/2305.10424): ICLR 2024, their pre-trained weight can covert into our format easily through [the script](tools/zerof2ours.py).
 - [ ] [NSFP](https://arxiv.org/abs/2111.01253): NeurIPS 2021, faster 3x than original version because of [our CUDA speed up](assets/cuda/README.md), same (slightly better) performance. Done coding, public after review.
 - [ ] [FastNSF](https://arxiv.org/abs/2304.09121): ICCV 2023. Done coding, public after review.
-- [ ] [Flow4D](https://arxiv.org/abs/2407.07995): Under Review. Done coding, public after review.
 - [ ] ... more on the way
 
 </details>
 
 ## Citation
 
-If you find *OpenSceneFlow* useful to your research, please cite our work as encouragement. (੭ˊ꒳​ˋ)੭✧
+If you find *OpenSceneFlow* useful to your research, please cite our work 📖 and give a star 🌟 as encouragement. (੭ˊ꒳​ˋ)੭✧
 
 ```
 @inproceedings{zhang2024seflow,
@@ -123,7 +122,18 @@ unzip demo_data.zip -p /home/kin/data/av2
 
 ## 2. Quick Start
 
-<!-- ### Flow4D -->
+### Flow4D
+
+Train Flow4D with the leaderboard submit config. [Runtime: Around ? hours in ? GPUs.]
+
+```bash
+python train.py model=flow4d lr=1e-3 epochs=15 batch_size=8 loss_fn=deflowLoss "voxel_size=[0.2, 0.2, 0.2]" "point_cloud_range=[-51.2, -51.2, -3.2, 51.2, 51.2, 3.2]"
+```
+
+Pretrained weight can be downloaded through:
+```bash
+wget https://huggingface.co/kin-zhang/OpenSceneFlow/resolve/main/deflow_best.ckpt
+```
 
 <!-- ### SSF -->
 
@@ -132,7 +142,7 @@ unzip demo_data.zip -p /home/kin/data/av2
 Train SeFlow needed to specify the loss function, we set the config of our best model in the leaderboard. [Runtime: Around 11 hours in 4x A100 GPUs.]
 
 ```bash
-python train.py model=deflow lr=2e-4 epochs=9 batch_size=16 loss_fn=seflowLoss "add_seloss={chamfer_dis: 1.0, static_flow_loss: 1.0, dynamic_chamfer_dis: 1.0, cluster_based_pc0pc1: 1.0}" "model.target.num_iters=2" "model.val_monitor=val/Dynamic/Mean"
+python train.py model=deflow lr=2e-4 epochs=9 batch_size=16 loss_fn=seflowLoss "add_seloss={chamfer_dis: 1.0, static_flow_loss: 1.0, dynamic_chamfer_dis: 1.0, cluster_based_pc0pc1: 1.0}" "model.target.num_iters=2"
 ```
 
 Pretrained weight can be downloaded through:
