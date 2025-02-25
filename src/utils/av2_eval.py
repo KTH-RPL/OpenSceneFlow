@@ -830,8 +830,8 @@ from dataclasses import dataclass
 class BaseSplitValue:
     name: str
     avg_epe: float
-    avg_speed: float
-    speed_thresholds: Tuple[float, float]
+    avg_range: float
+    thresholds_range: Tuple[float, float]
     count: int
     def __eq__(self, __value: object) -> bool:
         return hash(self) == hash(__value)
@@ -844,8 +844,9 @@ def compute_bucketed_epe(
 ):
     storage_error_matrix = []
     # bucket_max_speed, num_buckets, distance_thresholds set is from: eval/bucketed_epe.py#L226
-    bucket_edges = np.concatenate([np.linspace(0, 2.0, 51), [np.inf]])
-    speed_thresholds = list(zip(bucket_edges, bucket_edges[1:]))
+    # HARCODE(Qingwen): if change it please search globally for the same value
+    speed_splits = np.concatenate([np.linspace(0, 2.0, 51), [np.inf]])
+    speed_thresholds = list(zip(speed_splits, speed_splits[1:]))
 
     gt_speeds = np.linalg.norm(gt_flow, axis=-1)
     error_flow = np.linalg.norm(pred_flow - gt_flow, axis=-1)
@@ -864,8 +865,44 @@ def compute_bucketed_epe(
             count_pts = mask.sum()
             if count_pts == 0:
                 continue
-            avg_epe = error_flow[mask].mean()
-            avg_speed = gt_speeds[mask].mean()
-            storage_error_matrix.append(BaseSplitValue(cats_name, avg_epe, avg_speed, (min_speed_threshold, max_speed_threshold), count_pts))
+            storage_error_matrix.append(BaseSplitValue(cats_name, error_flow[mask].mean(), gt_speeds[mask].mean(), (min_speed_threshold, max_speed_threshold), count_pts))
             
+    return storage_error_matrix
+
+def compute_ssf_metrics(
+    pc0_dis: NDArrayFloat,
+    pred_flow: NDArrayFloat,
+    gt_flow: NDArrayFloat,
+    is_valid: NDArrayBool,
+    dynamic_speed = 1.4 # (m/s). since pedestrian walking speed normally is 1.4m/s
+) -> Dict[str, List[Any]]:
+    """
+    Compute metrics based on distance for a given example and package them into a list to be put into a DataFrame.
+    Args:
+        pc0_dis: (N,3) point distance to ego vehicle.
+        pred_flow: (N,3) Predicted flow vectors.
+        gt_flow: (N,3) Ground truth flow vectors.
+        is_valid: (N,) True for a point if its ground truth flow was successfully computed. Normally we will exclude the points belong to ground etc.
+    Returns:
+        A dictionary of columns to create a long-form DataFrame of the results from.
+        One row for each subset in the breakdown.
+    """
+    storage_error_matrix = []
+    # HARCODE(Qingwen): if change it please search globally for the same value
+    distance_split = [0, 35, 50, 75, 100, np.inf]
+    gt_speeds = np.linalg.norm(gt_flow, axis=-1) * 10 # since our sensor is 10Hz
+    range_thresholds = list(zip(distance_split, distance_split[1:]))
+    for min_range, max_range in range_thresholds:
+        mask = (pc0_dis >= min_range) & (pc0_dis < max_range) & is_valid
+        gt_speed_, pred_flow_, gt_flow_, pc0_dis_ = gt_speeds[mask], pred_flow[mask], gt_flow[mask], pc0_dis[mask]
+        # static and dynamic split based on the ground truth speed
+        dynamic_mask = gt_speed_ >= dynamic_speed 
+        static_mask = ~dynamic_mask
+        for motion, m_mask in [("Dynamic", dynamic_mask), ("Static", static_mask)]:
+            count_pts = m_mask.sum()
+            if count_pts == 0:
+                continue
+            epe = np.linalg.norm(pred_flow_ - gt_flow_, axis=-1)[m_mask].mean()
+            avg_dis = pc0_dis_[m_mask].mean()
+            storage_error_matrix.append(BaseSplitValue(motion, epe, avg_dis, (min_range, max_range), count_pts))
     return storage_error_matrix

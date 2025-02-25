@@ -1,0 +1,10 @@
+name: ssf
+
+target:
+  _target_: src.models.SSF
+  backbone_option: simplesparse_unet  # choices: [simplesparse_unet]
+  decoder_option: linear # choices: [linear]
+  voxel_size: [0.2, 0.2, 6]
+  point_cloud_range: ${point_cloud_range}
+
+val_monitor: val/Three-way

@@ -21,13 +21,13 @@ from lightning import LightningModule
 from hydra.utils import instantiate
 from omegaconf import OmegaConf,open_dict
 
-import os, sys, time, h5py
+import os, sys, time, h5py, pickle
 BASE_DIR = os.path.abspath(os.path.join( os.path.dirname( __file__ ), '..' ))
 sys.path.append(BASE_DIR)
 from src.utils.mics import import_func, weights_init, zip_res
 from src.utils.av2_eval import write_output_file
 from src.models.basic import cal_pose0to1
-from src.utils.eval_metric import OfficialMetrics, evaluate_leaderboard, evaluate_leaderboard_v2
+from src.utils.eval_metric import OfficialMetrics, evaluate_leaderboard, evaluate_leaderboard_v2, evaluate_ssf
 
 # debugging tools
 # import faulthandler
@@ -142,7 +142,7 @@ class ModelWrapper(LightningModule):
                 loss_logger[key] += res_loss[key]
 
         self.log("trainer/loss", total_loss/batch_sizes, sync_dist=True, batch_size=self.batch_size, prog_bar=True)
-        if self.add_seloss is not None:
+        if self.add_seloss is not None and self.cfg_loss_name in ['seflowLoss']:
             for key in loss_logger:
                 self.log(f"trainer/{key}", loss_logger[key]/batch_sizes, sync_dist=True, batch_size=self.batch_size)
         self.model.timer[5].stop()
@@ -164,8 +164,9 @@ class ModelWrapper(LightningModule):
                                            batch['flow_is_valid'][batch_id][valid_from_pc2res], batch['flow_category_indices'][batch_id][valid_from_pc2res])
                 v2_dict = evaluate_leaderboard_v2(final_flow_, pose_flow, batch['pc0'][batch_id][valid_from_pc2res], gt_flow[valid_from_pc2res], \
                                         batch['flow_is_valid'][batch_id][valid_from_pc2res], batch['flow_category_indices'][batch_id][valid_from_pc2res])
-                
-                self.metrics.step(v1_dict, v2_dict)
+                ssf_dict = evaluate_ssf(final_flow_, pose_flow, batch['pc0'][batch_id][valid_from_pc2res], gt_flow[valid_from_pc2res], \
+                                        batch['flow_is_valid'][batch_id][valid_from_pc2res], batch['flow_category_indices'][batch_id][valid_from_pc2res])
+                self.metrics.step(v1_dict, v2_dict, ssf_dict)
         else:
             pass
 
@@ -210,12 +211,15 @@ class ModelWrapper(LightningModule):
         
         self.metrics.print()
 
-        self.metrics = OfficialMetrics()
-
         if self.save_res:
+            # Save the dictionaries to a pickle file
+            with open(str(self.save_res_path)+'.pkl', 'wb') as f:
+                pickle.dump((self.metrics.epe_3way, self.metrics.bucketed, self.metrics.epe_ssf, self.metrics.mean_num_occupied_voxels), f)
             print(f"We already write the flow_est into the dataset, please run following commend to visualize the flow. Copy and paste it to your terminal:")
             print(f"python tools/visualization.py --res_name '{self.vis_name}' --data_dir {self.dataset_path}")
             print(f"Enjoy! ^v^ ------ \n")
+
+        self.metrics = OfficialMetrics()
         
     def eval_only_step_(self, batch, res_dict):
         eval_mask = batch['eval_mask'].squeeze()
@@ -235,6 +239,11 @@ class ModelWrapper(LightningModule):
         else:
             final_flow[~batch['gm0']] = res_dict['flow'] + pose_flow[~batch['gm0']]
 
+        if 'num_occupied_voxels' in res_dict:
+            num_occupied_voxels = res_dict['num_occupied_voxels']
+        else:
+            num_occupied_voxels = None
+
         if self.av2_mode == 'val': # since only val we have ground truth flow to eval
             gt_flow = batch["flow"]
             v1_dict = evaluate_leaderboard(final_flow[eval_mask], pose_flow[eval_mask], pc0[eval_mask], \
@@ -242,8 +251,9 @@ class ModelWrapper(LightningModule):
                                        batch['flow_category_indices'][eval_mask])
             v2_dict = evaluate_leaderboard_v2(final_flow[eval_mask], pose_flow[eval_mask], pc0[eval_mask], \
                                     gt_flow[eval_mask], batch['flow_is_valid'][eval_mask], batch['flow_category_indices'][eval_mask])
-            
-            self.metrics.step(v1_dict, v2_dict)
+            ssf_dict = evaluate_ssf(final_flow, pose_flow, pc0, \
+                                    gt_flow, batch['flow_is_valid'], batch['flow_category_indices'])
+            self.metrics.step(v1_dict, v2_dict, ssf_dict, num_occupied_voxels)
         
         # NOTE (Qingwen): Since val and test, we will force set batch_size = 1 
         if self.save_res or self.av2_mode == 'test': # test must save data to submit in the online leaderboard.    
@@ -274,7 +284,9 @@ class ModelWrapper(LightningModule):
     def validation_step(self, batch, batch_idx):
         if self.av2_mode == 'val' or self.av2_mode == 'test':
             batch, res_dict = self.run_model_wo_ground_data(batch)
+            self.model.timer[13].start("Eval")
             self.eval_only_step_(batch, res_dict)
+            self.model.timer[13].stop()
         else:
             res_dict = self.model(batch)
             self.train_validation_step_(batch, res_dict)

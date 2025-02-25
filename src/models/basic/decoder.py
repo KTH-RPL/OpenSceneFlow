@@ -119,6 +119,61 @@ class LinearDecoder(nn.Module):
             flow_results.append(flow)
         return flow_results
 
+class SimpleLinearDecoder(nn.Module):
+    """
+    Adapted from SST (https://github.com/tusen-ai/SST)
+    Licensed under the Apache License 2.0.
+    See https://www.apache.org/licenses/LICENSE-2.0
+    """
+
+    def __init__(self, pseudoimage_channels: int = 64):
+        super().__init__()
+
+        self.offset_encoder = nn.Linear(3, pseudoimage_channels)
+
+        self.decoder = nn.Sequential(
+            nn.Linear(pseudoimage_channels*4, 32), nn.GELU(),
+            nn.Linear(32, 3))
+
+    def forward_single(self, before_voxel_vectors: torch.Tensor,
+                       after_voxel_vectors: torch.Tensor,
+                       point_offsets: torch.Tensor,) -> torch.Tensor:
+
+        # [N, 64] [N, 128] -> [N, 192]
+        concatenated_vectors = torch.cat([before_voxel_vectors, after_voxel_vectors], dim=1)
+
+        # [N, 3] -> [N, 64]
+        point_offsets_feature = self.offset_encoder(point_offsets)
+
+        flow = self.decoder(torch.cat([concatenated_vectors, point_offsets_feature], dim=1))
+        return flow
+
+    def forward(
+            self, before_pseudoimages: torch.Tensor,
+            after_pseudoimages: torch.Tensor,
+            pc0_point_offsets: torch.Tensor, 
+            pc0_voxel_coors: torch.Tensor, 
+            pc0_voxel2point_inds: torch.Tensor, 
+            pc0_dummy_mask: torch.Tensor,) -> List[torch.Tensor]:
+
+        flow_results = []
+        for idx in range(len(pc0_voxel_coors[:,0].unique())):
+            voxel_batch_mask = pc0_voxel_coors[:,0]==idx
+            pointwise_batch_mask = voxel_batch_mask[[pc0_voxel2point_inds]]
+            realpoints_batch_mask = torch.logical_and(pointwise_batch_mask, ~pc0_dummy_mask)
+            if before_pseudoimages.size(0) > pc0_point_offsets.size(0):
+                a = torch.zeros((before_pseudoimages.size(0), 3)).to(before_pseudoimages.device)
+                a[:pc0_point_offsets.size(0),:] = pc0_point_offsets
+                pc0_point_offsets = a
+
+            flow = self.forward_single(before_pseudoimages[pc0_voxel2point_inds][realpoints_batch_mask], 
+                            after_pseudoimages[pc0_voxel2point_inds][realpoints_batch_mask], 
+                            pc0_point_offsets[pc0_voxel2point_inds][realpoints_batch_mask])
+
+            flow_results.append(flow)
+        return flow_results
+
+
 # from https://github.com/weiyithu/PV-RAFT/blob/main/model/update.py
 class ConvGRU(nn.Module):
     def __init__(self, input_dim=64, hidden_dim=128):
