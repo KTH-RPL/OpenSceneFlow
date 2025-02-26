@@ -51,6 +51,12 @@ International Conference on Robotics and Automation (**ICRA**) 2024
 If you find *OpenSceneFlow* useful to your research, please cite our work as encouragement. (੭ˊ꒳​ˋ)੭✧
 
 ```
+@article{khoche2025ssf,
+  title={SSF: Sparse Long-Range Scene Flow for Autonomous Driving},
+  author={Khoche, Ajinkya and Zhang, Qingwen and Sanchez, Laura Pereira and Asefaw, Aron and Mansouri, Sina Sharif and Jensfelt, Patric},
+  journal={arXiv preprint arXiv:2501.17821},
+  year={2025}
+}
 @inproceedings{zhang2024seflow,
   author={Zhang, Qingwen and Yang, Yi and Li, Peizheng and Andersson, Olov and Jensfelt, Patric},
   title={{SeFlow}: A Self-Supervised Scene Flow Method in Autonomous Driving},
@@ -125,7 +131,19 @@ unzip demo_data.zip -p /home/kin/data/av2
 
 <!-- ### Flow4D -->
 
-<!-- ### SSF -->
+### SSF
+
+Train SSF with the leaderboard submit config. [Runtime: Around 6 hours in 8x A100 GPUs.]
+
+```bash
+python train.py model=ssf lr=8e-3 epochs=25 batch_size=64 loss_fn=deflowLoss "voxel_size=[0.2, 0.2, 0.2]" "point_cloud_range=[-51.2, -51.2, -3.2, 51.2, 51.2, 3.2]"
+```
+<!--
+Pretrained weight can be downloaded through:
+```bash
+wget https://huggingface.co/kin-zhang/OpenSceneFlow/resolve/main/ssf_best.ckpt
+-->
+```
 
 ### SeFlow
 
