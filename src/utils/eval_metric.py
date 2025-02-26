@@ -84,6 +84,7 @@ def evaluate_ssf(est_flow, rigid_flow, pc0, gt_flow, is_valid, pts_ids):
     # # est_flow = torch.zeros_like(est_flow).to(est_flow.device)
     gt_flow = gt_flow[mask_eval, :] - rigid_flow 
     is_valid = is_valid[mask_eval]
+    pc_distance = pc_distance[mask_eval]
     pts_ids = pts_ids[mask_eval]
 
     res_dict = compute_ssf_metrics(
