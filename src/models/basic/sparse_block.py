@@ -282,3 +282,4 @@ def make_sparse_convmodule(in_channels,
 
     layers = SparseSequential(*layers)
     return layers
+    

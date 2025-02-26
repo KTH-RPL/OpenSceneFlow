@@ -936,7 +936,7 @@ class DynamicVFE(nn.Module):
 class DynamicScatterVFE(DynamicVFE):
     """ 
     Originally from SST (https://github.com/tusen-ai/SST)
-    Modified by Ajinkya Khoche for SSF (https://github.com/KTH-RPL/SSF)
+    Modified by Ajinkya Khoche (https://ajinkyakhoche.github.io/) for SSF (https://github.com/KTH-RPL/SSF)
     Same with DynamicVFE but use torch_scatter to avoid construct canvas in map_voxel_center_to_point.
     The canvas is very memory-consuming when use tiny voxel size (5cm * 5cm * 5cm) in large 3D space.
     """

@@ -2,7 +2,7 @@
 """
 # Created: 2024-05-16 15:08
 # Copyright (C) 2024-now, RPL, KTH Royal Institute of Technology
-# Author: Ajinkya Khoche (khoche@kth.se)
+# Author: Ajinkya Khoche (https://ajinkyakhoche.github.io/)
 #
 # This file is part of SSF (https://github.com/KTH-RPL/SSF).
 # If you find this repo helpful, please cite the respective publication as 

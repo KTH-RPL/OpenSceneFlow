@@ -357,4 +357,3 @@ class OfficialMetrics:
             printed_data.append([key, self.epe_ssf[key]['Static'], self.epe_ssf[key]['Dynamic'], self.epe_ssf[key]['NumPointsStatic'], self.epe_ssf[key]['NumPointsDynamic']])
         print("SSF Metric on Distance-based:")
         print(tabulate(printed_data, headers=["Distance", "Static", "Dynamic", "NumPointsStatic", "NumPointsDynamic"], tablefmt='orgtbl'), "\n")
-    
