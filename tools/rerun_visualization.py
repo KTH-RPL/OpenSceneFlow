@@ -6,6 +6,9 @@
 # 
 # Description: view scene flow dataset after preprocess or evaluation. 
 # --flow_mode accepts a list eg. ["flow", "flow_est", ...] where "flow" is ground truth and "flow_est" is estimated from a neural network (result of save.py script).
+
+# Usage with demo data: (flow is ground truth flow, `other_name` is the estimated flow from the model)
+* python tools/rerun_visualization.py --data_dir /home/kin/data/av2/preprocess_v2/demo/sensor/val --flow_mode ['flow', 'deflow' , 'ssf'] 
 """
 
 import numpy as np
