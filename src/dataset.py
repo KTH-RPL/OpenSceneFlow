@@ -98,7 +98,7 @@ class HDF5Dataset(Dataset):
             if not os.path.exists(eval_index_file):
                 raise Exception(f"No eval index file found! Please check {self.directory}")
             self.eval_index = eval
-            with open(os.path.join(self.directory, eval_index_file), 'rb') as f:
+            with open(eval_index_file, 'rb') as f:
                 self.eval_data_index = pickle.load(f)
                 
         self.scene_id_bounds = {}  # 存储每个scene_id的最大最小timestamp和位置

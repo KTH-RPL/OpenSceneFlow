@@ -66,7 +66,8 @@ class FastFlow3D(nn.Module):
             "pc0_warped_pc1_points_lst": pc0_warped_pc1_points_lst,
             "pc0_valid_point_idxes": pc0_valid_point_idxes,
             "pc1_points_lst": pc1_points_lst,
-            "pc1_valid_point_idxes": pc1_valid_point_idxes
+            "pc1_valid_point_idxes": pc1_valid_point_idxes,
+            "num_occupied_voxels": [grid_flow_pseudoimage.size(-1)*grid_flow_pseudoimage.size(-2)]
         }
 
     def forward(self, batch,

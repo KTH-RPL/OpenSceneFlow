@@ -109,5 +109,6 @@ class DeFlow(nn.Module):
             
             "pc1_valid_point_idxes": pc1_valid_point_idxes,
             "pc1_points_lst": pc1_points_lst,
+            "num_occupied_voxels": [grid_flow_pseudoimage.size(-1)*grid_flow_pseudoimage.size(-2)]
         }
         return model_res
