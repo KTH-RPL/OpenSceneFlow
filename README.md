@@ -142,8 +142,8 @@ python train.py model=ssf lr=8e-3 epochs=25 batch_size=64 loss_fn=deflowLoss "vo
 Pretrained weight can be downloaded through:
 ```bash
 wget https://huggingface.co/kin-zhang/OpenSceneFlow/resolve/main/ssf_best.ckpt
--->
-```
+```-->
+
 
 ### SeFlow
 
