@@ -3,7 +3,7 @@
 # Copyright (C) 2023-now, RPL, KTH Royal Institute of Technology
 # Author: Qingwen Zhang  (https://kin-zhang.github.io/), Ajinkya Khoche (https://ajinkyakhoche.github.io/)
 #
-# This file is part of DeFlow (https://github.com/KTH-RPL/DeFlow).
+# This file is part of OpenSceneFlow (https://github.com/KTH-RPL/OpenSceneFlow).
 # If you find this repo helpful, please cite the respective publication as 
 # listed on the above website.
 # 
@@ -11,6 +11,11 @@
 
 # CHANGELOG:
 # 2024-09-10 (Ajinkya): Add vis_multiple(), to visualize multiple flow modes at once.
+
+# Usage: (flow is ground truth flow, `other_name` is the estimated flow from the model)
+* python tools/visualization.py --data_dir /home/kin/data/av2/h5py/demo/train --res_name 'flow' --mode vis
+* python tools/visualization.py --data_dir /home/kin/data/av2/h5py/demo/train --res_name "['flow', 'deflow' , 'ssf']" --mode mul
+
 """
 
 import numpy as np
@@ -67,7 +72,10 @@ def vis(
     res_name: str = "flow", # "flow", "flow_est"
     start_id: int = 0,
     point_size: float = 2.0,
+    mode: str = "vis",
 ):
+    if mode != "vis":
+        return
     dataset = HDF5Data(data_dir, vis_name=res_name, flow_view=True)
     o3d_vis = MyVisualizer(view_file=VIEW_FILE, window_title=f"view {'ground truth flow' if res_name == 'flow' else f'{res_name} flow'}, `SPACE` start/stop")
 
@@ -117,14 +125,17 @@ def vis(
 
 def vis_multiple(
     data_dir: str ="/home/kin/data/av2/preprocess/sensor/mini",
-    flow_mode: list = ["flow"],
-    start_id: int = -1,
+    res_name: list = ["flow"],
+    start_id: int = 0,
     point_size: float = 3.0,
-    tone: str = 'dark'
+    tone: str = 'dark',
+    mode: str = "mul",
 ):
-    assert isinstance(flow_mode, list), "vis_multiple() needs a list as flow_mode"
-    dataset = HDF5Data(data_dir, vis_name=flow_mode, flow_view=True)
-    o3d_vis = MyMultiVisualizer(view_file=VIEW_FILE, flow_mode=flow_mode)
+    if mode != "mul":
+        return
+    assert isinstance(res_name, list), "vis_multiple() needs a list as flow_mode"
+    dataset = HDF5Data(data_dir, vis_name=res_name, flow_view=True)
+    o3d_vis = MyMultiVisualizer(view_file=VIEW_FILE, flow_mode=res_name)
 
     for v in o3d_vis.vis:
         opt = v.get_render_option()
@@ -139,18 +150,10 @@ def vis_multiple(
         opt.background_color = background_color
         opt.point_size = point_size
 
-    data_id = 0
+    data_id = start_id
     pbar = tqdm(range(0, len(dataset)))
 
-    while True:
-        if data_id < start_id and start_id != -1:
-            data_id += o3d_vis.playback_direction
-            # update the counter
-            pbar.update(o3d_vis.playback_direction)
-            if data_id < 0 or data_id >= len(dataset):
-                break
-            else:
-                continue
+    while data_id >= 0 and data_id < len(dataset):
         data = dataset[data_id]
         now_scene_id = data['scene_id']
         pbar.set_description(f"id: {data_id}, scene_id: {now_scene_id}, timestamp: {data['timestamp']}")
@@ -164,7 +167,7 @@ def vis_multiple(
         pose_flow = pc0[:, :3] @ ego_pose[:3, :3].T + ego_pose[:3, 3] - pc0[:, :3]
 
         pcd_list = []
-        for mode in flow_mode:
+        for mode in res_name:
             pcd = o3d.geometry.PointCloud()
             if mode in ['dufo_label', 'label']:
                 labels = data[mode]
@@ -190,17 +193,12 @@ def vis_multiple(
         o3d_vis.update(pcd_list)
 
         data_id += o3d_vis.playback_direction
-        # update the counter
         pbar.update(o3d_vis.playback_direction)
-        if data_id < 0 or data_id >= len(dataset):
-            break
-        else:
-            continue 
 
 
 if __name__ == '__main__':
     start_time = time.time()
     # fire.Fire(check_flow)
-    # fire.Fire(vis)
+    fire.Fire(vis)
     fire.Fire(vis_multiple)
     print(f"Time used: {time.time() - start_time:.2f} s")

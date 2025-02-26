@@ -240,11 +240,7 @@ class HDF5Data:
         t_x: how many past frames we want to extract
         '''
         self.flow_view = flow_view
-        self.vis_name = vis_name
-        if not isinstance(vis_name, list):
-            self.vis_name = [vis_name]
-        else:
-            self.vis_name = vis_name
+        self.vis_name = vis_name if isinstance(vis_name, list) else [vis_name]
         self.directory = directory
         with open(os.path.join(self.directory, 'index_total.pkl'), 'rb') as f:
             self.data_index = pickle.load(f)
