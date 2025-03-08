@@ -50,12 +50,12 @@ class MyVisualizer:
             "\t[SPACE] to pause/start\n"
             "\t[ESC/Q] to exit\n"
             "\t    [P] to save screen and viewpoint\n"
-            "\t    [N] to step\n"
+            "\t    [D] to step next\n"
         )
         self._register_key_callback(["Ā", "Q", "\x1b"], self._quit)
         self._register_key_callback(["P"], self._save_screen)
         self._register_key_callback([" "], self._start_stop)
-        self._register_key_callback(["N"], self._next_frame)
+        self._register_key_callback(["D"], self._next_frame)
 
     def show(self, assets: List):
         self.vis.clear_geometries()
