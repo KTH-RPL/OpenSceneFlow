@@ -124,15 +124,10 @@ unzip demo_data.zip -p /home/kin/data/av2
 
 ### Flow4D
 
-Train Flow4D with the leaderboard submit config. [Runtime: Around ? hours in ? GPUs.]
+Train Flow4D with the leaderboard submit config. [Runtime: Around 18 hours in 4x RTX 3090 GPUs.]
 
 ```bash
 python train.py model=flow4d lr=1e-3 epochs=15 batch_size=8 loss_fn=deflowLoss "voxel_size=[0.2, 0.2, 0.2]" "point_cloud_range=[-51.2, -51.2, -3.2, 51.2, 51.2, 3.2]"
-```
-
-Pretrained weight can be downloaded through:
-```bash
-wget https://huggingface.co/kin-zhang/OpenSceneFlow/resolve/main/deflow_best.ckpt
 ```
 
 <!-- ### SSF -->
