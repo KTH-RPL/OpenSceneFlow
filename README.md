@@ -204,6 +204,14 @@ python tools/visualization.py --res_name 'seflow_best' --data_dir /home/kin/data
 
 https://github.com/user-attachments/assets/f031d1a2-2d2f-4947-a01f-834ed1c146e6
 
+Or another way to interact with [rerun](https://github.com/rerun-io/rerun) but please only vis scene by scene, not all at once.
+
+```bash
+python tools/visualization_rerun.py --data_dir /home/kin/data/av2/h5py/demo/train --res_name "['flow', 'deflow']"
+```
+
+https://github.com/user-attachments/assets/07e8d430-a867-42b7-900a-11755949de21
+
 
 ## Acknowledgement
 
