@@ -50,6 +50,16 @@ International Conference on Robotics and Automation (**ICRA**) 2024
 If you find *OpenSceneFlow* useful to your research, please cite our work 📖 and give a star 🌟 as encouragement. (੭ˊ꒳​ˋ)੭✧
 
 ```
+@article{kim2025flow4d,
+  author={Kim, Jaeyeul and Woo, Jungwan and Shin, Ukcheol and Oh, Jean and Im, Sunghoon},
+  journal={IEEE Robotics and Automation Letters}, 
+  title={Flow4D: Leveraging 4D Voxel Network for LiDAR Scene Flow Estimation}, 
+  year={2025},
+  volume={10},
+  number={4},
+  pages={3462-3469},
+  doi={10.1109/LRA.2025.3542327}
+}
 @inproceedings{zhang2024seflow,
   author={Zhang, Qingwen and Yang, Yi and Li, Peizheng and Andersson, Olov and Jensfelt, Patric},
   title={{SeFlow}: A Self-Supervised Scene Flow Method in Autonomous Driving},
