@@ -106,8 +106,8 @@ class BucketResultMatrix:
         ), f"speed_buckets must have at least one entry, got {len(self.speed_buckets)}"
 
         # By default, NaNs are not counted in np.nanmean
-        self.epe_storage_matrix = np.zeros((len(class_names), len(self.speed_buckets))) * np.NaN
-        self.speed_storage_matrix = np.zeros((len(class_names), len(self.speed_buckets))) * np.NaN
+        self.epe_storage_matrix = np.zeros((len(class_names), len(self.speed_buckets))) * np.nan
+        self.speed_storage_matrix = np.zeros((len(class_names), len(self.speed_buckets))) * np.nan
         self.count_storage_matrix = np.zeros(
             (len(class_names), len(self.speed_buckets)), dtype=np.int64
         )

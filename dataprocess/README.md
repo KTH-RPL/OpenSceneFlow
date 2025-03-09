@@ -16,7 +16,7 @@ If you want to use all datasets above, there is a specific process environment i
 
 ```bash
 conda env create -f envprocess.yaml
-conda activate dataprocess
+conda activate sftool
 # NOTE we need **manually reinstall numpy** (higher than 1.22)
 # * since waymo package force numpy==1.21.5, BUT!
 # * hdbscan w. numpy<1.22.0 will raise error: 'numpy.float64' object cannot be interpreted as an integer

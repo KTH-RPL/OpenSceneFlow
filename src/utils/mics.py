@@ -234,13 +234,13 @@ def flow_to_rgb(
 
 
 class HDF5Data:
-    def __init__(self, directory, flow_view=False, vis_name="flow"):
+    def __init__(self, directory, flow_view=False, vis_name=["flow"]):
         '''
         directory: the directory of the dataset
         t_x: how many past frames we want to extract
         '''
         self.flow_view = flow_view
-        self.vis_name = vis_name
+        self.vis_name = vis_name if isinstance(vis_name, list) else [vis_name]
         self.directory = directory
         with open(os.path.join(self.directory, 'index_total.pkl'), 'rb') as f:
             self.data_index = pickle.load(f)
@@ -285,7 +285,7 @@ class HDF5Data:
             data_dict['pc0'] = f[key]['lidar'][:]
             data_dict['gm0'] = f[key]['ground_mask'][:]
             data_dict['pose0'] = f[key]['pose'][:]
-            for flow_key in [self.vis_name, 'dufo_label', 'label']:
+            for flow_key in self.vis_name + ['dufo_label', 'label']:
                 if flow_key in f[key]:
                     data_dict[flow_key] = f[key][flow_key][:]
 
