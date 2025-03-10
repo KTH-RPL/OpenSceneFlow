@@ -30,7 +30,8 @@ International Conference on Robotics and Automation (**ICRA**) 2024
 
 💞 If you find *OpenSceneFlow* useful to your research, please cite [our works 📖](#cite-us) and give a star 🌟 as encouragement. (੭ˊ꒳​ˋ)੭✧
 
-🎁 <b>One repository, All methods!</b>. Additionally, *OpenSceneFlow* integrates the following excellent work: [ICLR'24 ZeroFlow](https://arxiv.org/abs/2305.10424), [ICCV'23 FastNSF](https://arxiv.org/abs/2304.09121), [RA-L'21 FastFlow](https://arxiv.org/abs/2103.01306), [NeurIPS'21 NSFP](https://arxiv.org/abs/2111.01253), 
+🎁 <b>One repository, All methods!</b>
+Additionally, *OpenSceneFlow* integrates the following excellent work: [ICLR'24 ZeroFlow](https://arxiv.org/abs/2305.10424), [ICCV'23 FastNSF](https://arxiv.org/abs/2304.09121), [RA-L'21 FastFlow](https://arxiv.org/abs/2103.01306), [NeurIPS'21 NSFP](https://arxiv.org/abs/2111.01253). (More on the way)
 
 <details> <summary> Summary of them:</summary>
 
@@ -42,7 +43,7 @@ International Conference on Robotics and Automation (**ICRA**) 2024
 
 </details>
 
-💡: Want to learn how to add your own network in this structure? Check [Contribute section] and know more about the code. Fee free to pull request and your bibtex [here](#cite-us) by pull request.
+💡: Want to learn how to add your own network in this structure? Check [Contribute section](assets/README.md#contribute) and know more about the code. Fee free to pull request and your bibtex [here](#cite-us) by pull request.
 
 ---
 
@@ -90,7 +91,9 @@ cd /home/kin/workspace/OpenSceneFlow/assets/cuda/chamfer3D && /opt/conda/envs/op
 
 Refer to [dataprocess/README.md](dataprocess/README.md) for dataset download instructions. Currently, we support **Argoverse 2**, **Waymo**, and **custom datasets** (more datasets will be added in the future). 
 
-After downloading, convert the raw data to `.h5` format for easy training, evaluation, and visualization. Follow the steps in [dataprocess/README.md#process](dataprocess/README.md#process). For a quick start, use our **mini processed dataset**, which includes one scene in `train` and `val`. It is pre-converted to `.h5` format with label data ([Zenodo](https://zenodo.org/records/13744999/files/demo_data.zip)/[HuggingFace](https://huggingface.co/kin-zhang/OpenSceneFlow/blob/main/demo_data.zip)).
+After downloading, convert the raw data to `.h5` format for easy training, evaluation, and visualization. Follow the steps in [dataprocess/README.md#process](dataprocess/README.md#process). 
+
+For a quick start, use our **mini processed dataset**, which includes one scene in `train` and `val`. It is pre-converted to `.h5` format with label data ([Zenodo](https://zenodo.org/records/13744999/files/demo_data.zip)/[HuggingFace](https://huggingface.co/kin-zhang/OpenSceneFlow/blob/main/demo_data.zip)).
 
 
 ```bash

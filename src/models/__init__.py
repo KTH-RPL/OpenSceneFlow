@@ -7,6 +7,8 @@
 # If you find this repo helpful, please cite the respective publication as 
 # listed on the above website.
 """
+import warnings
+warnings.simplefilter(action="ignore", category=FutureWarning)
 
 from .deflow import DeFlow
 from .fastflow3d import FastFlow3D

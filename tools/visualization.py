@@ -69,7 +69,7 @@ def check_flow(
 
 def vis(
     data_dir: str ="/home/kin/data/av2/preprocess/sensor/mini",
-    res_name: str = "flow", # "flow", "flow_est"
+    res_name: str = "flow", # any res_name we write before in HDF5Data
     start_id: int = 0,
     point_size: float = 2.0,
     mode: str = "vis",
