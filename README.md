@@ -5,7 +5,7 @@
 </p>
 
 OpenSceneFlow is a codebase for point cloud scene flow estimation. 
-It is also an official implementation of the following paper (sored by the time of publication):
+It is also an official implementation of the following papers (sored by the time of publication):
 
 - **Flow4D: Leveraging 4D Voxel Network for LiDAR Scene Flow Estimation**  
 *Jaeyeul Kim, Jungwan Woo, Ukcheol Shin, Jean Oh, Sunghoon Im*  
@@ -31,7 +31,7 @@ International Conference on Robotics and Automation (**ICRA**) 2024
 💞 If you find *OpenSceneFlow* useful to your research, please cite [our works 📖](#cite-us) and give a star 🌟 as encouragement. (੭ˊ꒳​ˋ)੭✧
 
 🎁 <b>One repository, All methods!</b>
-Additionally, *OpenSceneFlow* integrates the following excellent work: [ICLR'24 ZeroFlow](https://arxiv.org/abs/2305.10424), [ICCV'23 FastNSF](https://arxiv.org/abs/2304.09121), [RA-L'21 FastFlow](https://arxiv.org/abs/2103.01306), [NeurIPS'21 NSFP](https://arxiv.org/abs/2111.01253). (More on the way)
+Additionally, *OpenSceneFlow* integrates the following excellent work: [ICLR'24 ZeroFlow](https://arxiv.org/abs/2305.10424), [ICCV'23 FastNSF](https://arxiv.org/abs/2304.09121), [RA-L'21 FastFlow](https://arxiv.org/abs/2103.01306), [NeurIPS'21 NSFP](https://arxiv.org/abs/2111.01253). (More on the way...)
 
 <details> <summary> Summary of them:</summary>
 
@@ -57,14 +57,16 @@ Additionally, *OpenSceneFlow* integrates the following excellent work: [ICLR'24 
 
 ## 0. Installation
 
-**Environment**: Setup
+There are two ways to install the codebase: directly on your [local machine](#environment-setup) or in a [Docker container](#docker-recommended-for-isolation).
+
+### Environment Setup
 
 ```bash
 git clone --recursive https://github.com/KTH-RPL/OpenSceneFlow.git
 cd OpenSceneFlow && mamba env create -f environment.yaml
 ```
 
-CUDA package (need install nvcc compiler), the compile time is around 1-5 minutes:
+CUDA package (we already install nvcc compiler inside conda env), the compile time is around 1-5 minutes:
 ```bash
 mamba activate opensf
 # CUDA already install in python environment. I also tested others version like 11.3, 11.4, 11.7, 11.8 all works
@@ -72,8 +74,9 @@ cd assets/cuda/mmcv && python ./setup.py install && cd ../../..
 cd assets/cuda/chamfer3D && python ./setup.py install && cd ../../..
 ```
 
-Or you always can choose [Docker](https://en.wikipedia.org/wiki/Docker_(software)) which isolated environment and free yourself from installation, you can pull it by. 
-If you have different arch, please build it by yourself `cd OpenSceneFlow && docker build -t zhangkin/opensf` by going through [build-docker-image](assets/README.md#build-docker-image) section.
+### Docker (Recommended for Isolation)
+
+You always can choose [Docker](https://en.wikipedia.org/wiki/Docker_(software)) which isolated environment and free yourself from installation. Pull the pre-built Docker image or build manually.
 
 ```bash
 # option 1: pull from docker hub
@@ -84,8 +87,11 @@ docker run -it --gpus all -v /dev/shm:/dev/shm -v /home/kin/data:/home/kin/data 
 # and better to read your own gpu device info to compile the cuda extension again:
 cd /home/kin/workspace/OpenSceneFlow/assets/cuda/mmcv && /opt/conda/envs/opensf/bin/python ./setup.py install
 cd /home/kin/workspace/OpenSceneFlow/assets/cuda/chamfer3D && /opt/conda/envs/opensf/bin/python ./setup.py install
+
+mamba activate opensf
 ```
 
+If you prefer to build the Docker image by yourself, Check [build-docker-image](assets/README.md#build-docker-image) section for more details.
 
 ## 1. Data Preparation
 
@@ -98,12 +104,18 @@ For a quick start, use our **mini processed dataset**, which includes one scene 
 
 ```bash
 wget https://huggingface.co/kin-zhang/OpenSceneFlow/resolve/main/demo_data.zip
-unzip demo_data.zip -p /home/kin/data/av2
+unzip demo_data.zip -d /home/kin/data/av2/h5py
 ```
 
 Once extracted, you can directly use this dataset to run the [training script](#2-quick-start) without further processing.
 
 ## 2. Quick Start
+
+Don't forget to active Python environment before running the code.
+
+```bash
+mamba activate opensf
+```
 
 ### Flow4D
 

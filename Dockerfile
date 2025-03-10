@@ -32,4 +32,3 @@ RUN apt-get update && apt-get install libgl1 -y
 RUN cd /home/kin/workspace/OpenSceneFlow && /opt/conda/bin/mamba env create -f environment.yaml
 RUN cd /home/kin/workspace/OpenSceneFlow/assets/cuda/mmcv && /opt/conda/envs/opensf/bin/python ./setup.py install
 RUN cd /home/kin/workspace/OpenSceneFlow/assets/cuda/chamfer3D && /opt/conda/envs/opensf/bin/python ./setup.py install
-

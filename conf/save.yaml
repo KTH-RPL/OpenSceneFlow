@@ -1,4 +1,4 @@
-dataset_path: /home/kin/data/av2/preprocess_v2/demo/sensor/val
+dataset_path: /home/kin/data/av2/h5py/demo/sensor/val
 checkpoint: /home/kin/model_zoo/seflow_best.ckpt
 res_name: # if None will directly be the `model_name.ckpt` in checkpoint path
 
