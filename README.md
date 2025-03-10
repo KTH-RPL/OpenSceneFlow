@@ -28,10 +28,10 @@ International Conference on Robotics and Automation (**ICRA**) 2024
 [ Backbone ] [ Supervised ] - [ [arXiv](https://arxiv.org/abs/2401.16122) ] [ [Project](https://github.com/KTH-RPL/DeFlow) ] &rarr; [here](#deflow)
 
 
-💞 If you find *OpenSceneFlow* useful to your research, please cite [our works 📖](#cite-us) and give a star 🌟 as encouragement. (੭ˊ꒳​ˋ)੭✧
+💞 If you find *OpenSceneFlow* useful to your research, please cite [**our works** 📖](#cite-us) and give a star 🌟 as encouragement. (੭ˊ꒳​ˋ)੭✧
 
 🎁 <b>One repository, All methods!</b>
-Additionally, *OpenSceneFlow* integrates the following excellent work: [ICLR'24 ZeroFlow](https://arxiv.org/abs/2305.10424), [ICCV'23 FastNSF](https://arxiv.org/abs/2304.09121), [RA-L'21 FastFlow](https://arxiv.org/abs/2103.01306), [NeurIPS'21 NSFP](https://arxiv.org/abs/2111.01253). (More on the way...)
+Additionally, *OpenSceneFlow* integrates following excellent works: [ICLR'24 ZeroFlow](https://arxiv.org/abs/2305.10424), [ICCV'23 FastNSF](https://arxiv.org/abs/2304.09121), [RA-L'21 FastFlow](https://arxiv.org/abs/2103.01306), [NeurIPS'21 NSFP](https://arxiv.org/abs/2111.01253). (More on the way...)
 
 <details> <summary> Summary of them:</summary>
 
@@ -242,6 +242,12 @@ https://github.com/user-attachments/assets/07e8d430-a867-42b7-900a-11755949de21
   year={2024},
   pages={2105-2111},
   doi={10.1109/ICRA57147.2024.10610278}
+}
+@article{zhang2025himu,
+    title={HiMo: High-Speed Objects Motion Compensation in Point Cloud},
+    author={Zhang, Qingwen and Khoche, Ajinkya and Yang, Yi and Ling, Li and Sina, Sharif Mansouri and Andersson, Olov and Jensfelt, Patric},
+    year={2025},
+    journal={arXiv preprint arXiv:2503.00803},
 }
 ```
 
