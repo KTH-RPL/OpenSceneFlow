@@ -13,13 +13,15 @@
 import torch
 import os, sys
 import numpy as np
-from typing import Dict, Final, List, Tuple
+from typing import List, Tuple
 from tabulate import tabulate
 
 BASE_DIR = os.path.abspath(os.path.join( os.path.dirname( __file__ ), '../..' ))
 sys.path.append(BASE_DIR)
 from src.utils.av2_eval import compute_metrics, compute_bucketed_epe, CLOSE_DISTANCE_THRESHOLD
-
+import warnings
+warnings.simplefilter(action='ignore', category=FutureWarning)
+warnings.simplefilter(action='ignore', category=RuntimeWarning)
 
 # EPE Three-way: Foreground Dynamic, Background Dynamic, Background Static
 # leaderboard link: https://eval.ai/web/challenges/challenge-page/2010/evaluation

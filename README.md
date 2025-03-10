@@ -88,18 +88,17 @@ cd /home/kin/workspace/OpenSceneFlow/assets/cuda/chamfer3D && /opt/conda/envs/op
 
 ## 1. Data Preparation
 
-Check [dataprocess/README.md](dataprocess/README.md#argoverse-20) for downloading tips for the raw Argoverse 2 dataset and [data preprocessed to h5 files commands](dataprocess/README.md#process).
-Another good way to try code quickly is using **mini processed dataset**, we directly provide one scene inside `train` and `val`. 
-It already converted to `.h5` format and processed with the label data. 
-You can download it from [Zenodo](https://zenodo.org/records/13744999/files/demo_data.zip)/[HuggingFace](https://huggingface.co/kin-zhang/OpenSceneFlow/blob/main/demo_data.zip) and extract it to the data folder. 
+Refer to [dataprocess/README.md](dataprocess/README.md) for dataset download instructions. Currently, we support **Argoverse 2**, **Waymo**, and **custom datasets** (more datasets will be added in the future). 
+
+After downloading, convert the raw data to `.h5` format for easy training, evaluation, and visualization. Follow the steps in [dataprocess/README.md#process](dataprocess/README.md#process). For a quick start, use our **mini processed dataset**, which includes one scene in `train` and `val`. It is pre-converted to `.h5` format with label data ([Zenodo](https://zenodo.org/records/13744999/files/demo_data.zip)/[HuggingFace](https://huggingface.co/kin-zhang/OpenSceneFlow/blob/main/demo_data.zip)).
+
 
 ```bash
 wget https://huggingface.co/kin-zhang/OpenSceneFlow/resolve/main/demo_data.zip
 unzip demo_data.zip -p /home/kin/data/av2
 ```
 
-Then you can directly use this mini processed demo data to run the [training script](#2-quick-start) without any further data processing.
-
+Once extracted, you can directly use this dataset to run the [training script](#2-quick-start) without further processing.
 
 ## 2. Quick Start
 
@@ -108,7 +107,7 @@ Then you can directly use this mini processed demo data to run the [training scr
 Train Flow4D with the leaderboard submit config. [Runtime: Around 18 hours in 4x RTX 3090 GPUs.]
 
 ```bash
-python train.py model=flow4d lr=1e-3 epochs=15 batch_size=8 loss_fn=deflowLoss "voxel_size=[0.2, 0.2, 0.2]" "point_cloud_range=[-51.2, -51.2, -3.2, 51.2, 51.2, 3.2]"
+python train.py model=flow4d lr=1e-3 epochs=15 batch_size=8 num_frames=5 loss_fn=deflowLoss "voxel_size=[0.2, 0.2, 0.2]" "point_cloud_range=[-51.2, -51.2, -3.2, 51.2, 51.2, 3.2]"
 ```
 
 Pretrained weight can be downloaded through:
@@ -248,5 +247,7 @@ And our excellent collaborators works as followings:
   year={2025}
 }
 ```
+
+Feel free to contribute your method and add your bibtex here by pull request!
 
 ❤️: [BucketedSceneFlowEval](https://github.com/kylevedder/BucketedSceneFlowEval); [Pointcept](https://github.com/Pointcept/Pointcept); [ZeroFlow](https://github.com/kylevedder/zeroflow) ...

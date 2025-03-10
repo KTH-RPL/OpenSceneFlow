@@ -75,7 +75,7 @@ def run_cluster(
                     del f[key]['label']
                 f[key].create_dataset('label', data=np.array(cluster_label).astype(np.int16))
         print(f"==> Scene {scene_id} finished, used: {(time.time() - start_time)/60:.2f} mins")
-    print(f"Data inside {str(data_path)} finished. Check the result with vis() function if you want to visualize them.")
+    print(f"Data inside {str(data_path)} finished. Check the result with tools/visulization.py if you want to visualize them.")
 
 def run_dufo(
     data_dir: str ="/home/kin/data/av2/preprocess/sensor/train",
