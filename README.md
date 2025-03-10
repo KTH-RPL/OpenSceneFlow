@@ -64,6 +64,9 @@ There are two ways to install the codebase: directly on your [local machine](#en
 ```bash
 git clone --recursive https://github.com/KTH-RPL/OpenSceneFlow.git
 cd OpenSceneFlow && mamba env create -f environment.yaml
+
+# You may need export your LD_LIBRARY_PATH with env lib
+# export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/home/kin/mambaforge/lib
 ```
 
 CUDA package (we already install nvcc compiler inside conda env), the compile time is around 1-5 minutes:
