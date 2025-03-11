@@ -43,35 +43,6 @@ Additionally, *OpenSceneFlow* integrates following excellent works: [ICLR'24 Zer
 
 </details>
 
-## Citation
-
-If you find *OpenSceneFlow* useful to your research, please cite our work as encouragement. (੭ˊ꒳​ˋ)੭✧
-
-```
-@article{khoche2025ssf,
-  title={SSF: Sparse Long-Range Scene Flow for Autonomous Driving},
-  author={Khoche, Ajinkya and Zhang, Qingwen and Sanchez, Laura Pereira and Asefaw, Aron and Mansouri, Sina Sharif and Jensfelt, Patric},
-  journal={arXiv preprint arXiv:2501.17821},
-  year={2025}
-}
-@inproceedings{zhang2024seflow,
-  author={Zhang, Qingwen and Yang, Yi and Li, Peizheng and Andersson, Olov and Jensfelt, Patric},
-  title={{SeFlow}: A Self-Supervised Scene Flow Method in Autonomous Driving},
-  booktitle={European Conference on Computer Vision (ECCV)},
-  year={2024},
-  pages={353–369},
-  organization={Springer},
-  doi={10.1007/978-3-031-73232-4_20},
-}
-@inproceedings{zhang2024deflow,
-  author={Zhang, Qingwen and Yang, Yi and Fang, Heng and Geng, Ruoyu and Jensfelt, Patric},
-  booktitle={2024 IEEE International Conference on Robotics and Automation (ICRA)}, 
-  title={{DeFlow}: Decoder of Scene Flow Network in Autonomous Driving}, 
-  year={2024},
-  pages={2105-2111},
-  doi={10.1109/ICRA57147.2024.10610278}
-}
-```
 💡: Want to learn how to add your own network in this structure? Check [Contribute section](assets/README.md#contribute) and know more about the code. Fee free to pull request and your bibtex [here](#cite-us) by pull request.
 
 ---
