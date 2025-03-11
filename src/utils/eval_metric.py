@@ -266,7 +266,7 @@ class OfficialMetrics:
         )
         for min_, max_ in list(zip(distance_split, distance_split[1:])):
             str_name = f"{int(min_)}-{int(max_)}" if max_ != np.inf else f"{int(min_)}-inf"
-            self.epe_ssf[str_name] = {"Static": [], "Dynamic": [], "NumPointsStatic": 0, "NumPointsDynamic": 0}
+            self.epe_ssf[str_name] = {"Static": [], "Dynamic": [], "#Static": 0, "#Dynamic": 0}
         
         self.num_occupied_voxels = []
 
@@ -321,7 +321,7 @@ class OfficialMetrics:
         self.norm_flag = True
 
         # ssf evaluation
-        self.epe_ssf['Mean'] = {"Static": [], "Dynamic": [], "NumPointsStatic": np.nan, "NumPointsDynamic": np.nan}
+        self.epe_ssf['Mean'] = {"Static": [], "Dynamic": [], "#Static": np.nan, "#Dynamic": np.nan}
         
         for motion in ["Static", "Dynamic"]:
             avg_epes, avg_diss, num_pts = self.distanceMatrix.get_class_entries(motion)
@@ -333,7 +333,7 @@ class OfficialMetrics:
                         min_, max_ = int(min_), int(max_) if max_ != "inf" else np.inf        
                         if max_ > avg_dis >= min_:
                             self.epe_ssf[dis_range_key][motion] = avg_epe
-                            self.epe_ssf[dis_range_key]["NumPoints"+motion] += num_pt
+                            self.epe_ssf[dis_range_key]["#"+motion] += num_pt
             
             self.epe_ssf['Mean'][motion] = np.nanmean(avg_epes)
 
@@ -351,11 +351,11 @@ class OfficialMetrics:
         printed_data = []
         for key in self.bucketed:
             printed_data.append([key, self.bucketed[key]['Static'], self.bucketed[key]['Dynamic']])
-        print("Version 2 Metric on Category-based:")
+        print("Version 2 Metric on Normalized Category-based:")
         print(tabulate(printed_data, headers=["Class", "Static", "Dynamic"], tablefmt='orgtbl'), "\n")
 
         printed_data = []
         for key in self.epe_ssf:
-            printed_data.append([key, self.epe_ssf[key]['Static'], self.epe_ssf[key]['Dynamic'], self.epe_ssf[key]['NumPointsStatic'], self.epe_ssf[key]['NumPointsDynamic']])
-        print("SSF Metric on Distance-based:")
-        print(tabulate(printed_data, headers=["Distance", "Static", "Dynamic", "NumPointsStatic", "NumPointsDynamic"], tablefmt='orgtbl'), "\n")
+            printed_data.append([key, np.around(self.epe_ssf[key]['Static'],4), np.around(self.epe_ssf[key]['Dynamic'],4), self.epe_ssf[key]["#Static"], self.epe_ssf[key]["#Dynamic"]])
+        print("Version 3 Metric on EPE Distance-based:")
+        print(tabulate(printed_data, headers=["Distance", "Static", "Dynamic", "#Static", "#Dynamic"], tablefmt='orgtbl'), "\n")
