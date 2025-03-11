@@ -1,22 +1,16 @@
 <p align="center">
-    <!-- pypi-strip -->
     <picture>
-    <!-- <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/Pointcept/Pointcept/main/docs/logo_dark.png">
-    <source media="(prefers-color-scheme: light)" srcset="https://raw.githubusercontent.com/Pointcept/Pointcept/main/docs/logo.png"> -->
-    <!-- /pypi-strip -->
     <img alt="opensceneflow" src="assets/docs/logo.png" width="600">
-    <!-- pypi-strip -->
     </picture><br>
-    <!-- /pypi-strip -->
 </p>
 
 OpenSceneFlow is a codebase for point cloud scene flow estimation. 
-It is also an official implementation of the following paper (sored by the time of publication):
+It is also an official implementation of the following papers (sored by the time of publication):
 
-<!-- - **Flow4D: Leveraging 4D Voxel Network for LiDAR Scene Flow Estimation**  
+- **Flow4D: Leveraging 4D Voxel Network for LiDAR Scene Flow Estimation**  
 *Jaeyeul Kim, Jungwan Woo, Ukcheol Shin, Jean Oh, Sunghoon Im*  
 IEEE Robotics and Automation Letters (**RA-L**) 2025  
-[ Backbone ] [ Supervised ] - [ [arXiv](https://arxiv.org/abs/2407.07995) ] [ [Project](https://github.com/dgist-cvlab/Flow4D) ] &rarr; [here](#flow4d) -->
+[ Backbone ] [ Supervised ] - [ [arXiv](https://arxiv.org/abs/2407.07995) ] [ [Project](https://github.com/dgist-cvlab/Flow4D) ] &rarr; [here](#flow4d)
 
 - **SSF: Sparse Long-Range Scene Flow for Autonomous Driving**  
 *Ajinkya Khoche, Qingwen Zhang, Laura Pereira Sánchez, Aron Asefaw, Sina Sharif Mansouri and Patric Jensfelt*  
@@ -34,15 +28,18 @@ International Conference on Robotics and Automation (**ICRA**) 2024
 [ Backbone ] [ Supervised ] - [ [arXiv](https://arxiv.org/abs/2401.16122) ] [ [Project](https://github.com/KTH-RPL/DeFlow) ] &rarr; [here](#deflow)
 
 
+💞 If you find *OpenSceneFlow* useful to your research, please cite [**our works** 📖](#cite-us) and give a star 🌟 as encouragement. (੭ˊ꒳​ˋ)੭✧
 
-<details> <summary>🎁 <b>One repository, All methods!</b> </summary>
+🎁 <b>One repository, All methods!</b>
+Additionally, *OpenSceneFlow* integrates following excellent works: [ICLR'24 ZeroFlow](https://arxiv.org/abs/2305.10424), [ICCV'23 FastNSF](https://arxiv.org/abs/2304.09121), [RA-L'21 FastFlow](https://arxiv.org/abs/2103.01306), [NeurIPS'21 NSFP](https://arxiv.org/abs/2111.01253). (More on the way...)
 
-- [x] [FastFlow3d](https://arxiv.org/abs/2103.01306): RA-L 2021
+<details> <summary> Summary of them:</summary>
+
+- [x] [FastFlow3d](https://arxiv.org/abs/2103.01306): RA-L 2021, a basic backbone model.
 - [x] [ZeroFlow](https://arxiv.org/abs/2305.10424): ICLR 2024, their pre-trained weight can covert into our format easily through [the script](tools/zerof2ours.py).
 - [ ] [NSFP](https://arxiv.org/abs/2111.01253): NeurIPS 2021, faster 3x than original version because of [our CUDA speed up](assets/cuda/README.md), same (slightly better) performance. Done coding, public after review.
 - [ ] [FastNSF](https://arxiv.org/abs/2304.09121): ICCV 2023. Done coding, public after review.
-- [ ] [Flow4D](https://arxiv.org/abs/2407.07995): Under Review. Done coding, public after review.
-- [ ] ... more on the way
+- [ ] [ICP-Flow](https://arxiv.org/abs/2402.17351): CVPR 2024. Done coding, public after review.
 
 </details>
 
@@ -75,27 +72,33 @@ If you find *OpenSceneFlow* useful to your research, please cite our work as enc
   doi={10.1109/ICRA57147.2024.10610278}
 }
 ```
+💡: Want to learn how to add your own network in this structure? Check [Contribute section](assets/README.md#contribute) and know more about the code. Fee free to pull request and your bibtex [here](#cite-us) by pull request.
 
 ---
 
-📜 Changelog:
+<!-- 📜 Changelog:
 
 - 🎁 2025/1/28 14:58: Update the codebase to collect all methods in one repository reference [Pointcept](https://github.com/Pointcept/Pointcept) repo.
 - 🤗 2024/11/18 16:17: Update model and demo data download link through HuggingFace, Personally I found `wget` from HuggingFace link is much faster than Zenodo.
 - 2024/09/26 16:24: All codes already uploaded and tested. You can to try training directly by downloading (through [HuggingFace](https://huggingface.co/kin-zhang/OpenSceneFlow)/[Zenodo](https://zenodo.org/records/13744999)) demo data or pretrained weight for evaluation. 
 - 2024/07/24: Merging SeFlow & DeFlow code together, lighter setup and easier running.
-- 🔥 2024/07/02: Check the self-supervised version in our new ECCV'24 [SeFlow](https://github.com/KTH-RPL/SeFlow). The 1st ranking in new leaderboard among self-supervise methods.
+- 🔥 2024/07/02: Check the self-supervised version in our new ECCV'24 [SeFlow](https://github.com/KTH-RPL/SeFlow). The 1st ranking in new leaderboard among self-supervise methods. -->
 
 ## 0. Installation
 
-**Environment**: Setup
+There are two ways to install the codebase: directly on your [local machine](#environment-setup) or in a [Docker container](#docker-recommended-for-isolation).
+
+### Environment Setup
 
 ```bash
 git clone --recursive https://github.com/KTH-RPL/OpenSceneFlow.git
 cd OpenSceneFlow && mamba env create -f environment.yaml
+
+# You may need export your LD_LIBRARY_PATH with env lib
+# export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/home/kin/mambaforge/lib
 ```
 
-CUDA package (need install nvcc compiler), the compile time is around 1-5 minutes:
+CUDA package (we already install nvcc compiler inside conda env), the compile time is around 1-5 minutes:
 ```bash
 mamba activate opensf
 # CUDA already install in python environment. I also tested others version like 11.3, 11.4, 11.7, 11.8 all works
@@ -103,33 +106,61 @@ cd assets/cuda/mmcv && python ./setup.py install && cd ../../..
 cd assets/cuda/chamfer3D && python ./setup.py install && cd ../../..
 ```
 
-<!-- Or you always can choose [Docker](https://en.wikipedia.org/wiki/Docker_(software)) which isolated environment and free yourself from installation, you can pull it by. 
-If you have different arch, please build it by yourself `cd OpenSceneFlow && docker build -t zhangkin/opensf` by going through [build-docker-image](assets/README.md/#build-docker-image) section.
+### Docker (Recommended for Isolation)
+
+You always can choose [Docker](https://en.wikipedia.org/wiki/Docker_(software)) which isolated environment and free yourself from installation. Pull the pre-built Docker image or build manually.
+
 ```bash
 # option 1: pull from docker hub
-docker pull zhangkin/seflow
+docker pull zhangkin/opensf
 
 # run container
-docker run -it --gpus all -v /dev/shm:/dev/shm -v /home/kin/data:/home/kin/data --name seflow zhangkin/seflow /bin/zsh
-``` -->
+docker run -it --gpus all -v /dev/shm:/dev/shm -v /home/kin/data:/home/kin/data --name opensceneflow zhangkin/opensf /bin/zsh
+# and better to read your own gpu device info to compile the cuda extension again:
+cd /home/kin/workspace/OpenSceneFlow/assets/cuda/mmcv && /opt/conda/envs/opensf/bin/python ./setup.py install
+cd /home/kin/workspace/OpenSceneFlow/assets/cuda/chamfer3D && /opt/conda/envs/opensf/bin/python ./setup.py install
 
+mamba activate opensf
+```
+
+If you prefer to build the Docker image by yourself, Check [build-docker-image](assets/README.md#build-docker-image) section for more details.
 
 ## 1. Data Preparation
 
-Check [dataprocess/README.md](dataprocess/README.md#argoverse-20) for downloading tips for the raw Argoverse 2 dataset and [data preprocessed to h5 files commands](dataprocess/README.md#process).
-Another good way to try code quickly is using **mini processed dataset**, we directly provide one scene inside `train` and `val`. 
-It already converted to `.h5` format and processed with the label data. 
-You can download it from [Zenodo](https://zenodo.org/records/13744999/files/demo_data.zip)/[HuggingFace](https://huggingface.co/kin-zhang/OpenSceneFlow/blob/main/demo_data.zip) and extract it to the data folder. 
-Then you can directly use this mini processed demo data to run the [training script](#2-quick-start).
+Refer to [dataprocess/README.md](dataprocess/README.md) for dataset download instructions. Currently, we support **Argoverse 2**, **Waymo**, and **custom datasets** (more datasets will be added in the future). 
+
+After downloading, convert the raw data to `.h5` format for easy training, evaluation, and visualization. Follow the steps in [dataprocess/README.md#process](dataprocess/README.md#process). 
+
+For a quick start, use our **mini processed dataset**, which includes one scene in `train` and `val`. It is pre-converted to `.h5` format with label data ([Zenodo](https://zenodo.org/records/13744999/files/demo_data.zip)/[HuggingFace](https://huggingface.co/kin-zhang/OpenSceneFlow/blob/main/demo_data.zip)).
+
 
 ```bash
 wget https://huggingface.co/kin-zhang/OpenSceneFlow/resolve/main/demo_data.zip
-unzip demo_data.zip -p /home/kin/data/av2
+unzip demo_data.zip -d /home/kin/data/av2/h5py
 ```
+
+Once extracted, you can directly use this dataset to run the [training script](#2-quick-start) without further processing.
 
 ## 2. Quick Start
 
-<!-- ### Flow4D -->
+Don't forget to active Python environment before running the code.
+
+```bash
+mamba activate opensf
+```
+
+### Flow4D
+
+Train Flow4D with the leaderboard submit config. [Runtime: Around 18 hours in 4x RTX 3090 GPUs.]
+
+```bash
+python train.py model=flow4d lr=1e-3 epochs=15 batch_size=8 num_frames=5 loss_fn=deflowLoss "voxel_size=[0.2, 0.2, 0.2]" "point_cloud_range=[-51.2, -51.2, -3.2, 51.2, 51.2, 3.2]"
+```
+
+Pretrained weight can be downloaded through:
+```bash
+wget https://huggingface.co/kin-zhang/OpenSceneFlow/resolve/main/flow4d_best.ckpt
+```
 
 ### SSF
 
@@ -150,7 +181,7 @@ wget https://huggingface.co/kin-zhang/OpenSceneFlow/resolve/main/ssf_best.ckpt
 Train SeFlow needed to specify the loss function, we set the config of our best model in the leaderboard. [Runtime: Around 11 hours in 4x A100 GPUs.]
 
 ```bash
-python train.py model=deflow lr=2e-4 epochs=9 batch_size=16 loss_fn=seflowLoss "add_seloss={chamfer_dis: 1.0, static_flow_loss: 1.0, dynamic_chamfer_dis: 1.0, cluster_based_pc0pc1: 1.0}" "model.target.num_iters=2" "model.val_monitor=val/Dynamic/Mean"
+python train.py model=deflow lr=2e-4 epochs=9 batch_size=16 loss_fn=seflowLoss "add_seloss={chamfer_dis: 1.0, static_flow_loss: 1.0, dynamic_chamfer_dis: 1.0, cluster_based_pc0pc1: 1.0}" "model.target.num_iters=2"
 ```
 
 Pretrained weight can be downloaded through:
@@ -222,12 +253,66 @@ python tools/visualization.py --res_name 'seflow_best' --data_dir /home/kin/data
 
 https://github.com/user-attachments/assets/f031d1a2-2d2f-4947-a01f-834ed1c146e6
 
+Or another way to interact with [rerun](https://github.com/rerun-io/rerun) but please only vis scene by scene, not all at once.
 
-## Acknowledgement
+```bash
+python tools/visualization_rerun.py --data_dir /home/kin/data/av2/h5py/demo/train --res_name "['flow', 'deflow']"
+```
 
-These work were partially supported by the Wallenberg AI, Autonomous Systems and Software Program (WASP) funded by the Knut and Alice Wallenberg Foundation and Prosense (2020-02963) funded by Vinnova. 
-The computations were enabled by the supercomputing resource Berzelius provided by National Supercomputer Centre at Linköping University and the Knut and Alice Wallenberg Foundation, Sweden.
+https://github.com/user-attachments/assets/07e8d430-a867-42b7-900a-11755949de21
 
-<!-- *OpenSceneFlow* is designed by [Qingwen Zhang](https://kin-zhang.github.io/). It  -->
 
-❤️: Evaluation Metric from [BucketedSceneFlowEval](https://github.com/kylevedder/BucketedSceneFlowEval); README reference from [Pointcept](https://github.com/Pointcept/Pointcept); Many thanks to [ZeroFlow](https://github.com/kylevedder/zeroflow) ...
+## Cite Us
+
+*OpenSceneFlow* is designed by [Qingwen Zhang](https://kin-zhang.github.io/) from DeFlow and SeFlow project. If you find it useful, please cite our works:
+
+```bibtex
+@inproceedings{zhang2024seflow,
+  author={Zhang, Qingwen and Yang, Yi and Li, Peizheng and Andersson, Olov and Jensfelt, Patric},
+  title={{SeFlow}: A Self-Supervised Scene Flow Method in Autonomous Driving},
+  booktitle={European Conference on Computer Vision (ECCV)},
+  year={2024},
+  pages={353–369},
+  organization={Springer},
+  doi={10.1007/978-3-031-73232-4_20},
+}
+@inproceedings{zhang2024deflow,
+  author={Zhang, Qingwen and Yang, Yi and Fang, Heng and Geng, Ruoyu and Jensfelt, Patric},
+  booktitle={2024 IEEE International Conference on Robotics and Automation (ICRA)}, 
+  title={{DeFlow}: Decoder of Scene Flow Network in Autonomous Driving}, 
+  year={2024},
+  pages={2105-2111},
+  doi={10.1109/ICRA57147.2024.10610278}
+}
+@article{zhang2025himu,
+    title={HiMo: High-Speed Objects Motion Compensation in Point Cloud},
+    author={Zhang, Qingwen and Khoche, Ajinkya and Yang, Yi and Ling, Li and Sina, Sharif Mansouri and Andersson, Olov and Jensfelt, Patric},
+    year={2025},
+    journal={arXiv preprint arXiv:2503.00803},
+}
+```
+
+And our excellent collaborators works as followings:
+
+```bibtex
+@article{kim2025flow4d,
+  author={Kim, Jaeyeul and Woo, Jungwan and Shin, Ukcheol and Oh, Jean and Im, Sunghoon},
+  journal={IEEE Robotics and Automation Letters}, 
+  title={Flow4D: Leveraging 4D Voxel Network for LiDAR Scene Flow Estimation}, 
+  year={2025},
+  volume={10},
+  number={4},
+  pages={3462-3469},
+  doi={10.1109/LRA.2025.3542327}
+}
+@article{khoche2025ssf,
+  title={SSF: Sparse Long-Range Scene Flow for Autonomous Driving},
+  author={Khoche, Ajinkya and Zhang, Qingwen and Sanchez, Laura Pereira and Asefaw, Aron and Mansouri, Sina Sharif and Jensfelt, Patric},
+  journal={arXiv preprint arXiv:2501.17821},
+  year={2025}
+}
+```
+
+Feel free to contribute your method and add your bibtex here by pull request!
+
+❤️: [BucketedSceneFlowEval](https://github.com/kylevedder/BucketedSceneFlowEval); [Pointcept](https://github.com/Pointcept/Pointcept); [ZeroFlow](https://github.com/kylevedder/zeroflow) ...

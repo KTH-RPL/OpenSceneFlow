@@ -35,6 +35,7 @@ from collections import defaultdict
 import pickle
 from zipfile import ZipFile
 import pandas as pd
+from copy import deepcopy
 
 import os, sys
 BASE_DIR = os.path.abspath(os.path.join( os.path.dirname( __file__ ), '..' ))
@@ -132,23 +133,49 @@ def compute_sceneflow(data_dir: Path, log_id: str, timestamps: Tuple[int, int]) 
         valid = np.ones(len(sweeps[0].xyz), dtype=np.bool_)
         # classes = -np.ones(len(sweeps[0].xyz), dtype=np.int8)
         classes = np.zeros(len(sweeps[0].xyz), dtype=np.uint8)
+
+        # # old version
+        # for id in cuboids[0]:
+        #     c0 = cuboids[0][id]
+        #     c0.length_m += BOUNDING_BOX_EXPANSION # the bounding boxes are a little too tight and some points are missed
+        #     c0.width_m += BOUNDING_BOX_EXPANSION
+        #     obj_pts, obj_mask = c0.compute_interior_points(sweeps[0].xyz)
+        #     classes[obj_mask] = CATEGORY_TO_INDEX[str(c0.category)]
         
+        #     if id in cuboids[1]:
+        #         c1 = cuboids[1][id]
+        #         c1_SE3_c0 = c1.dst_SE3_object.compose(c0.dst_SE3_object.inverse())
+        #         obj_flow = c1_SE3_c0.transform_point_cloud(obj_pts) - obj_pts
+        #         flow[obj_mask] = obj_flow.astype(np.float32)
+        #     else:
+        #         valid[obj_mask] = 0
+
+        # NOTE(HiMo): box expansion based on the object velocity
+        # check more detail: https://kin-zhang.github.io/HiMo
         for id in cuboids[0]:
-            c0 = cuboids[0][id]
-            c0.length_m += BOUNDING_BOX_EXPANSION # the bounding boxes are a little too tight and some points are missed
-            c0.width_m += BOUNDING_BOX_EXPANSION
+            c0 = deepcopy(cuboids[0][id])
             obj_pts, obj_mask = c0.compute_interior_points(sweeps[0].xyz)
-            classes[obj_mask] = CATEGORY_TO_INDEX[str(c0.category)]
-        
             if id in cuboids[1]:
                 c1 = cuboids[1][id]
+                c1_SE3_c0_ego_frame = ego1_SE3_ego0.inverse().compose(c1.dst_SE3_object.compose(c0.dst_SE3_object.inverse()))
+                rel_obj_flow = c1_SE3_c0_ego_frame.transform_point_cloud(obj_pts) - obj_pts
+                delta_move = abs(np.linalg.norm(rel_obj_flow, axis=0).mean())
+
+                if delta_move > 0.04: # only when it's moving
+                    c0 = cuboids[0][id]
+                    c0.length_m += (BOUNDING_BOX_EXPANSION + min(delta_move/2, 2)) # since 180/360 for two LiDARs orientation
+                    c0.width_m += BOUNDING_BOX_EXPANSION
+                    c0.height_m += BOUNDING_BOX_EXPANSION
+                obj_pts, obj_mask = c0.compute_interior_points(sweeps[0].xyz)
+
+                # NOTE(Qingwen): after expansion, we need to recompute the flow
                 c1_SE3_c0 = c1.dst_SE3_object.compose(c0.dst_SE3_object.inverse())
                 obj_flow = c1_SE3_c0.transform_point_cloud(obj_pts) - obj_pts
+                classes[obj_mask] = CATEGORY_TO_INDEX[str(c0.category)]
                 flow[obj_mask] = obj_flow.astype(np.float32)
             else:
                 valid[obj_mask] = 0
         return flow, classes, valid, ego1_SE3_ego0
-
     sweeps = [Sweep.from_feather(data_dir / log_id / "sensors" / "lidar" / f"{ts}.feather") for ts in timestamps]
 
     # ================== Load annotations ==================

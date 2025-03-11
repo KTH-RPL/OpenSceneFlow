@@ -5,11 +5,11 @@ defaults:
   
 slurm_id: 00000
 
-wandb_mode: offline # [offline, disabled, online]
+wandb_mode: disabled # [offline, disabled, online]
 wandb_project_name: seflow
 
-train_data: /home/kin/data/av2/preprocess_v2/demo/sensor/train
-val_data: /home/kin/data/av2/preprocess_v2/demo/sensor/val
+train_data: /home/kin/data/av2/h5py/demo/train
+val_data: /home/kin/data/av2/h5py/demo/val
 
 output: ${model.name}-${slurm_id}
 

@@ -1,5 +1,5 @@
 
-dataset_path: /home/kin/data/av2/preprocess_v2/sensor
+dataset_path: /home/kin/data/av2/h5py/sensor
 checkpoint: /home/kin/model_zoo/deflow.ckpt
 av2_mode: val # [val, test]
 save_res: False # [True, False]
