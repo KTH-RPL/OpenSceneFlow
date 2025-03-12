@@ -35,9 +35,9 @@ dependencies:
     - av2==0.2.1
     - dufomap==1.0.0
     - spconv-cu117==2.3.6
-    - mmengine-lite
-    - torch_scatter
-
+    # - mmengine-lite
+    # - torch-scatter==2.1.2
+    
 # Reason about the version fixed:
 # setuptools==68.5.1: https://github.com/aws-neuron/aws-neuron-sdk/issues/893
 # mkl==2024.0.0: https://github.com/pytorch/pytorch/issues/123097#issue-2218541307
@@ -46,3 +46,4 @@ dependencies:
 # open3d==0.18.0: because 0.17.0 have bug on set the view json file
 # dufomap==1.0.0: in case later updating may not compatible with the code.
 # spconv-cu117==2.3.6: avoid error: KeyError: ((16, 8, 8), float, float)
+# torch-scatter==2.1.2: in case later updating may not compatible with the code.

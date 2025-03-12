@@ -12,10 +12,10 @@
 import torch.nn as nn
 import dztimer, torch
 
-from .basic.unet import FastFlow3DUNet
 from .basic.sparse_unet import SimpleSparseUNet
-from .basic.encoder import DynamicVoxelizer, DynamicScatterVFE 
-from .basic.decoder import SimpleLinearDecoder, LinearDecoder
+from .basic.encoder import DynamicVoxelizer
+from .basic.ssf_module import DynamicScatterVFE
+from .basic.decoder import SimpleLinearDecoder
 from .basic import cal_pose0to1
 
 class SSF(nn.Module):

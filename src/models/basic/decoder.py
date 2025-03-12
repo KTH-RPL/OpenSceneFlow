@@ -1,7 +1,6 @@
 import torch
 import torch.nn as nn
-from typing import List, Tuple, Dict
-from . import ConvWithNorms
+from typing import List, Dict
 
 SPLIT_BATCH_SIZE = 512
 

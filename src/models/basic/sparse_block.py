@@ -1,8 +1,8 @@
 # Copyright (c) OpenMMLab. All rights reserved.
-from assets.cuda.mmcv import build_conv_layer, build_norm_layer
+from assets.cuda.mmdet import BasicBlock, Bottleneck, build_norm_layer, build_conv_layer
 from torch import nn
 from spconv.pytorch import SparseModule, SparseSequential
-from assets.mmdet import BasicBlock, Bottleneck
+
 
 def replace_feature(out, new_features):
     if 'replace_feature' in out.__dir__():
