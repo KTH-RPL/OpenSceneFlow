@@ -12,10 +12,10 @@ We've updated the process dataset for:
 - [x] Waymo: check [here](#waymo-dataset). The process script was involved from [SeFlow](https://github.com/KTH-RPL/SeFlow).
 - [ ] nuScenes: done coding, public after review. Will be involved later by another paper.
 
-If you want to use all datasets above, there is a specific process environment in [envprocess.yaml](../envprocess.yaml) to install all the necessary packages. As Waymo package have different configuration and conflict with the main environment. Setup through the following command:
+If you want to use all datasets above, there is a specific process environment in [envsftool.yaml](../envsftool.yaml) to install all the necessary packages. As Waymo package have different configuration and conflict with the main environment. Setup through the following command:
 
 ```bash
-conda env create -f envprocess.yaml
+conda env create -f envsftool.yaml
 conda activate sftool
 # NOTE we need **manually reinstall numpy** (higher than 1.22)
 # * since waymo package force numpy==1.21.5, BUT!
@@ -28,7 +28,7 @@ pip install numpy==1.22
 
 ### Argoverse 2.0
 
-Install their download tool `s5cmd`, already in our envprocess.yaml. Then download the dataset:
+Install their download tool `s5cmd`, already in our envsftool.yaml. Then download the dataset:
 ```bash
 # train is really big (750): totally 966 GB
 s5cmd --numworkers 12 --no-sign-request cp "s3://argoverse/datasets/av2/sensor/train/*" av2/sensor/train 

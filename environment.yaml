@@ -28,12 +28,13 @@ dependencies:
   - setuptools==69.5.1
   - gxx_linux-64==11.4.0
   - pathtools
+  - rerun-sdk
   - pip:
     - open3d==0.18.0
     - dztimer
     - av2==0.2.1
     - dufomap==1.0.0
-    - spconv-cu117
+    - spconv-cu117==2.3.6
     - mmengine-lite
     - torch_scatter
 
@@ -44,3 +45,4 @@ dependencies:
 # lightning==2.0.1: https://stackoverflow.com/questions/76647518/how-to-fix-error-cannot-import-name-modelmetaclass-from-pydantic-main
 # open3d==0.18.0: because 0.17.0 have bug on set the view json file
 # dufomap==1.0.0: in case later updating may not compatible with the code.
+# spconv-cu117==2.3.6: avoid error: KeyError: ((16, 8, 8), float, float)

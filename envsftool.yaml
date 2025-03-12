@@ -16,7 +16,6 @@ dependencies:
   - fire
   - hdbscan
   - s5cmd
-  - rerun-sdk
   - pip:
     - nuscenes-devkit
     - av2==0.2.1

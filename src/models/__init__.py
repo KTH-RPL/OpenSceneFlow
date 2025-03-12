@@ -13,18 +13,18 @@ warnings.simplefilter(action="ignore", category=FutureWarning)
 from .deflow import DeFlow
 from .fastflow3d import FastFlow3D
 
-# following need install extra package:
-# * pip install torch_scatter mmengine-lite
-try:
-    from .ssf import SSF
-except ImportError as e:
-    print("\033[93m--- WARNING [model]: Model with torch scatter is not imported, as it requires some lib which is not installed.")
-    print(f"\033[91m--- Detail error message\033[0m: {e}")
-
 # following need install extra package: 
 # * pip install spconv-cu117
 try:
     from .flow4d import Flow4D
 except ImportError as e:
     print("\033[93m--- WARNING [model]: Model with SparseConv is not imported, as it requires spconv lib which is not installed.")
+    print(f"\033[91m--- Detail error message\033[0m: {e}")
+
+# following need install extra package:
+# * pip install torch_scatter mmengine-lite
+try:
+    from .ssf import SSF
+except ImportError as e:
+    print("\033[93m--- WARNING [model]: Model with torch scatter is not imported, as it requires some lib which is not installed.")
     print(f"\033[91m--- Detail error message\033[0m: {e}")

@@ -1,8 +1,12 @@
 <p align="center">
+    <a href="https://github.com/KTH-RPL/OpenSceneFlow">
     <picture>
     <img alt="opensceneflow" src="assets/docs/logo.png" width="600">
     </picture><br>
+    </a>
 </p>
+
+💞 If you find [*OpenSceneFlow*](https://github.com/KTH-RPL/OpenSceneFlow) useful to your research, please cite [**our works** 📖](#cite-us) and give a star 🌟 as encouragement. (੭ˊ꒳​ˋ)੭✧
 
 OpenSceneFlow is a codebase for point cloud scene flow estimation. 
 It is also an official implementation of the following papers (sored by the time of publication):
@@ -26,9 +30,6 @@ European Conference on Computer Vision (**ECCV**) 2024
 *Qingwen Zhang, Yi Yang, Heng Fang, Ruoyu Geng, Patric Jensfelt*  
 International Conference on Robotics and Automation (**ICRA**) 2024  
 [ Backbone ] [ Supervised ] - [ [arXiv](https://arxiv.org/abs/2401.16122) ] [ [Project](https://github.com/KTH-RPL/DeFlow) ] &rarr; [here](#deflow)
-
-
-💞 If you find *OpenSceneFlow* useful to your research, please cite [**our works** 📖](#cite-us) and give a star 🌟 as encouragement. (੭ˊ꒳​ˋ)੭✧
 
 🎁 <b>One repository, All methods!</b>
 Additionally, *OpenSceneFlow* integrates following excellent works: [ICLR'24 ZeroFlow](https://arxiv.org/abs/2305.10424), [ICCV'23 FastNSF](https://arxiv.org/abs/2304.09121), [RA-L'21 FastFlow](https://arxiv.org/abs/2103.01306), [NeurIPS'21 NSFP](https://arxiv.org/abs/2111.01253). (More on the way...)
@@ -114,7 +115,8 @@ Once extracted, you can directly use this dataset to run the [training script](#
 
 ## 2. Quick Start
 
-Don't forget to active Python environment before running the code.
+Don't forget to active Python environment before running the code. 
+If you want to use [wandb](wandb.ai), replace all `entity="kth-rpl",` to your own entity otherwise tensorboard will be used locally.
 
 ```bash
 mamba activate opensf
@@ -286,4 +288,4 @@ And our excellent collaborators works as followings:
 
 Feel free to contribute your method and add your bibtex here by pull request!
 
-❤️: [BucketedSceneFlowEval](https://github.com/kylevedder/BucketedSceneFlowEval); [Pointcept](https://github.com/Pointcept/Pointcept); [ZeroFlow](https://github.com/kylevedder/zeroflow) ...
+❤️: [BucketedSceneFlowEval](https://github.com/kylevedder/BucketedSceneFlowEval); [Pointcept](https://github.com/Pointcept/Pointcept); [OpenPCSeg](https://github.com/BAI-Yeqi/OpenPCSeg); [ZeroFlow](https://github.com/kylevedder/zeroflow) ...

@@ -14,6 +14,7 @@ I tried half hour to find the solution... and note down here for other readers:
 2. Then I checked cumm/gemm file: # ((16, 8, 8), dtypes.float32, dtypes.float32): MmaM16N8K8F32((8, 0)),
 3. This line is commented that's why float32 float 32 is KeyError
 4. And I didn't find a solution to have cumm/gemm work out. But change all algorithm on layers to: spconv.ConvAlgo.Native
+5. 2025/03/12 (Qingwen): Another way to solve it is limit `spconv-cu117==2.3.6` and make sure you didn't have any version in local python environment.
 
 This file is originally copied from: https://github.com/dgist-cvlab/Flow4D
 with some modifications to have unified format with all benchmark. Check above changelog I made.
@@ -114,20 +115,20 @@ class DynamicEmbedder_4D(nn.Module):
     
 def conv1x1x1x3(in_planes, out_planes, stride=1, indice_key=None):
     return spconv.SubMConv4d(in_planes, out_planes, kernel_size=(1,1,1,3), stride=stride,
-                             padding=(0,0,0,1), bias=False, indice_key=indice_key, algo=spconv.ConvAlgo.Native)
+                             padding=(0,0,0,1), bias=False, indice_key=indice_key)
 
 def conv3x3x3x1(in_planes, out_planes, stride=1, indice_key=None):
     return spconv.SubMConv4d(in_planes, out_planes, kernel_size=(3,3,3,1), stride=stride,
-                             padding=(1,1,1,0), bias=False, indice_key=indice_key, algo=spconv.ConvAlgo.Native)
+                             padding=(1,1,1,0), bias=False, indice_key=indice_key)
 
 def conv1x1x1x1(in_planes, out_planes, stride=1, indice_key=None):
     return spconv.SubMConv4d(in_planes, out_planes, kernel_size=(1,1,1,1), stride=stride,
-                             padding=0, bias=False, indice_key=indice_key, algo=spconv.ConvAlgo.Native)
+                             padding=0, bias=False, indice_key=indice_key)
 
 
 def conv3x3x3x3(in_planes, out_planes, stride=1, indice_key=None):
     return spconv.SubMConv4d(in_planes, out_planes, kernel_size=(3,3,3,3), stride=stride,
-                             padding=(1,1,1,1), bias=False, indice_key=indice_key, algo=spconv.ConvAlgo.Native)
+                             padding=(1,1,1,1), bias=False, indice_key=indice_key)
 
 
 class Seperate_to_3D(nn.Module):
@@ -185,9 +186,9 @@ class SpatioTemporal_Decomposition_Block(nn.Module):
 
         if self.pooling:
             if z_pooling == True:
-                self.pool = spconv.SparseConv4d(out_filters, out_filters, kernel_size=(2,2,2,1), stride=(2,2,2,1), indice_key=down_key, bias=False, algo=spconv.ConvAlgo.Native)
+                self.pool = spconv.SparseConv4d(out_filters, out_filters, kernel_size=(2,2,2,1), stride=(2,2,2,1), indice_key=down_key, bias=False)
             else:
-                self.pool = spconv.SparseConv4d(out_filters, out_filters, kernel_size=(2,2,1,1), stride=(2,2,1,1), indice_key=down_key, bias=False, algo=spconv.ConvAlgo.Native)
+                self.pool = spconv.SparseConv4d(out_filters, out_filters, kernel_size=(2,2,1,1), stride=(2,2,1,1), indice_key=down_key, bias=False)
 
         self.weight_initialization()
 
@@ -259,16 +260,16 @@ class Network_4D(nn.Module):
 
         self.STDB_5_1_1 = SpatioTemporal_Block(model_size*4, model_size*4, model_size*4, indice_key="st5_1")
         self.STDB_5_1_2 = SpatioTemporal_Block(model_size*4, model_size*4, model_size*4, indice_key="st5_1")
-        self.up_subm_5 = spconv.SparseInverseConv4d(model_size*4, model_size*4, kernel_size=(2,2,1,1), indice_key='floor4', bias=False, algo=spconv.ConvAlgo.Native) #zpooling false
+        self.up_subm_5 = spconv.SparseInverseConv4d(model_size*4, model_size*4, kernel_size=(2,2,1,1), indice_key='floor4', bias=False) #zpooling false
 
         self.STDB_4_2_1 = SpatioTemporal_Block(model_size*8, model_size*8, model_size*4, indice_key="st4_2")
-        self.up_subm_4 = spconv.SparseInverseConv4d(model_size*4, model_size*4, kernel_size=(2,2,2,1), indice_key='floor3', bias=False, algo=spconv.ConvAlgo.Native)
+        self.up_subm_4 = spconv.SparseInverseConv4d(model_size*4, model_size*4, kernel_size=(2,2,2,1), indice_key='floor3', bias=False)
 
         self.STDB_3_2_1 = SpatioTemporal_Block(model_size*8, model_size*8, model_size*4, indice_key="st3_2")
-        self.up_subm_3 = spconv.SparseInverseConv4d(model_size*4, model_size*4, kernel_size=(2,2,2,1), indice_key='floor2', bias=False, algo=spconv.ConvAlgo.Native)
+        self.up_subm_3 = spconv.SparseInverseConv4d(model_size*4, model_size*4, kernel_size=(2,2,2,1), indice_key='floor2', bias=False)
 
         self.STDB_2_2_1 = SpatioTemporal_Block(model_size*8, model_size*4, model_size*4, indice_key="st_2_2")
-        self.up_subm_2 = spconv.SparseInverseConv4d(model_size*4, model_size*2, kernel_size=(2,2,2,1), indice_key='floor1', bias=False, algo=spconv.ConvAlgo.Native)
+        self.up_subm_2 = spconv.SparseInverseConv4d(model_size*4, model_size*2, kernel_size=(2,2,2,1), indice_key='floor1', bias=False)
 
         self.STDB_1_2_1 = SpatioTemporal_Block(model_size*4, model_size*2, out_channel, indice_key="st_1_2")
         
