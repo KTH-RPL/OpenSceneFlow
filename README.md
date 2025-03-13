@@ -138,7 +138,7 @@ wget https://huggingface.co/kin-zhang/OpenSceneFlow/resolve/main/flow4d_best.ckp
 
 ### SSF
 
-Extra pakcge needed by installed for SSF model:
+Extra pakcges needed for SSF model:
 ```bash
 pip install mmengine-lite torch-scatter
 ```

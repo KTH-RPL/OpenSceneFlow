@@ -215,7 +215,7 @@ class ModelWrapper(LightningModule):
             # Save the dictionaries to a pickle file
             with open(str(self.save_res_path)+'.pkl', 'wb') as f:
                 pickle.dump((self.metrics.epe_3way, self.metrics.bucketed, self.metrics.epe_ssf, self.metrics.mean_num_occupied_voxels), f)
-            print(f"We already write the flow_est into the dataset, please run following commend to visualize the flow. Copy and paste it to your terminal:")
+            print(f"We already write the {self.vis_name} into the dataset, please run following commend to visualize the flow. Copy and paste it to your terminal:")
             print(f"python tools/visualization.py --res_name '{self.vis_name}' --data_dir {self.dataset_path}")
             print(f"Enjoy! ^v^ ------ \n")
 
