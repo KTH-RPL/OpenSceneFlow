@@ -44,7 +44,7 @@ Additionally, *OpenSceneFlow* integrates following excellent works: [ICLR'24 Zer
 
 </details>
 
-💡: Want to learn how to add your own network in this structure? Check [Contribute section](assets/README.md#contribute) and know more about the code. Fee free to pull request and your bibtex [here](#cite-us) by pull request.
+💡: Want to learn how to add your own network in this structure? Check [Contribute section](assets/README.md#contribute) and know more about the code. Fee free to pull request and your bibtex [here](#cite-us).
 
 ---
 
@@ -247,7 +247,8 @@ https://github.com/user-attachments/assets/07e8d430-a867-42b7-900a-11755949de21
 
 ## Cite Us
 
-*OpenSceneFlow* is designed by [Qingwen Zhang](https://kin-zhang.github.io/) from DeFlow and SeFlow project. If you find it useful, please cite our works:
+[*OpenSceneFlow*](https://github.com/KTH-RPL/OpenSceneFlow) is originally designed by [Qingwen Zhang](https://kin-zhang.github.io/) from DeFlow and SeFlow. 
+If you find it useful, please cite our works:
 
 ```bibtex
 @inproceedings{zhang2024seflow,
@@ -275,7 +276,7 @@ https://github.com/user-attachments/assets/07e8d430-a867-42b7-900a-11755949de21
 }
 ```
 
-And our excellent collaborators works as followings:
+And our excellent collaborators works contributed to this codebase also:
 
 ```bibtex
 @article{kim2025flow4d,
@@ -296,6 +297,7 @@ And our excellent collaborators works as followings:
 }
 ```
 
+Thank you for your support! ❤️
 Feel free to contribute your method and add your bibtex here by pull request!
 
 ❤️: [BucketedSceneFlowEval](https://github.com/kylevedder/BucketedSceneFlowEval); [Pointcept](https://github.com/Pointcept/Pointcept); [OpenPCSeg](https://github.com/BAI-Yeqi/OpenPCSeg); [ZeroFlow](https://github.com/kylevedder/zeroflow) ...
