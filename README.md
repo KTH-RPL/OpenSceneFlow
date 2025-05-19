@@ -241,6 +241,18 @@ python tools/visualization_rerun.py --data_dir /home/kin/data/av2/h5py/demo/trai
 
 https://github.com/user-attachments/assets/07e8d430-a867-42b7-900a-11755949de21
 
+## **📊 Range-Wise Metric (New!)**
+In SSF paper, we introduce a new distance-based evaluation metric for scene flow estimation. Below is an example output for SSF, `point_cloud_range=204.8`m, `voxel_size=0.2`m
+
+| Distance  | Static    | Dynamic  | NumPointsStatic | NumPointsDynamic |
+|-----------|----------|----------|-----------------|------------------|
+| 0-35      | 0.00836  | 0.11546  | 3.33e+08        | 1.57e+07         |
+| 35-50     | 0.00910  | 0.16805  | 4.40e+07        | 703125           |
+| 50-75     | 0.01107  | 0.20448  | 3.25e+07        | 395398           |
+| 75-100    | 0.01472  | 0.24133  | 1.31e+07        | 145281           |
+| 100-inf   | 0.01970  | 0.30536  | 1.32e+07        | 171865           |
+| **Mean**  | 0.01259  | 0.20693  | NaN             | NaN              |
+
 
 ## Cite Us
 
