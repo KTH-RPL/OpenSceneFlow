@@ -11,6 +11,11 @@
 OpenSceneFlow is a codebase for point cloud scene flow estimation. 
 It is also an official implementation of the following papers (sored by the time of publication):
 
+- **HiMo: High-Speed Objects Motion Compensation in Point Clouds** (SeFlow++)   
+*Qingwen Zhang, Ajinkya Khoche, Yi Yang, Li Ling, Sina Sharif Mansouri, Olov Andersson, Patric Jensfelt*  
+Preprint; Under review; 2025   
+[ Strategy ] [ Self-Supervised ] - [ [arXiv](https://arxiv.org/abs/2503.00803) ] [ [Project](https://kin-zhang.github.io/HiMo/) ]
+
 - **Flow4D: Leveraging 4D Voxel Network for LiDAR Scene Flow Estimation**  
 *Jaeyeul Kim, Jungwan Woo, Ukcheol Shin, Jean Oh, Sunghoon Im*  
 IEEE Robotics and Automation Letters (**RA-L**) 2025  
@@ -197,7 +202,21 @@ python eval.py checkpoint=/home/kin/seflow_best.ckpt av2_mode=test leaderboard_v
 python eval.py checkpoint=/home/kin/seflow_best.ckpt av2_mode=test leaderboard_version=2
 ```
 
-To submit to the Online Leaderboard, if you select `av2_mode=test`, it should be a zip file for you to submit to the leaderboard.
+### **📊 Range-Wise Metric (New!)**
+In [SSF paper](https://arxiv.org/abs/2501.17821), we introduce a new distance-based evaluation metric for scene flow estimation. Below is an example output for SSF with point_cloud_range to 204.8m and voxel_size=0.2m. Check more long-range result in [SSF paper](https://arxiv.org/abs/2501.17821).
+
+| Distance  | Static    | Dynamic  | NumPointsStatic | NumPointsDynamic |
+|-----------|----------|----------|-----------------|------------------|
+| 0-35      | 0.00836  | 0.11546  | 3.33e+08        | 1.57e+07         |
+| 35-50     | 0.00910  | 0.16805  | 4.40e+07        | 703125           |
+| 50-75     | 0.01107  | 0.20448  | 3.25e+07        | 395398           |
+| 75-100    | 0.01472  | 0.24133  | 1.31e+07        | 145281           |
+| 100-inf   | 0.01970  | 0.30536  | 1.32e+07        | 171865           |
+| **Mean**  | 0.01259  | 0.20693  | NaN             | NaN              |
+
+
+### Submit result to public leaderboard
+To submit your result to the public Leaderboard, if you select `av2_mode=test`, it should be a zip file for you to submit to the leaderboard.
 Note: The leaderboard result in DeFlow&SeFlow main paper is [version 1](https://eval.ai/web/challenges/challenge-page/2010/evaluation), as [version 2](https://eval.ai/web/challenges/challenge-page/2210/overview) is updated after DeFlow&SeFlow.
 
 ```bash
@@ -241,18 +260,6 @@ python tools/visualization_rerun.py --data_dir /home/kin/data/av2/h5py/demo/trai
 
 https://github.com/user-attachments/assets/07e8d430-a867-42b7-900a-11755949de21
 
-## **📊 Range-Wise Metric (New!)**
-In SSF paper, we introduce a new distance-based evaluation metric for scene flow estimation. Below is an example output for SSF, `point_cloud_range=204.8`m, `voxel_size=0.2`m
-
-| Distance  | Static    | Dynamic  | NumPointsStatic | NumPointsDynamic |
-|-----------|----------|----------|-----------------|------------------|
-| 0-35      | 0.00836  | 0.11546  | 3.33e+08        | 1.57e+07         |
-| 35-50     | 0.00910  | 0.16805  | 4.40e+07        | 703125           |
-| 50-75     | 0.01107  | 0.20448  | 3.25e+07        | 395398           |
-| 75-100    | 0.01472  | 0.24133  | 1.31e+07        | 145281           |
-| 100-inf   | 0.01970  | 0.30536  | 1.32e+07        | 171865           |
-| **Mean**  | 0.01259  | 0.20693  | NaN             | NaN              |
-
 
 ## Cite Us
 
@@ -277,8 +284,8 @@ If you find it useful, please cite our works:
   pages={2105-2111},
   doi={10.1109/ICRA57147.2024.10610278}
 }
-@article{zhang2025himu,
-    title={HiMo: High-Speed Objects Motion Compensation in Point Cloud},
+@article{zhang2025himo,
+    title={HiMo: High-Speed Objects Motion Compensation in Point Clouds},
     author={Zhang, Qingwen and Khoche, Ajinkya and Yang, Yi and Ling, Li and Sina, Sharif Mansouri and Andersson, Olov and Jensfelt, Patric},
     year={2025},
     journal={arXiv preprint arXiv:2503.00803},
