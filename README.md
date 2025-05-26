@@ -11,6 +11,11 @@
 OpenSceneFlow is a codebase for point cloud scene flow estimation. 
 It is also an official implementation of the following papers (sored by the time of publication):
 
+- **VoteFlow:VoteFlow: Enforcing Local Rigidity in Self-Supervised Scene Flow**   
+*Yancong Lin\*, Shiming Wang\*, Liangliang Nan, Julian Kooij, Holger Caesar*   
+Conference on Computer Vision and Pattern Recognition (**CVPR**) 2025  
+[ Backbone ] [ Self-Supervised ] - [ [arXiv](https://arxiv.org/abs/2503.22328) ] [ [Project](https://github.com/tudelft-iv/VoteFlow/)]
+
 - **HiMo: High-Speed Objects Motion Compensation in Point Clouds** (SeFlow++)   
 *Qingwen Zhang, Ajinkya Khoche, Yi Yang, Li Ling, Sina Sharif Mansouri, Olov Andersson, Patric Jensfelt*  
 Preprint; Under review; 2025   
