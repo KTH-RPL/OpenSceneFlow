@@ -130,6 +130,13 @@ And free yourself from trainning, you can download the pretrained weight from [H
 mamba activate opensf
 ```
 
+### VoteFLow
+Extra pakcges needed for VoteFlow, [pytorch3d](https://pytorch3d.org/) (prefer 0.7.7) and [torch-scatter](https://github.com/rusty1s/pytorch_scatter?tab=readme-ov-file) (prefer 2.1.2):
+```bash
+pip install pytorch3d
+pip install torch-scatter -f https://data.pyg.org/whl/torch-2.0.0+cu117.html
+```
+
 ### Flow4D
 
 Train Flow4D with the leaderboard submit config. [Runtime: Around 18 hours in 4x RTX 3090 GPUs.]
@@ -315,6 +322,13 @@ And our excellent collaborators works contributed to this codebase also:
   author={Khoche, Ajinkya and Zhang, Qingwen and Sanchez, Laura Pereira and Asefaw, Aron and Mansouri, Sina Sharif and Jensfelt, Patric},
   journal={arXiv preprint arXiv:2501.17821},
   year={2025}
+}
+
+@inproceedings{lin2025voteflow,
+  title={VoteFlow: Enforcing Local Rigidity in Self-Supervised Scene Flow},
+  author={Lin, Yancong and Wang, Shiming and Nan, Liangliang and Kooij, Julian and Caesar, Holger},
+  booktitle={CVPR},
+  year={2025},
 }
 ```
 
