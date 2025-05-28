@@ -132,11 +132,23 @@ mamba activate opensf
 
 ### VoteFLow
 Extra pakcges needed for VoteFlow, [pytorch3d](https://pytorch3d.org/) (prefer 0.7.7) and [torch-scatter](https://github.com/rusty1s/pytorch_scatter?tab=readme-ov-file) (prefer 2.1.2):
+Install Pytorch3d
 ```bash
-pip install pytorch3d
+conda install -c iopath iopath
+conda install -c bottler nvidiacub
+conda install pytorch3d -c pytorch3d
+```
+Install torch-scatter
+```bash
 pip install torch-scatter -f https://data.pyg.org/whl/torch-2.0.0+cu117.html
 ```
-
+```bash
+python train.py model=voteflow lr=2e-4 epochs=12 batch_size=16 model.target.m=8 model.target.n=128 loss_fn=seflowLoss "add_seloss={chamfer_dis: 1.0, static_flow_loss: 1.0, dynamic_chamfer_dis: 1.0, cluster_based_pc0pc1: 1.0}"
+```
+Pretrained weight can be downloaded through
+```
+PLACEHOLDER
+```
 ### Flow4D
 
 Train Flow4D with the leaderboard submit config. [Runtime: Around 18 hours in 4x RTX 3090 GPUs.]

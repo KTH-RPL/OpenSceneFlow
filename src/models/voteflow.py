@@ -1,3 +1,11 @@
+"""
+This file is directly copied from: 
+https://github.com/tudelft-iv/VoteFlow
+
+with slightly modification to have unified format with all benchmark.
+"""
+
+
 import math
 import numpy as np
 
@@ -10,7 +18,7 @@ from .basic.encoder import DynamicEmbedder
 from .basic import cal_pose0to1
 
 from .basic.voteflow_plugin.hough_transformation import HT_CUDA
-from .basic.voteflow_plugin.voteflow_module import VolConvBN, Decoder, FastFlow3DUNet
+from .basic.voteflow_plugin.voteflow_module import VolConvBN, VoteFlowLinearDecoder, FastFlow3DUNet
 from .basic.voteflow_plugin.utils import calculate_unq_voxels, batched_masked_gather, pad_to_batch
 
 import warnings
@@ -30,7 +38,6 @@ class VoteFlow(nn.Module):
                  grid_feature_size = [512, 512],
                  decoder_layers=1,
                  use_ball_query=False,
-                 use_separate_feats_voting=False,
                  vol_conv_hidden_dim=16,
                  **kwargs):
         super().__init__()
@@ -53,10 +60,10 @@ class VoteFlow(nn.Module):
         self.backbone = FastFlow3DUNet(input_channels, output_channels) ## output_channel 64
         
         if self.using_voting:
-            self.decoder = Decoder(dim_input= output_channels * 2 + input_channels * 2, layer_size=decoder_layers)
+            self.decoder = VoteFlowLinearDecoder(dim_input= output_channels * 2 + input_channels * 2, layer_size=decoder_layers)
             print('decoder:', self.decoder)
         else:
-            self.decoder = Decoder(dim_input= output_channels + input_channels * 2, layer_size=decoder_layers)
+            self.decoder = VoteFlowLinearDecoder(dim_input= output_channels + input_channels * 2, layer_size=decoder_layers)
             print('decoder:', self.decoder)
 
         
@@ -92,8 +99,6 @@ class VoteFlow(nn.Module):
             else:
                 print(f'using knn to search window radius in source pc, m={self.m};')
             print(f'using ball query to search in target pc, n={self.n}, search window radius: {self.radius_dst}.')
-            self.use_separate_feats = use_separate_feats_voting
-            print(f'using separate features for voting: {self.use_separate_feats}')
 
             self.vote = HT_CUDA(self.ny, self.nx, self.nz)
             
@@ -261,13 +266,10 @@ class VoteFlow(nn.Module):
         
         if self.using_voting:
             self.timer[1][3].start("Gathering")
-            if self.use_separate_feats:
-            # print('using separate features for voting')
-                feats_voxel_src = self.extract_voxel_from_image(pseudoimages_src, voxels_src) # [B, N_valid_voxels, C]
-                feats_voxel_dst = self.extract_voxel_from_image(pseudoimages_dst, voxels_dst) # [B, N_valid_voxels, C]
-            else:
-                feats_voxel_src = self.extract_voxel_from_image(pseudoimages_grid, voxels_src) # [B, N_valid_voxels, C]
-                feats_voxel_dst = self.extract_voxel_from_image(pseudoimages_grid, voxels_dst) # [B, N_valid_voxels, C]
+
+            feats_voxel_src = self.extract_voxel_from_image(pseudoimages_src, voxels_src) # [B, N_valid_voxels, C]
+            feats_voxel_dst = self.extract_voxel_from_image(pseudoimages_dst, voxels_dst) # [B, N_valid_voxels, C]
+
             feats_voxel_dst_inflate = batched_masked_gather(feats_voxel_dst, knn_idxs_dst.long(), knn_idxs_dst>=0, fill_value=0)
 
             corr_src_dst = torch.nn.functional.cosine_similarity(feats_voxel_src[:, :, None, :], feats_voxel_dst_inflate, dim=-1)
@@ -283,12 +285,9 @@ class VoteFlow(nn.Module):
             self.timer[1][4].stop()
             
             self.timer[1][5].start("Decoding")
-            if self.decoder=='simple_decoder':
-                flows = self.decoder(feats_point_vol)
-            else: 
-                feats_cat = torch.cat([feats_point_vol, feats_point_src_init, feats_point_src_grid], -1)
-            
-                flows = self.decoder(feats_cat, point_offsets_src)
+
+            feats_cat = torch.cat([feats_point_vol, feats_point_src_init, feats_point_src_grid], -1)
+            flows = self.decoder(feats_cat, point_offsets_src)
             self.timer[1][5].stop()
         else:
             feats_voxel_src = None
