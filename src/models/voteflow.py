@@ -15,10 +15,11 @@ import torch.nn as nn
 import pytorch3d.ops as pytorch3d_ops
 
 from .basic.encoder import DynamicEmbedder
+from .basic.unet import FastFlow3DUNet
 from .basic import cal_pose0to1
 
 from .basic.voteflow_plugin.hough_transformation import HT_CUDA
-from .basic.voteflow_plugin.voteflow_module import VolConvBN, VoteFlowLinearDecoder, FastFlow3DUNet
+from .basic.voteflow_plugin.voteflow_module import VolConvBN, VoteFlowLinearDecoder
 from .basic.voteflow_plugin.utils import calculate_unq_voxels, batched_masked_gather, pad_to_batch
 
 import warnings
@@ -57,7 +58,7 @@ class VoteFlow(nn.Module):
         self.voxel_size = voxel_size
         self.pseudo_image_dims = pseudo_image_dims
         #self.backbone = Backbone(input_channels, output_channels)
-        self.backbone = FastFlow3DUNet(input_channels, output_channels) ## output_channel 64
+        self.backbone = FastFlow3DUNet() ## output_channel 64
         
         if self.using_voting:
             self.decoder = VoteFlowLinearDecoder(dim_input= output_channels * 2 + input_channels * 2, layer_size=decoder_layers)

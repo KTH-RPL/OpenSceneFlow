@@ -62,6 +62,7 @@ class ModelWrapper(LightningModule):
         
         self.batch_size = int(cfg.batch_size) if 'batch_size' in cfg else 1
         self.lr = cfg.lr if 'lr' in cfg else None
+        self.lr_scheduler = cfg.lr_scheduler if 'lr_scheduler' in cfg else None
         self.epochs = cfg.epochs if 'epochs' in cfg else None
         
         self.metrics = OfficialMetrics()
@@ -171,8 +172,14 @@ class ModelWrapper(LightningModule):
             pass
 
     def configure_optimizers(self):
-        optimizer = optim.Adam(self.model.parameters(), lr=self.lr)
-        return optimizer
+        if self.lr is None:
+            optimizer = optim.Adam(self.model.parameters(), lr=self.lr)
+            return optimizer
+        elif self.lr_scheduler == 'step':
+            optimizer = optim.Adam(self.model.parameters(), lr=self.lr)
+            lr_scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=self.trainer.max_epochs//2, gamma=0.1)
+            return {'optimizer': optimizer,
+                    'lr_scheduler': lr_scheduler}
 
     def on_train_epoch_start(self):
         self.time_start_train_epoch = time.time()
