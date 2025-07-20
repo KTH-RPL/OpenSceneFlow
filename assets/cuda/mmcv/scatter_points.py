@@ -8,14 +8,24 @@ from torch.autograd import Function
 
 # from utils import ext_loader
 import importlib
-def load_ext(name, funcs):
-    ext = importlib.import_module('mmcv.' + name)
-    for fun in funcs:
-        assert hasattr(ext, fun), f'{fun} miss in module {name}'
-    return ext
 
+def load_ext(possible_names, funcs):
+    """Try loading module from list of possible names, return first matching."""
+    for name in possible_names:
+        try:
+            ext = importlib.import_module('mmcv' + name)
+            missing = [f for f in funcs if not hasattr(ext, f)]
+            if missing:
+                print(f"Missing functions in 'mmcv{name}': {missing}")
+                continue
+            return ext  # success
+        except (ModuleNotFoundError, ImportError) as e:
+            print(f"Failed to import mmcv{name}: {e}")
+    raise ImportError(f"Could not load mmcv extension with functions: {funcs}")
+
+# Usage
 ext_module = load_ext(
-    '_ext',
+    ['', '._ext'],
     ['dynamic_point_to_voxel_forward', 'dynamic_point_to_voxel_backward'])
 
 
