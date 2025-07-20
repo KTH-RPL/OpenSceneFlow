@@ -65,21 +65,13 @@ bash Miniforge3-$(uname)-$(uname -m).sh
 
 ### Environment
 
-Create base env: [~5 mins]
+Create base env: [5~15 minutes based on your network speed and cpu]
 
 ```bash
 git clone https://github.com/KTH-RPL/OpenSceneFlow.git
 cd OpenSceneFlow
 mamba env create -f assets/environment.yml
 ```
-
-CUDA package (nvcc compiler already installed through conda), the compile time is around 1-5 minutes:
-```bash
-mamba activate opensf
-cd assets/cuda/mmcv && python ./setup.py install && cd ../../..
-cd assets/cuda/chamfer3D && python ./setup.py install && cd ../../..
-```
-
 
 Checking important packages in our environment now:
 ```bash

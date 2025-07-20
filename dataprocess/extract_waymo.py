@@ -405,7 +405,7 @@ def process_logs(data_dir: Path, map_dir: Path, output_dir: Path, nproc: int):
 
 def main(
     flow_data_dir: str = "/home/kin/data/waymo/flowlabel",
-    mode: str = "test",
+    mode: str = "valid",
     map_dir: str = "/home/kin/data/waymo/flowlabel/map",
     output_dir: str ="/home/kin/data/waymo/flowlabel/preprocess",
     nproc: int = (multiprocessing.cpu_count() - 1),

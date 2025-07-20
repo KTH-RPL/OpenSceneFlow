@@ -12,7 +12,7 @@ We've updated the process dataset for:
 - [x] Waymo: check [here](#waymo-dataset). The process script was involved from [SeFlow](https://github.com/KTH-RPL/SeFlow).
 - [ ] nuScenes: done coding, public after review. Will be involved later by another paper.
 
-If you want to use all datasets above, there is a specific process environment in [envsftool.yaml](../envsftool.yaml) to install all the necessary packages. As Waymo package have different configuration and conflict with the main environment. Setup through the following command:
+If you want to **use all datasets above**, there is a **specific environment** in [envsftool.yaml](../envsftool.yaml) to install all the necessary packages. As Waymo package have different configuration and conflict with the main environment. Setup through the following command:
 
 ```bash
 conda env create -f envsftool.yaml
@@ -30,7 +30,7 @@ pip install numpy==1.22
 
 Install their download tool `s5cmd`, already in our envsftool.yaml. Then download the dataset:
 ```bash
-# train is really big (750): totally 966 GB
+# train is really big (700): totally 966 GB
 s5cmd --numworkers 12 --no-sign-request cp "s3://argoverse/datasets/av2/sensor/train/*" av2/sensor/train 
 
 # val (150) and test (150): totally 168GB + 168GB
@@ -61,7 +61,7 @@ s5cmd --numworkers 12 --no-sign-request cp "s3://argoverse/datasets/av2/lidar/te
 
 | Dataset      | # Total Scene | # Total Frames |
 | ------------ | ------------- | -------------- |
-| Sensor/train | 750           | 110071         |
+| Sensor/train | 700           | 110071         |
 | Sensor/val   | 150           | 23547          |
 | Sensor/test  | 150           | 23574          |
 | LiDAR/train  | 16000         | -              |
@@ -90,15 +90,15 @@ gsutil -m cp -r "gs://waymo_open_dataset_scene_flow/valid" .
 gsutil -m cp -r "gs://waymo_open_dataset_scene_flow/train" .
 ```
 
-And flowlabel data can be downloaded here with ground segmentation by HDMap follow the same style of [ZeroFlow](https://github.com/kylevedder/zeroflow/blob/master/data_prep_scripts/waymo/extract_flow_and_remove_ground.py).
-
-You can download the processed map folder here to free yourself downloaded another type of data again:
+For ground segmentation, we follow the same style of [ZeroFlow](https://github.com/kylevedder/zeroflow/blob/master/data_prep_scripts/waymo/extract_flow_and_remove_ground.py) to have HDMap. You can download the processed map by running:
 
 ```bash
 wget https://huggingface.co/kin-zhang/OpenSceneFlow/resolve/main/waymo_map.tar.gz
 tar -xvf waymo_map.tar.gz -C /home/kin/data/waymo/flowlabel
 # you will see there is a `map` folder in the `flowlabel` folder now.
 ```
+
+<!-- Another way to have ground mask is to use [linefit](https://github.com/Kin-Zhang/linefit) to generate the ground mask without effort. -->
 
 #### Dataset frames
 

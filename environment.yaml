@@ -30,6 +30,8 @@ dependencies:
   - pathtools
   - rerun-sdk
   - pip:
+    - assets/cuda/chamfer3D
+    - assets/cuda/mmcv
     - open3d==0.18.0
     - dztimer
     - av2==0.2.1

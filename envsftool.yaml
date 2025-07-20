@@ -6,6 +6,7 @@ dependencies:
   - python=3.8
   - pytorch::pytorch=2.0.0
   - pytorch::torchvision
+  - mkl==2024.0.0
   - numba
   - numpy==1.22
   - pandas
@@ -20,13 +21,11 @@ dependencies:
     - nuscenes-devkit
     - av2==0.2.1
     - waymo-open-dataset-tf-2.11.0==1.5.0
-    - open3d==0.18.0
     - linefit
     - dztimer
     - dufomap==1.0.0
-    - evalai
 
 # Reason about the version fixed:
 # numpy==1.22: package conflicts, need numpy higher or same 1.22
-# open3d==0.18.0: because 0.17.0 have bug on set the view json file
 # dufomap==1.0.0: in case later updating may not compatible with the code.
+# Pleaase check dataprocess/README.md for more details.

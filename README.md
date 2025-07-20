@@ -11,6 +11,11 @@
 OpenSceneFlow is a codebase for point cloud scene flow estimation. 
 It is also an official implementation of the following papers (sored by the time of publication):
 
+- **HiMo: High-Speed Objects Motion Compensation in Point Clouds** (SeFlow++)   
+*Qingwen Zhang, Ajinkya Khoche, Yi Yang, Li Ling, Sina Sharif Mansouri, Olov Andersson, Patric Jensfelt*  
+Preprint; Under review; 2025   
+[ Strategy ] [ Self-Supervised ] - [ [arXiv](https://arxiv.org/abs/2503.00803) ] [ [Project](https://kin-zhang.github.io/HiMo/) ]
+
 - **Flow4D: Leveraging 4D Voxel Network for LiDAR Scene Flow Estimation**  
 *Jaeyeul Kim, Jungwan Woo, Ukcheol Shin, Jean Oh, Sunghoon Im*  
 IEEE Robotics and Automation Letters (**RA-L**) 2025  
@@ -32,15 +37,15 @@ International Conference on Robotics and Automation (**ICRA**) 2024
 [ Backbone ] [ Supervised ] - [ [arXiv](https://arxiv.org/abs/2401.16122) ] [ [Project](https://github.com/KTH-RPL/DeFlow) ] &rarr; [here](#deflow)
 
 🎁 <b>One repository, All methods!</b> 
-Additionally, *OpenSceneFlow* integrates following excellent works: [ICLR'24 ZeroFlow](https://arxiv.org/abs/2305.10424), [ICCV'23 FastNSF](https://arxiv.org/abs/2304.09121), [RA-L'21 FastFlow](https://arxiv.org/abs/2103.01306), [NeurIPS'21 NSFP](https://arxiv.org/abs/2111.01253). (More on the way...)
+Additionally, *OpenSceneFlow* integrates following excellent works: [ICLR'24 ZeroFlow](https://arxiv.org/abs/2305.10424), [ICCV'23 FastNSF](https://arxiv.org/abs/2304.09121), [RA-L'21 FastFlow3D](https://arxiv.org/abs/2103.01306), [NeurIPS'21 NSFP](https://arxiv.org/abs/2111.01253). (More on the way...)
 
 <details> <summary> Summary of them:</summary>
 
-- [x] [FastFlow3d](https://arxiv.org/abs/2103.01306): RA-L 2021, a basic backbone model.
+- [x] [FastFlow3D](https://arxiv.org/abs/2103.01306): RA-L 2021, a basic backbone model.
 - [x] [ZeroFlow](https://arxiv.org/abs/2305.10424): ICLR 2024, their pre-trained weight can covert into our format easily through [the script](tools/zerof2ours.py).
 - [ ] [NSFP](https://arxiv.org/abs/2111.01253): NeurIPS 2021, faster 3x than original version because of [our CUDA speed up](assets/cuda/README.md), same (slightly better) performance. Done coding, public after review.
-- [ ] [FastNSF](https://arxiv.org/abs/2304.09121): ICCV 2023. Done coding, public after review.
-- [ ] [ICP-Flow](https://arxiv.org/abs/2402.17351): CVPR 2024. Done coding, public after review.
+- [ ] [FastNSF](https://arxiv.org/abs/2304.09121): ICCV 2023. SSL optimization-based. Done coding, public after review.
+- [ ] [ICP-Flow](https://arxiv.org/abs/2402.17351): CVPR 2024. SSL optimization-based. Done coding, public after review.
 
 </details>
 
@@ -62,20 +67,14 @@ There are two ways to install the codebase: directly on your [local machine](#en
 
 ### Environment Setup
 
+We use conda to manage the environment, you can install it follow [here](assets/README.md#system). Then create the base environment with the following command [5~15 minutes]:
+
 ```bash
 git clone --recursive https://github.com/KTH-RPL/OpenSceneFlow.git
 cd OpenSceneFlow && mamba env create -f environment.yaml
 
 # You may need export your LD_LIBRARY_PATH with env lib
 # export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/home/kin/mambaforge/lib
-```
-
-CUDA package (we already install nvcc compiler inside conda env), the compile time is around 1-5 minutes:
-```bash
-mamba activate opensf
-# CUDA already install in python environment. I also tested others version like 11.3, 11.4, 11.7, 11.8 all works
-cd assets/cuda/mmcv && python ./setup.py install && cd ../../..
-cd assets/cuda/chamfer3D && python ./setup.py install && cd ../../..
 ```
 
 ### Docker (Recommended for Isolation)
@@ -115,8 +114,11 @@ Once extracted, you can directly use this dataset to run the [training script](#
 
 ## 2. Quick Start
 
-Don't forget to active Python environment before running the code. 
-If you want to use [wandb](wandb.ai), replace all `entity="kth-rpl",` to your own entity otherwise tensorboard will be used locally.
+Some tips before running the code:
+* Don't forget to active Python environment before running the code. 
+* If you want to use [wandb](wandb.ai), replace all `entity="kth-rpl",` to your own entity otherwise tensorboard will be used locally.
+* Set correct data path by passing the config, e.g. `train_data=/home/kin/data/av2/h5py/demo/train val_data=/home/kin/data/av2/h5py/demo/val`.
+
 And free yourself from trainning, you can download the pretrained weight from [HuggingFace](https://huggingface.co/kin-zhang/OpenSceneFlow) and we provided the detail `wget` command in each model section.
 
 ```bash
@@ -200,7 +202,21 @@ python eval.py checkpoint=/home/kin/seflow_best.ckpt av2_mode=test leaderboard_v
 python eval.py checkpoint=/home/kin/seflow_best.ckpt av2_mode=test leaderboard_version=2
 ```
 
-To submit to the Online Leaderboard, if you select `av2_mode=test`, it should be a zip file for you to submit to the leaderboard.
+### **📊 Range-Wise Metric (New!)**
+In [SSF paper](https://arxiv.org/abs/2501.17821), we introduce a new distance-based evaluation metric for scene flow estimation. Below is an example output for SSF with point_cloud_range to 204.8m and voxel_size=0.2m. Check more long-range result in [SSF paper](https://arxiv.org/abs/2501.17821).
+
+| Distance  | Static    | Dynamic  | NumPointsStatic | NumPointsDynamic |
+|-----------|----------|----------|-----------------|------------------|
+| 0-35      | 0.00836  | 0.11546  | 3.33e+08        | 1.57e+07         |
+| 35-50     | 0.00910  | 0.16805  | 4.40e+07        | 703125           |
+| 50-75     | 0.01107  | 0.20448  | 3.25e+07        | 395398           |
+| 75-100    | 0.01472  | 0.24133  | 1.31e+07        | 145281           |
+| 100-inf   | 0.01970  | 0.30536  | 1.32e+07        | 171865           |
+| **Mean**  | 0.01259  | 0.20693  | NaN             | NaN              |
+
+
+### Submit result to public leaderboard
+To submit your result to the public Leaderboard, if you select `av2_mode=test`, it should be a zip file for you to submit to the leaderboard.
 Note: The leaderboard result in DeFlow&SeFlow main paper is [version 1](https://eval.ai/web/challenges/challenge-page/2010/evaluation), as [version 2](https://eval.ai/web/challenges/challenge-page/2210/overview) is updated after DeFlow&SeFlow.
 
 ```bash
@@ -268,8 +284,8 @@ If you find it useful, please cite our works:
   pages={2105-2111},
   doi={10.1109/ICRA57147.2024.10610278}
 }
-@article{zhang2025himu,
-    title={HiMo: High-Speed Objects Motion Compensation in Point Cloud},
+@article{zhang2025himo,
+    title={HiMo: High-Speed Objects Motion Compensation in Point Clouds},
     author={Zhang, Qingwen and Khoche, Ajinkya and Yang, Yi and Ling, Li and Sina, Sharif Mansouri and Andersson, Olov and Jensfelt, Patric},
     year={2025},
     journal={arXiv preprint arXiv:2503.00803},

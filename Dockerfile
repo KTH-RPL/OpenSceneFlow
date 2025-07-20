@@ -30,5 +30,5 @@ WORKDIR /home/kin/workspace/OpenSceneFlow
 RUN apt-get update && apt-get install libgl1 -y
 # need read the gpu device info to compile the cuda extension
 RUN cd /home/kin/workspace/OpenSceneFlow && /opt/conda/bin/mamba env create -f environment.yaml
-RUN cd /home/kin/workspace/OpenSceneFlow/assets/cuda/mmcv && /opt/conda/envs/opensf/bin/python ./setup.py install
-RUN cd /home/kin/workspace/OpenSceneFlow/assets/cuda/chamfer3D && /opt/conda/envs/opensf/bin/python ./setup.py install
+# environment for dataprocessing inlucdes data-api
+RUN cd /home/kin/workspace/OpenSceneFlow && /opt/conda/bin/mamba env create -f envsftool.yaml
