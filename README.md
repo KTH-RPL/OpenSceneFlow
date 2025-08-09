@@ -43,8 +43,8 @@ Additionally, *OpenSceneFlow* integrates following excellent works: [ICLR'24 Zer
 
 - [x] [FastFlow3D](https://arxiv.org/abs/2103.01306): RA-L 2021, a basic backbone model.
 - [x] [ZeroFlow](https://arxiv.org/abs/2305.10424): ICLR 2024, their pre-trained weight can covert into our format easily through [the script](tools/zerof2ours.py).
-- [ ] [NSFP](https://arxiv.org/abs/2111.01253): NeurIPS 2021, faster 3x than original version because of [our CUDA speed up](assets/cuda/README.md), same (slightly better) performance. Done coding, public after review.
-- [ ] [FastNSF](https://arxiv.org/abs/2304.09121): ICCV 2023. SSL optimization-based. Done coding, public after review.
+- [x] [NSFP](https://arxiv.org/abs/2111.01253): NeurIPS 2021, faster 3x than original version because of [our CUDA speed up](assets/cuda/README.md), same (slightly better) performance.
+- [x] [FastNSF](https://arxiv.org/abs/2304.09121): ICCV 2023. SSL optimization-based.
 - [ ] [ICP-Flow](https://arxiv.org/abs/2402.17351): CVPR 2024. SSL optimization-based. Done coding, public after review.
 
 </details>

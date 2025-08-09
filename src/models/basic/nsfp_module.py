@@ -32,10 +32,11 @@ class Neural_Prior(torch.nn.Module):
             if hasattr(layer, 'reset_parameters'):
                 layer.reset_parameters()
 
-    def init_weights(m):
-        if isinstance(m, torch.nn.Linear):
-            torch.nn.init.xavier_uniform_(m.weight)
-            m.bias.data.fill_(0.0)
+    def init_weights(self):
+        for m in self.nn_layers:
+            if isinstance(m, torch.nn.Linear):
+                torch.nn.init.xavier_uniform_(m.weight)
+                m.bias.data.fill_(0.0)
 
     def forward(self, x):
         """ points -> features
