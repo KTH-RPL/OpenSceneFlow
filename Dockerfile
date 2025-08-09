@@ -1,5 +1,5 @@
 # check more: https://hub.docker.com/r/nvidia/cuda
-FROM nvidia/cuda:11.7.1-devel-ubuntu20.04
+FROM nvidia/cuda:11.8.0-devel-ubuntu22.04
 ENV DEBIAN_FRONTEND noninteractive
 
 RUN apt update && apt install -y git curl vim rsync htop
@@ -32,3 +32,6 @@ RUN apt-get update && apt-get install libgl1 -y
 RUN cd /home/kin/workspace/OpenSceneFlow && /opt/conda/bin/mamba env create -f environment.yaml
 # environment for dataprocessing inlucdes data-api
 RUN cd /home/kin/workspace/OpenSceneFlow && /opt/conda/bin/mamba env create -f envsftool.yaml
+
+# clean up apt cache
+RUN rm -rf /var/lib/apt/lists/* && rm -rf /root/.cache/pip
