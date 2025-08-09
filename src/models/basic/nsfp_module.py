@@ -26,6 +26,16 @@ class Neural_Prior(torch.nn.Module):
             self.nn_layers.append(torch.nn.Linear(filter_size, dim_x))
         else:
             self.nn_layers.append(torch.nn.Sequential(torch.nn.Linear(dim_x, dim_x)))
+    
+    def reset(self):
+        for layer in self.nn_layers.children():
+            if hasattr(layer, 'reset_parameters'):
+                layer.reset_parameters()
+
+    def init_weights(m):
+        if isinstance(m, torch.nn.Linear):
+            torch.nn.init.xavier_uniform_(m.weight)
+            m.bias.data.fill_(0.0)
 
     def forward(self, x):
         """ points -> features

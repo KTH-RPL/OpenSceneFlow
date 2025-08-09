@@ -12,6 +12,7 @@ warnings.simplefilter(action="ignore", category=FutureWarning)
 
 from .deflow import DeFlow
 from .fastflow3d import FastFlow3D
+from .nsfp import NSFP
 
 # following need install extra package: 
 # * pip install spconv-cu117
@@ -28,3 +29,10 @@ try:
 except ImportError as e:
     print("\033[93m--- WARNING [model]: Model with torch scatter is not imported, as it requires some lib which is not installed.")
     print(f"Detail error message\033[0m: {e}. Just ignore this warning if code runs without these models.")
+
+# following need install extra package:
+# * pip install FastGeodis --no-build-isolation --no-cache-dir
+try:
+    from .fastnsf import FastNSF
+except ImportError:
+    print("--- WARNING [model]: FastNSF is not imported, as it requires FastGeodis lib which is not installed.")
