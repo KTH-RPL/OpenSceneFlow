@@ -96,14 +96,7 @@ class InferenceRunner:
 
         self.model.to(self.device)
         self.metrics = OfficialMetrics() if self.mode in ['val', 'eval'] else None
-        
-        # Setup temporary directory for multi-GPU results
-        if self.mode == 'test':
-            self.temp_save_path = Path(self.cfg.save_res_path).parent / (Path(self.cfg.save_res_path).name + "_tmp")
-            self.rank_save_path = self.temp_save_path / f"rank_{self.rank}"
-            if self.rank == 0:
-                os.makedirs(self.temp_save_path, exist_ok=True)
-            os.makedirs(self.rank_save_path, exist_ok=True)
+        self.save_res_path = cfg.save_res_path
 
     def _setup_dataloader(self):
         if self.mode in ['val', 'test', 'eval']:
@@ -168,7 +161,7 @@ class InferenceRunner:
             self.metrics.step(v1_dict, v2_dict, ssf_dict)
 
         elif self.mode == 'test':
-            eval_mask = batch['eval_mask']
+            eval_mask = batch['eval_mask'].squeeze()
             save_pred_flow = final_flow[eval_mask, :3].cpu().detach().numpy()
             rigid_flow = pose_flow[eval_mask, :3].cpu().detach().numpy()
             is_dynamic = np.linalg.norm(save_pred_flow - rigid_flow, axis=1, ord=2) >= 0.05
@@ -177,7 +170,7 @@ class InferenceRunner:
             if self.cfg.leaderboard_version == 2:
                 save_pred_flow = (final_flow - pose_flow).cpu().detach().numpy()
 
-            write_output_file(save_pred_flow, is_dynamic, sweep_uuid, self.rank_save_path, self.cfg.leaderboard_version)
+            write_output_file(save_pred_flow, is_dynamic, sweep_uuid, self.save_res_path, self.cfg.leaderboard_version)
             
         elif self.mode == 'save':
             key = str(batch['timestamp'])
@@ -312,14 +305,8 @@ def launch_runner(cfg, mode):
         if world_size == 0:
             raise SystemError("No CUDA devices found.")
         
-        temp_save_path = None
         if mode == 'test':
-            save_res_path = Path(cfg.dataset_path).parent / "results" / cfg.output
-            cfg.save_res_path = str(save_res_path)
-            temp_save_path = save_res_path.parent / (save_res_path.name + "_tmp")
-            if os.path.exists(temp_save_path):
-                shutil.rmtree(temp_save_path)
-            os.makedirs(temp_save_path, exist_ok=True)
+            cfg.save_res_path = Path(cfg.dataset_path).parent / "results" / cfg.output
             
         mp.spawn(_spawn_wrapper,
                  args=(world_size, cfg, mode),
@@ -328,17 +315,13 @@ def launch_runner(cfg, mode):
         
         if mode == 'test':
             print("\nAll workers finished. Aggregating results into submission file...")
-            try:
-                final_zip_file = zip_res(
-                    temp_save_path, 
-                    leaderboard_version=cfg.leaderboard_version, 
-                    is_supervised=cfg.supervised_flag, 
-                    output_file=cfg.save_res_path + ".zip"
-                )
-                print(f"--- [LOG] Submission file successfully created at: {final_zip_file}")
-            finally:
-                print(f"--- [LOG] Cleaning up temporary directory: {temp_save_path}")
-                shutil.rmtree(temp_save_path)
+            final_zip_file = zip_res(
+                cfg.save_res_path, 
+                leaderboard_version=cfg.leaderboard_version, 
+                is_supervised=False,  # all optimization-based now is ssl.
+                output_file=str(cfg.save_res_path) + ".zip"
+            )
+            print(f"--- [LOG] Submission file successfully created at: {final_zip_file}")
         return
     else:
         _run_process(cfg, mode)

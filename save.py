@@ -27,6 +27,12 @@ def main(cfg):
     pl.seed_everything(cfg.seed, workers=True)
     output_dir = HydraConfig.get().runtime.output_dir
 
+    if 'iter_only' in cfg.model and cfg.model.iter_only:
+        from src.runner import launch_runner
+        print(f"---LOG[eval]: Run optmization-based method: {cfg.model.name}")
+        launch_runner(cfg, 'save')
+        return
+    
     if not os.path.exists(cfg.checkpoint):
         print(f"Checkpoint {cfg.checkpoint} does not exist. Need checkpoints for evaluation.")
         sys.exit(1)

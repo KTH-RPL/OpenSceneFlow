@@ -37,7 +37,7 @@ def main(cfg):
     if 'iter_only' in cfg.model and cfg.model.iter_only:
         from src.runner import launch_runner
         print(f"---LOG[eval]: Run optmization-based method: {cfg.model.name}")
-        launch_runner(cfg, 'eval')
+        launch_runner(cfg, cfg.av2_mode)
         return
     
     if not os.path.exists(cfg.checkpoint):
