@@ -246,7 +246,10 @@ evalai challenge 2210 phase 4396 submit --file av2_submit_v2.zip --large --priva
 We provide a script to visualize the results of the model also. You can specify the checkpoint path and the data path to visualize the results. The step is quite similar to evaluation.
 
 ```bash
+# (feed-forward): load ckpt
 python save.py checkpoint=/home/kin/seflow_best.ckpt dataset_path=/home/kin/data/av2/preprocess_v2/sensor/vis
+# (optimization-based): change another model by passing model name.
+python eval.py model=nsfp dataset_path=/home/kin/data/av2/h5py/demo/val
 
 # The output of above command will be like:
 Model: DeFlow, Checkpoint from: /home/kin/model_zoo/v2/seflow_best.ckpt
@@ -259,6 +262,11 @@ python tools/visualization.py --res_name 'seflow_best' --data_dir /home/kin/data
 ```
 
 https://github.com/user-attachments/assets/f031d1a2-2d2f-4947-a01f-834ed1c146e6
+
+For exporting easy comparsion with ground truth and other methods, we also provided multi-visulization open3d window:
+```bash
+python tools/visualization.py --mode mul --res_name "['flow', 'seflow_best']" --data_dir /home/kin/data/av2/preprocess_v2/sensor/vis
+```
 
 Or another way to interact with [rerun](https://github.com/rerun-io/rerun) but please only vis scene by scene, not all at once.
 
