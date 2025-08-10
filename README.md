@@ -88,10 +88,12 @@ docker pull zhangkin/opensf
 
 # run container
 docker run -it --net=host --gpus all -v /dev/shm:/dev/shm -v /home/kin/data:/home/kin/data --name opensf zhangkin/opensf /bin/zsh
+
 # and better to read your own gpu device info to compile the cuda extension again:
+cd /home/kin/workspace/OpenSceneFlow && git pull
 cd /home/kin/workspace/OpenSceneFlow/assets/cuda/mmcv && /opt/conda/envs/opensf/bin/python ./setup.py install
 cd /home/kin/workspace/OpenSceneFlow/assets/cuda/chamfer3D && /opt/conda/envs/opensf/bin/python ./setup.py install
-
+cd /home/kin/workspace/OpenSceneFlow
 mamba activate opensf
 ```
 

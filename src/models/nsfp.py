@@ -7,7 +7,10 @@ with our modification to have unified format with our codebase running.
 # Copyright (C) 2024-now, RPL, KTH Royal Institute of Technology
 # Author: Qingwen Zhang  (https://kin-zhang.github.io/)
 # 
-# This file is part of SeFlow (https://github.com/KTH-RPL/SeFlow) and HiMu (https://github.com/KTH-RPL/HiMu)
+# This file is part of 
+# * SeFlow (https://github.com/KTH-RPL/SeFlow) 
+# * HiMo (https://kin-zhang.github.io/HiMo)
+# 
 # If you find this repo helpful, please cite the respective publication as 
 # listed on the above website.
 # 
