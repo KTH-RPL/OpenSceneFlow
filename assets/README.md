@@ -49,7 +49,7 @@ Then follow [this stackoverflow answers](https://stackoverflow.com/questions/596
 
 3. Then you can build the docker image:
    ```bash
-   cd OpenSceneFlow && docker build -t zhangkin/OpenSceneFlow .
+   cd OpenSceneFlow && docker build -f Dockerfile -t zhangkin/opensf .
    ```
    
 ## Installation

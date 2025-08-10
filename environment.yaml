@@ -51,6 +51,6 @@ dependencies:
 # av2==0.2.1: in case other version deleted some functions.
 # lightning==2.0.1: https://stackoverflow.com/questions/76647518/how-to-fix-error-cannot-import-name-modelmetaclass-from-pydantic-main
 # open3d==0.18.0: because 0.17.0 have bug on set the view json file
-# dufomap==1.0.0: in case later updating may not compatible with the code.
+# dufomap==1.1.0: in case later updating may not compatible with the code.
 # spconv-cu117==2.3.6: avoid error: KeyError: ((16, 8, 8), float, float)
 # torch-scatter==2.1.2: in case later updating may not compatible with the code.
