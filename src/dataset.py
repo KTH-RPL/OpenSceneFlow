@@ -19,6 +19,9 @@ from tqdm import tqdm
 BASE_DIR = os.path.abspath(os.path.join( os.path.dirname( __file__ ), '..' ))
 sys.path.append(BASE_DIR)
 
+import warnings
+warnings.filterwarnings("ignore", category=UserWarning)
+
 def collate_fn_pad(batch):
 
     num_frames = 2

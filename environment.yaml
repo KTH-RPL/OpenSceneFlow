@@ -34,11 +34,8 @@ dependencies:
     - assets/cuda/chamfer3D
     - assets/cuda/mmcv
     - open3d==0.18.0
-    - av2==0.3.4
-    - spconv-cu117==2.3.6
-    - FastGeodis
-    - mmengine-lite
-    - torch-scatter==2.1.2
+    - av2==0.3.1
+    - spconv-cu118==2.3.6
     - numpy==1.26.4
     # Qingwen's public pkg:
     - dztimer
@@ -52,5 +49,3 @@ dependencies:
 # lightning==2.0.1: https://stackoverflow.com/questions/76647518/how-to-fix-error-cannot-import-name-modelmetaclass-from-pydantic-main
 # open3d==0.18.0: because 0.17.0 have bug on set the view json file
 # dufomap==1.1.0: in case later updating may not compatible with the code.
-# spconv-cu117==2.3.6: avoid error: KeyError: ((16, 8, 8), float, float)
-# torch-scatter==2.1.2: in case later updating may not compatible with the code.
