@@ -96,7 +96,7 @@ class InferenceRunner:
 
         self.model.to(self.device)
         self.metrics = OfficialMetrics() if self.mode in ['val', 'eval'] else None
-        self.save_res_path = cfg.save_res_path
+        self.save_res_path = cfg.get('save_res_path', None)
 
     def _setup_dataloader(self):
         if self.mode in ['val', 'test', 'eval']:
@@ -109,8 +109,8 @@ class InferenceRunner:
         dataset = HDF5Dataset(dataset_path,
                               n_frames=self.cfg.num_frames,
                               eval=is_eval_mode,
-                              leaderboard_version=self.cfg.leaderboard_version)
-        
+                              leaderboard_version=self.cfg.leaderboard_version if 'leaderboard_version' in self.cfg else 1)
+
         sampler = SceneDistributedSampler(dataset, num_replicas=self.world_size, rank=self.rank)
         
         return DataLoader(dataset, 
@@ -251,9 +251,9 @@ def _run_process(cfg, mode):
         gathered_metrics_objects = [runner.metrics]
 
     if rank == 0:
-        final_metrics = OfficialMetrics()
-        print(f"\n--- [LOG] Finished processing. Aggregating results from {world_size} GPUs with {len(gathered_metrics_objects)} metrics objects...")
         if mode in ['val', 'eval']:
+            final_metrics = OfficialMetrics()
+            print(f"\n--- [LOG] Finished processing. Aggregating results from {world_size} GPUs with {len(gathered_metrics_objects)} metrics objects...")
             for metrics_obj in gathered_metrics_objects:
                 if metrics_obj is None: continue
 
@@ -280,7 +280,10 @@ def _run_process(cfg, mode):
                             )
 
             final_metrics.print() 
-            
+        else:
+            print(f"\nWe already write the {cfg.res_name} into the dataset, please run following commend to visualize the flow. Copy and paste it to your terminal:")
+            print(f"python tools/visualization.py --res_name '{cfg.res_name}' --data_dir {cfg.dataset_path}")
+            print(f"Enjoy! ^v^ ------ \n")
         runner.model.timer.print(random_colors=False, bold=False)
 
     if world_size > 1:

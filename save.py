@@ -30,6 +30,7 @@ def main(cfg):
     if 'iter_only' in cfg.model and cfg.model.iter_only:
         from src.runner import launch_runner
         print(f"---LOG[eval]: Run optmization-based method: {cfg.model.name}")
+        cfg.res_name = cfg.model.name if (cfg.res_name is None) else cfg.res_name
         launch_runner(cfg, 'save')
         return
     
