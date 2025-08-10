@@ -83,7 +83,10 @@ class SceneDistributedSampler(Sampler):
     
 class InferenceRunner:
     def __init__(self, cfg, rank, world_size, mode):
-        self.model = instantiate(cfg.model.target)
+        try:
+            self.model = instantiate(cfg.model.target)
+        except Exception as e:
+            raise RuntimeError(f"Failed to instantiate model with target '{cfg.model.target}'. Error: {e}") from e
         self.cfg = cfg
         self.rank = rank
         self.world_size = world_size
@@ -120,7 +123,7 @@ class InferenceRunner:
         return DataLoader(dataset, 
                           batch_size=1, # One sample per optimization
                           sampler=sampler, 
-                          num_workers=self.cfg.get('num_workers', 8),
+                          num_workers=self.cfg.get('num_workers', 4),
                           pin_memory=True)
 
     
@@ -191,13 +194,24 @@ class InferenceRunner:
     def run(self):
         dataloader = self._setup_dataloader()
         
-        iterable = dataloader
-        if self.rank == 0:
-            iterable = tqdm(dataloader, desc="Processing Scenes", dynamic_ncols=True)
 
-        for batch in iterable:
+        iter_bar = tqdm(
+            dataloader, 
+            desc=f"[GPU {self.rank}] Initializing...", 
+            position=self.rank,
+            leave=False,
+            dynamic_ncols=True
+        )
+
+        for batch in iter_bar:
+            current_scene_id = batch['scene_id'][0] 
+            
+            iter_bar.set_description(f"[GPU {self.rank}] Processing {current_scene_id}")
+
             with torch.no_grad():
                 self._process_step(batch)
+        
+        iter_bar.close()
 
     def cleanup(self):
         dist.destroy_process_group()
@@ -226,9 +240,6 @@ def _setup_distributed_environment():
 
 
 def _run_process(cfg, mode):
-    """
-    这是每个分布式进程实际执行的核心逻辑。
-    """
     rank, world_size = _setup_distributed_environment()
     
     runner = InferenceRunner(cfg, rank, world_size, mode)
@@ -248,7 +259,7 @@ def _run_process(cfg, mode):
 
     if rank == 0:
         final_metrics = OfficialMetrics()
-        
+        print(f"\n--- [LOG] Finished processing. Aggregating results from {world_size} GPUs with {len(gathered_metrics_objects)} metrics objects...")
         if mode in ['val', 'eval']:
             for metrics_obj in gathered_metrics_objects:
                 if metrics_obj is None: continue
@@ -285,6 +296,8 @@ def _run_process(cfg, mode):
     runner.cleanup()
 
 def _spawn_wrapper(rank, world_size, cfg, mode):
+    torch.cuda.set_device(rank)
+
     os.environ['RANK'] = str(rank)
     os.environ['WORLD_SIZE'] = str(world_size)
     os.environ['MASTER_ADDR'] = 'localhost'
