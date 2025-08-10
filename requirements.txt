@@ -25,7 +25,6 @@ spconv-cu118==2.3.8
 flash-attn==2.6.3
 mmengine-lite
 torch-scatter==2.1.2
-FastGeodis --no-build-isolation
 
 # Qingwen's public pkg
 dufomap==1.1.0
