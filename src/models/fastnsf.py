@@ -10,7 +10,6 @@ with slightly modification to have unified format with all benchmark.
 # This file is part of 
 # * SeFlow (https://github.com/KTH-RPL/SeFlow) 
 # * HiMo (https://kin-zhang.github.io/HiMo)
-# 
 # If you find this repo helpful, please cite the respective publication as 
 # listed on the above website.
 # 

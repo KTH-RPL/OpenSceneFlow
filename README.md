@@ -49,7 +49,7 @@ Additionally, *OpenSceneFlow* integrates following excellent works: [ICLR'24 Zer
 
 </details>
 
-💡: Want to learn how to add your own network in this structure? Check [Contribute section](assets/README.md#contribute) and know more about the code. Fee free to pull request and your bibtex [here](#cite-us).
+💡: Want to learn how to add your own network in this structure? Check [Contribute section](CONTRIBUTING.md#adding-a-new-method) and know more about the code. Fee free to pull request and your bibtex [here](#cite-us).
 
 ---
 

@@ -47,7 +47,6 @@ class Flow4D(nn.Module):
         return self.load_state_dict(state_dict=state_dict, strict=False)
 
     def forward(self, batch):
-        #t_deflow_start = time.time()
         """
         input: using the batch from dataloader, which is a dict
                Detail: [pc0, pc1, pose0, pose1]

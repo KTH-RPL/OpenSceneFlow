@@ -10,7 +10,6 @@ with our modification to have unified format with our codebase running.
 # This file is part of 
 # * SeFlow (https://github.com/KTH-RPL/SeFlow) 
 # * HiMo (https://kin-zhang.github.io/HiMo)
-# 
 # If you find this repo helpful, please cite the respective publication as 
 # listed on the above website.
 # 

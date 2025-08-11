@@ -3,6 +3,12 @@
 # Copyright (C) 2023-now, RPL, KTH Royal Institute of Technology
 # Author: Qingwen Zhang  (https://kin-zhang.github.io/), AI Assistant (Google AI Studio)
 #
+# This file is part of 
+# * SeFlow (https://github.com/KTH-RPL/SeFlow) 
+# * HiMo (https://kin-zhang.github.io/HiMo)
+# If you find this repo helpful, please cite the respective publication as 
+# listed on the above website.
+#
 # Description: Runner for optimization-based models (e.g., NSFP, FastNSF) that
 #              replaces the need for PyTorch Lightning in evaluation/testing.
 #              It handles multi-GPU distribution, execution, and result aggregation.
