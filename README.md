@@ -9,7 +9,7 @@
 💞 If you find [*OpenSceneFlow*](https://github.com/KTH-RPL/OpenSceneFlow) useful to your research, please cite [**our works** 📖](#cite-us) and [give a star 🌟](https://github.com/KTH-RPL/OpenSceneFlow) as encouragement. (੭ˊ꒳​ˋ)੭✧
 
 OpenSceneFlow is a codebase for point cloud scene flow estimation. 
-It is also an official implementation of the following papers (sored by the time of publication):
+It is also an official implementation of the following papers (sorted by the time of publication):
 
 - **HiMo: High-Speed Objects Motion Compensation in Point Clouds** (SeFlow++)   
 *Qingwen Zhang, Ajinkya Khoche, Yi Yang, Li Ling, Sina Sharif Mansouri, Olov Andersson, Patric Jensfelt*  
@@ -31,6 +31,11 @@ International Conference on Robotics and Automation (**ICRA**) 2025
 European Conference on Computer Vision (**ECCV**) 2024  
 [ Strategy ] [ Self-Supervised ] - [ [arXiv](https://arxiv.org/abs/2407.01702) ] [ [Project](https://github.com/KTH-RPL/SeFlow) ] &rarr; [here](#seflow)
 
+- **ICP-Flow: LiDAR Scene Flow Estimation with ICP**  
+*Yancong Lin, Holger Caesar*  
+Conference on Computer Vision and Pattern Recognition (**CVPR**) 2024  
+[ Optimization-based ] [ Self-Supervised ] - [ [arXiv](https://arxiv.org/abs/2402.17351) ] [ [Project](https://github.com/yanconglin/ICP-Flow) ] &rarr; [here](#icp-flow)
+
 - **DeFlow: Decoder of Scene Flow Network in Autonomous Driving**  
 *Qingwen Zhang, Yi Yang, Heng Fang, Ruoyu Geng, Patric Jensfelt*  
 International Conference on Robotics and Automation (**ICRA**) 2024  
@@ -45,7 +50,6 @@ Additionally, *OpenSceneFlow* integrates following excellent works: [ICLR'24 Zer
 - [x] [ZeroFlow](https://arxiv.org/abs/2305.10424): ICLR 2024, their pre-trained weight can covert into our format easily through [the script](tools/zerof2ours.py).
 - [x] [NSFP](https://arxiv.org/abs/2111.01253): NeurIPS 2021, faster 3x than original version because of [our CUDA speed up](assets/cuda/README.md), same (slightly better) performance.
 - [x] [FastNSF](https://arxiv.org/abs/2304.09121): ICCV 2023. SSL optimization-based.
-- [ ] [ICP-Flow](https://arxiv.org/abs/2402.17351): CVPR 2024. SSL optimization-based. Done coding, public after review.
 
 </details>
 
@@ -143,7 +147,7 @@ wget https://huggingface.co/kin-zhang/OpenSceneFlow/resolve/main/flow4d_best.ckp
 
 ### SSF
 
-Extra pakcges needed for SSF model:
+Extra packages needed for SSF model:
 ```bash
 pip install mmengine-lite torch-scatter
 # torch-scatter might not working, then reinstall by:
@@ -177,6 +181,21 @@ python train.py model=deflow lr=2e-4 epochs=9 batch_size=16 loss_fn=seflowLoss "
 Pretrained weight can be downloaded through:
 ```bash
 wget https://huggingface.co/kin-zhang/OpenSceneFlow/resolve/main/seflow_best.ckpt
+```
+
+### ICP-Flow
+
+ICP-Flow is a optimization-based method, you can directly run `eval.py`/`save.py` to get the result. 
+
+Extra packages needed for ICP-Flow model:
+```bash
+pip install pytorch3d assets/cuda/histlib
+```
+
+Then run as:
+```bash
+python eval.py model=icpflow
+python save.py model=icpflow
 ```
 
 ### DeFlow
@@ -326,6 +345,12 @@ And our excellent collaborators works contributed to this codebase also:
   author={Khoche, Ajinkya and Zhang, Qingwen and Sanchez, Laura Pereira and Asefaw, Aron and Mansouri, Sina Sharif and Jensfelt, Patric},
   journal={arXiv preprint arXiv:2501.17821},
   year={2025}
+}
+@article{lin2024icp,
+  title={ICP-Flow: LiDAR Scene Flow Estimation with ICP},
+  author={Lin, Yancong and Caesar, Holger},
+  booktitle={Proceedings of the IEEE/CVF Conference on Computer Vision and Pattern Recognition (CVPR)},
+  year={2024}
 }
 ```
 

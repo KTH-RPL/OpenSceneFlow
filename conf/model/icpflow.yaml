@@ -1,0 +1,17 @@
+name: icpflow
+
+target:
+  _target_: src.models.ICPFlow
+  thres_dist: 0.1
+  translation_frame: 1.67
+  chunk_size: 50
+  thres_iou: 0.2
+  max_points: 10000
+  min_cluster_size: 20
+  thres_box: 0.1
+  thres_rot: 0.1
+  thres_error: 0.2
+  speed: 1.67
+  point_cloud_range: [-51.2, -51.2, -3, 51.2, 51.2, 3]
+  
+iter_only: True
