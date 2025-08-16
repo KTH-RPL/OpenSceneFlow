@@ -3,6 +3,30 @@ import pickle, h5py, os, time
 from pathlib import Path
 from tqdm import tqdm
 
+def check_h5py_file_exists(h5py_file: Path, timestamps: list, verbose: bool = False) -> bool:
+    if not h5py_file.exists():
+        return False
+    
+    log_id = h5py_file.name.split(".")[0]
+    try:
+        with h5py.File(h5py_file, 'r') as f:
+            for timestamp in timestamps:
+                if str(timestamp) not in f.keys():
+                    # delete the file if the timestamp is not in the file
+                    # and it will reprocess this scene file
+                    if verbose:
+                        print(f"\n--- WARNING [data]: {log_id} has no {timestamp}, will be deleted the scene h5py.")
+                    os.remove(h5py_file)
+                    return False
+    except Exception as e:
+        if verbose:
+            print(f"\n--- WARNING [data]: {log_id} has error: {e}, will be deleted the scene h5py.")
+        os.remove(h5py_file)
+        return False
+    if verbose:
+        print(f'\n--- INFO [data]: {log_id} has been processed with total {len(timestamps)} timestamps.')
+    return True
+
 def create_reading_index(data_dir: Path):
     start_time = time.time()
     data_index = []
@@ -89,3 +113,39 @@ class SE2:
         )
         return chained_se2
     
+
+## ====> nuScenes to Argoverse Mapping
+NusNamMap = {
+    'noise': 'NONE',
+    'animal': 'ANIMAL',
+    'human.pedestrian.adult': 'PEDESTRIAN',
+    'human.pedestrian.child': 'PEDESTRIAN',
+    'human.pedestrian.construction_worker': 'PEDESTRIAN',
+    'human.pedestrian.personal_mobility': 'PEDESTRIAN',
+    'human.pedestrian.police_officer': 'PEDESTRIAN',
+    'human.pedestrian.stroller': 'STROLLER',
+    'human.pedestrian.wheelchair': 'WHEELCHAIR',
+    'movable_object.barrier': 'NONE',
+    'movable_object.debris': 'NONE',
+    'movable_object.pushable_pullable': 'NONE',
+    'movable_object.trafficcone': 'CONSTRUCTION_CONE',
+    'static_object.bicycle_rack': 'NONE',
+    'vehicle.bicycle': 'BICYCLE',
+    'vehicle.bus.bendy': 'ARTICULATED_BUS',
+    'vehicle.bus.rigid': 'BUS',
+    'vehicle.car': 'REGULAR_VEHICLE',
+    'vehicle.construction': 'LARGE_VEHICLE',
+    'vehicle.emergency.ambulance': 'LARGE_VEHICLE',
+    'vehicle.emergency.police': 'REGULAR_VEHICLE',
+    'vehicle.motorcycle': 'MOTORCYCLE',
+    'vehicle.trailer': 'VEHICULAR_TRAILER',
+    'vehicle.truck': 'TRUCK',
+    'flat.driveable_surface': 'NONE',
+    'flat.other': 'NONE',
+    'flat.sidewalk': 'NONE',
+    'flat.terrain': 'NONE',
+    'static.manmade': 'NONE',
+    'static.other': 'NONE',
+    'static.vegetation': 'NONE',
+    'vehicle.ego': 'NONE'
+}
