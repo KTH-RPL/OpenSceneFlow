@@ -295,7 +295,7 @@ def process_logs(nusc_mode, data_dir: Path, scene_list: list, output_dir: Path, 
             res = list(tqdm(p.imap_unordered(proc, args), total=len(scene_list), ncols=100))
 
 def main(
-    data_dir: str = "/home/kin/data/nus/raw",
+    data_dir: str = "/home/kin/data/nus/v1.0",
     mode: str = "v1.0-mini",
     output_dir: str ="/home/kin/data/nus/h5py/demo",
     nproc: int = (multiprocessing.cpu_count() - 1),
@@ -332,6 +332,7 @@ def main(
 
     for input_key, input_val in input_dict.items():
         output_dir_ = Path(output_dir) / input_key
+        print("[INFO] We are processing data to ", output_dir_)
         if only_index:
             create_reading_index(Path(output_dir_))
             create_reading_index(Path(output_dir_), flow_inside_check=True)

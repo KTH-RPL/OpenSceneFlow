@@ -3,7 +3,6 @@ import torch.nn as nn
 import math
 from torch.optim.lr_scheduler import _LRScheduler
 
-# TODO: add a base model to wrap the same function like load_from_checkpoint, etc.
 class BaseModel(nn.Module):
     def __init__(self):
         super(BaseModel, self).__init__()
