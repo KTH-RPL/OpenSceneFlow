@@ -24,7 +24,8 @@ from omegaconf import OmegaConf,open_dict
 import os, sys, time, h5py, pickle
 BASE_DIR = os.path.abspath(os.path.join( os.path.dirname( __file__ ), '..' ))
 sys.path.append(BASE_DIR)
-from src.utils.mics import import_func, weights_init, zip_res
+from src.utils import import_func
+from src.utils.mics import weights_init, zip_res
 from src.utils.av2_eval import write_output_file
 from src.models.basic import cal_pose0to1
 from src.utils.eval_metric import OfficialMetrics, evaluate_leaderboard, evaluate_leaderboard_v2, evaluate_ssf

@@ -9,11 +9,11 @@ with slightly modification to have unified format with all benchmark.
 import torch.nn as nn
 import dztimer, torch
 
-from .basic import wrap_batch_pcs
+from .basic import wrap_batch_pcs, BaseModel
 from .basic.flow4d_module import DynamicEmbedder_4D
 from .basic.flow4d_module import Network_4D, Seperate_to_3D, Point_head
 
-class Flow4D(nn.Module):
+class Flow4D(BaseModel):
     def __init__(self, voxel_size = [0.2, 0.2, 0.2],
                  point_cloud_range = [-51.2, -51.2, -2.2, 51.2, 51.2, 4.2],
                  grid_feature_size = [512, 512, 32],
@@ -37,14 +37,6 @@ class Flow4D(nn.Module):
         
         self.timer = dztimer.Timing()
         self.timer.start("Total")
-
-    def load_from_checkpoint(self, ckpt_path):
-        ckpt = torch.load(ckpt_path, map_location="cpu")["state_dict"]
-        state_dict = {
-            k[len("model.") :]: v for k, v in ckpt.items() if k.startswith("model.")
-        }
-        print("\nLoading... model weight from: ", ckpt_path, "\n")
-        return self.load_state_dict(state_dict=state_dict, strict=False)
 
     def forward(self, batch):
         """
