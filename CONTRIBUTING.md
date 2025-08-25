@@ -1,10 +1,10 @@
-# Contributing to OpenSceneFlow
+# Contributing to [OpenSceneFlow](https://github.com/KTH-RPL/OpenSceneFlow)
 
 We want to make contributing to this project as easy and transparent as possible. We welcome any contributions, from bug fixes to new features. If you're interested in adding your own scene flow method, this guide will walk you through the process.
 
 ## Adding a New Method
 
-Here is a quick guide to integrating a new method into the OpenSceneFlow codebase.
+Here is a quick guide to integrating a new method into the [OpenSceneFlow](https://github.com/KTH-RPL/OpenSceneFlow) codebase.
 
 ### 1. Data Preparation
 

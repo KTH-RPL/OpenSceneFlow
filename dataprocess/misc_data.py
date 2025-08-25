@@ -27,7 +27,8 @@ def check_h5py_file_exists(h5py_file: Path, timestamps: list, verbose: bool = Fa
         print(f'\n--- INFO [data]: {log_id} has been processed with total {len(timestamps)} timestamps.')
     return True
 
-def create_reading_index(data_dir: Path):
+def create_reading_index(data_dir: Path, flow_inside_check=False):
+    pkl_file_name = 'index_total.pkl' if not flow_inside_check else 'index_flow.pkl'
     start_time = time.time()
     data_index = []
     for file_name in tqdm(os.listdir(data_dir), ncols=100):
@@ -36,14 +37,20 @@ def create_reading_index(data_dir: Path):
         scene_id = file_name.split(".")[0]
         timestamps = []
         with h5py.File(data_dir/file_name, 'r') as f:
-            timestamps.extend(f.keys())
+            if flow_inside_check:
+                for key in f.keys():
+                    if 'flow' in f[key]:
+                        # print(f"Found flow in {scene_id} at {key}")
+                        timestamps.append(key)
+            else:
+                timestamps.extend(f.keys())
         timestamps.sort(key=lambda x: int(x)) # make sure the timestamps are in order
         for timestamp in timestamps:
             data_index.append([scene_id, timestamp])
 
-    with open(data_dir/'index_total.pkl', 'wb') as f:
+    with open(data_dir/pkl_file_name, 'wb') as f:
         pickle.dump(data_index, f)
-        print(f"Create reading index Successfully, cost: {time.time() - start_time:.2f} s")
+        print(f"Create {pkl_file_name} index Successfully, cost: {time.time() - start_time:.2f} s")
 
 class SE2:
 

@@ -101,7 +101,7 @@ If you prefer to build the Docker image by yourself, Check [build-docker-image](
 
 ## 1. Data Preparation
 
-Refer to [dataprocess/README.md](dataprocess/README.md) for dataset download instructions. Currently, we support **Argoverse 2**, **Waymo**, and **custom datasets** (more datasets will be added in the future). 
+Refer to [dataprocess/README.md](dataprocess/README.md) for dataset download instructions. Currently, we support **Argoverse 2**, **Waymo**, **nuScenes** and **custom datasets** (more datasets will be added in the future). 
 
 After downloading, convert the raw data to `.h5` format for easy training, evaluation, and visualization. Follow the steps in [dataprocess/README.md#process](dataprocess/README.md#process). 
 
