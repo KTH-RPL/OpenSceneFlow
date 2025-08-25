@@ -137,6 +137,9 @@ python dataprocess/extract_av2.py --av2_type sensor --data_mode train --argo_dir
 
 # waymo:
 python dataprocess/extract_waymo.py --mode train --flow_data_dir /home/kin/data/waymo/flowlabel --map_dir /home/kin/data/waymo/flowlabel/map --output_dir /home/kin/data/waymo/preprocess  --nproc 48
+
+# nus:
+python dataprocess/extract_nus.py --mode v1.0-trainval --ouput_dir /home/kin/data/nus/h5py/full --nproc 24
 ```
 
 

@@ -9,7 +9,7 @@
 💞 If you find [*OpenSceneFlow*](https://github.com/KTH-RPL/OpenSceneFlow) useful to your research, please cite [**our works** 📖](#cite-us) and [give a star 🌟](https://github.com/KTH-RPL/OpenSceneFlow) as encouragement. (੭ˊ꒳​ˋ)੭✧
 
 OpenSceneFlow is a codebase for point cloud scene flow estimation. 
-It is also an official implementation of the following papers (sored by the time of publication):
+It is also an official implementation of the following papers (sorted by the time of publication):
 
 - **HiMo: High-Speed Objects Motion Compensation in Point Clouds** (SeFlow++)   
 *Qingwen Zhang, Ajinkya Khoche, Yi Yang, Li Ling, Sina Sharif Mansouri, Olov Andersson, Patric Jensfelt*  
