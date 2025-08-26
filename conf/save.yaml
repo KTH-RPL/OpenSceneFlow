@@ -4,6 +4,7 @@ res_name: # if None will directly be the `model_name.ckpt` in checkpoint path
 
 
 # no need to change
+num_frames: 2
 defaults:
   - hydra: default
   - model: deflow

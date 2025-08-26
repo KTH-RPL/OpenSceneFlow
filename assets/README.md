@@ -49,7 +49,7 @@ Then follow [this stackoverflow answers](https://stackoverflow.com/questions/596
 
 3. Then you can build the docker image:
    ```bash
-   cd OpenSceneFlow && docker build -t zhangkin/OpenSceneFlow .
+   cd OpenSceneFlow && docker build -f Dockerfile -t zhangkin/opensf .
    ```
    
 ## Installation
@@ -98,12 +98,5 @@ python -c "from assets.cuda.chamfer3D import nnChamferDis;print('successfully im
     Solved by `export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/proj/berzelius-2023-154/users/x_qinzh/mambaforge/lib`
 
 
-## Contribute
-
-If you want to contribute to new model, here are tips you can follow:
-1. Dataloader: we believe all data could be process to `.h5`, we named as different scene and inside a scene, the key of each data is timestamp. Check [dataprocess/README.md](../dataprocess/README.md#process) for more details.
-2. Model: All model files can be found [here: src/models](../src/models). You can view deflow and fastflow3d to know how to implement a new model. Don't forget to add to the `__init__.py` [file to import class](../src/models/__init__.py).
-3. Loss: All loss files can be found [here: src/lossfuncs.py](../src/lossfuncs.py). There are three loss functions already inside the file, you can add a new one following the same pattern.
-4. Training: Once you have implemented the model, you can add the model to the config file [here: conf/model](../conf/model) and train the model using the command `python train.py model=your_model_name`. One more note here may: if your res_dict from model output is different, you may need add one pattern in `def training_step` and `def validation_step`.
-
-All others like eval and vis will be changed according to the model you implemented as you follow the above steps.
+3. torch_scatter problem: `OSError: /home/kin/mambaforge/envs/opensf-v2/lib/python3.10/site-packages/torch_scatter/_version_cpu.so: undefined symbol: _ZN5torch3jit17parseSchemaOrNameERKNSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEE`
+   Solved by install the torch-cuda version: `pip install https://data.pyg.org/whl/torch-2.0.0%2Bcu118/torch_scatter-2.1.2%2Bpt20cu118-cp310-cp310-linux_x86_64.whl`

@@ -19,6 +19,9 @@ from tqdm import tqdm
 BASE_DIR = os.path.abspath(os.path.join( os.path.dirname( __file__ ), '..' ))
 sys.path.append(BASE_DIR)
 
+import warnings
+warnings.filterwarnings("ignore", category=UserWarning)
+
 def collate_fn_pad(batch):
 
     num_frames = 2
@@ -83,6 +86,8 @@ class HDF5Dataset(Dataset):
         super(HDF5Dataset, self).__init__()
         self.directory = directory
         
+        if (torch.distributed.is_initialized() and torch.distributed.get_rank() == 0) or not torch.distributed.is_initialized():
+            print(f"----[Debug] Loading data with num_frames={n_frames}, eval={eval}, leaderboard_version={leaderboard_version}")
         with open(os.path.join(self.directory, 'index_total.pkl'), 'rb') as f:
             self.data_index = pickle.load(f)
 

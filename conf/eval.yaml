@@ -8,6 +8,8 @@ leaderboard_version: 1 # [1, 2]
 supervised_flag: True # [True, False], whether you use any label from the dataset
 
 # no need to change
+save_res_path: 
+num_frames: 2
 slurm_id: 00000
 output: ${model.name}-${slurm_id}
 gpus: 1

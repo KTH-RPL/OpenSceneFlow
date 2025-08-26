@@ -9,13 +9,24 @@ class bc:
     BOLD = '\033[1m'
     UNDERLINE = '\033[4m'
 
+# ====> import func through string, ref: https://stackoverflow.com/a/19393328
+import importlib
+def import_func(path: str):
+    function_string = path
+    mod_name, func_name = function_string.rsplit('.',1)
+    mod = importlib.import_module(mod_name)
+    func = getattr(mod, func_name)
+    return func
 
-def hex_to_rgb(hex_color):
-    hex_color = hex_color.lstrip("#")
-    return tuple(int(hex_color[i:i + 2], 16) / 255.0 for i in (0, 2, 4))
-
-color_map_hex = ['#a6cee3', '#de2d26', '#1f78b4','#b2df8a','#33a02c','#fb9a99','#e31a1c','#fdbf6f','#ff7f00',\
-                 '#cab2d6','#6a3d9a','#ffff99','#b15928', '#8dd3c7','#ffffb3','#bebada','#fb8072','#80b1d3',\
-                 '#fdb462','#b3de69','#fccde5','#d9d9d9','#bc80bd','#ccebc5','#ffed6f']
-
-color_map = [hex_to_rgb(color) for color in color_map_hex]
+import numpy as np
+def npcal_pose0to1(pose0, pose1):
+    """
+    Note(Qingwen 2023-12-05 11:09):
+    Don't know why but it needed set the pose to float64 to calculate the inverse 
+    otherwise it will be not expected result....
+    """
+    pose1_inv = np.eye(4, dtype=np.float64)
+    pose1_inv[:3,:3] = pose1[:3,:3].T
+    pose1_inv[:3,3] = (pose1[:3,:3].T * -pose1[:3,3]).sum(axis=1)
+    pose_0to1 = pose1_inv @ pose0.astype(np.float64)
+    return pose_0to1.astype(np.float32)

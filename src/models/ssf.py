@@ -16,9 +16,9 @@ from .basic.sparse_unet import SimpleSparseUNet
 from .basic.encoder import DynamicVoxelizer
 from .basic.ssf_module import DynamicScatterVFE
 from .basic.decoder import SimpleLinearDecoder
-from .basic import cal_pose0to1
+from .basic import cal_pose0to1, BaseModel
 
-class SSF(nn.Module):
+class SSF(BaseModel):
     def __init__(self, voxel_size = [0.2, 0.2, 6],
                  point_cloud_range = [-51.2, -51.2, -3, 51.2, 51.2, 3],
                  grid_feature_size = [512, 512],
@@ -56,14 +56,6 @@ class SSF(nn.Module):
 
         self.timer = dztimer.Timing()
         self.timer.start("Total")
-
-    def load_from_checkpoint(self, ckpt_path):
-        ckpt = torch.load(ckpt_path, map_location="cpu")["state_dict"]
-        state_dict = {
-            k[len("model.") :]: v for k, v in ckpt.items() if k.startswith("model.")
-        }
-        print("\nLoading... model weight from: ", ckpt_path, "\n")
-        return self.load_state_dict(state_dict=state_dict, strict=False)
 
     def forward(self, batch):
         """

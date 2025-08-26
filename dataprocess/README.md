@@ -10,7 +10,9 @@ We've updated the process dataset for:
 
 - [x] Argoverse 2.0: check [here](#argoverse-20). The process script Involved from [DeFlow](https://github.com/KTH-RPL/DeFlow).
 - [x] Waymo: check [here](#waymo-dataset). The process script was involved from [SeFlow](https://github.com/KTH-RPL/SeFlow).
-- [ ] nuScenes: done coding, public after review. Will be involved later by another paper.
+- [x] nuScenes: check [here](#nuscenes), The process script was involved from [DeltaFlow](https://github.com/Kin-Zhang/DeltaFlow).
+- [ ] TruckScene: done coding, public after review. Will be involved later by another paper.
+- [ ] ZOD (w/o gt): done coding, public after review. Will be involved later by another paper.
 
 If you want to **use all datasets above**, there is a **specific environment** in [envsftool.yaml](../envsftool.yaml) to install all the necessary packages. As Waymo package have different configuration and conflict with the main environment. Setup through the following command:
 
@@ -75,6 +77,20 @@ You need sign up an account at [nuScenes](https://www.nuscenes.org/) to download
 ![](../assets/docs/nuscenes.png)
 
 
+Extracting & processing nuScenes require special handling:
+
+* Frame Rate: The raw LiDAR data is captured at 20Hz, while ground truth (GT) annotations are only available at 2Hz.
+* Resampling: To standardize the data for consistent evaluation, we downsample the LiDAR point clouds to 10Hz. It is a GT-guided process that guarantees all annotated 2Hz frames are preserved within the final 10Hz sequence.
+* The ground truth scene flow is generated using the official per-object velocity labels provided in the dataset, calculated between the resampled 10Hz frames.
+
+
+#### Dataset frames
+
+| Dataset | # Total Scene | # Total Frames |
+| ------- | ------------- | -------------- |
+| train   | 700           | 137575 / 27392 (w. gt)         |
+| val     | 150           | 29126 / 5798 (w.gt)          |
+
 ### Waymo Dataset
 
 To download the Waymo dataset, you need to register an account at [Waymo Open Dataset](https://waymo.com/open/). You also need to install gcloud SDK and authenticate your account. Please refer to [this page](https://cloud.google.com/sdk/docs/install) for more details. 
@@ -121,6 +137,9 @@ python dataprocess/extract_av2.py --av2_type sensor --data_mode train --argo_dir
 
 # waymo:
 python dataprocess/extract_waymo.py --mode train --flow_data_dir /home/kin/data/waymo/flowlabel --map_dir /home/kin/data/waymo/flowlabel/map --output_dir /home/kin/data/waymo/preprocess  --nproc 48
+
+# nus:
+python dataprocess/extract_nus.py --mode v1.0-trainval --output_dir /home/kin/data/nus/h5py/full --nproc 24
 ```
 
 

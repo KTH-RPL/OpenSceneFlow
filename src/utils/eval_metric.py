@@ -267,10 +267,8 @@ class OfficialMetrics:
         for min_, max_ in list(zip(distance_split, distance_split[1:])):
             str_name = f"{int(min_)}-{int(max_)}" if max_ != np.inf else f"{int(min_)}-inf"
             self.epe_ssf[str_name] = {"Static": [], "Dynamic": [], "#Static": 0, "#Dynamic": 0}
-        
-        self.num_occupied_voxels = []
 
-    def step(self, epe_dict, bucket_dict, ssf_dict=None, num_occupied_voxels=-1):
+    def step(self, epe_dict, bucket_dict, ssf_dict=None):
         """
         This step function is used to store the results of **each frame**.
         """
@@ -296,9 +294,6 @@ class OfficialMetrics:
                     item_.avg_range,
                     item_.count,
                 )
-        
-        self.num_occupied_voxels.append(num_occupied_voxels) 
-
     def normalize(self):
         """
         This normalize mean average results between **frame and frame**.
@@ -336,8 +331,6 @@ class OfficialMetrics:
                             self.epe_ssf[dis_range_key]["#"+motion] += num_pt
             
             self.epe_ssf['Mean'][motion] = np.nanmean(avg_epes)
-
-        self.mean_num_occupied_voxels = {'num_occupied_voxels': np.mean(self.num_occupied_voxels)}
 
     def print(self):
         if not self.norm_flag:

@@ -3,7 +3,32 @@ import pickle, h5py, os, time
 from pathlib import Path
 from tqdm import tqdm
 
-def create_reading_index(data_dir: Path):
+def check_h5py_file_exists(h5py_file: Path, timestamps: list, verbose: bool = False) -> bool:
+    if not h5py_file.exists():
+        return False
+    
+    log_id = h5py_file.name.split(".")[0]
+    try:
+        with h5py.File(h5py_file, 'r') as f:
+            for timestamp in timestamps:
+                if str(timestamp) not in f.keys():
+                    # delete the file if the timestamp is not in the file
+                    # and it will reprocess this scene file
+                    if verbose:
+                        print(f"\n--- WARNING [data]: {log_id} has no {timestamp}, will be deleted the scene h5py.")
+                    os.remove(h5py_file)
+                    return False
+    except Exception as e:
+        if verbose:
+            print(f"\n--- WARNING [data]: {log_id} has error: {e}, will be deleted the scene h5py.")
+        os.remove(h5py_file)
+        return False
+    if verbose:
+        print(f'\n--- INFO [data]: {log_id} has been processed with total {len(timestamps)} timestamps.')
+    return True
+
+def create_reading_index(data_dir: Path, flow_inside_check=False):
+    pkl_file_name = 'index_total.pkl' if not flow_inside_check else 'index_flow.pkl'
     start_time = time.time()
     data_index = []
     for file_name in tqdm(os.listdir(data_dir), ncols=100):
@@ -12,14 +37,20 @@ def create_reading_index(data_dir: Path):
         scene_id = file_name.split(".")[0]
         timestamps = []
         with h5py.File(data_dir/file_name, 'r') as f:
-            timestamps.extend(f.keys())
+            if flow_inside_check:
+                for key in f.keys():
+                    if 'flow' in f[key]:
+                        # print(f"Found flow in {scene_id} at {key}")
+                        timestamps.append(key)
+            else:
+                timestamps.extend(f.keys())
         timestamps.sort(key=lambda x: int(x)) # make sure the timestamps are in order
         for timestamp in timestamps:
             data_index.append([scene_id, timestamp])
 
-    with open(data_dir/'index_total.pkl', 'wb') as f:
+    with open(data_dir/pkl_file_name, 'wb') as f:
         pickle.dump(data_index, f)
-        print(f"Create reading index Successfully, cost: {time.time() - start_time:.2f} s")
+        print(f"Create {pkl_file_name} index Successfully, cost: {time.time() - start_time:.2f} s")
 
 class SE2:
 
@@ -89,3 +120,39 @@ class SE2:
         )
         return chained_se2
     
+
+## ====> nuScenes to Argoverse Mapping
+NusNamMap = {
+    'noise': 'NONE',
+    'animal': 'ANIMAL',
+    'human.pedestrian.adult': 'PEDESTRIAN',
+    'human.pedestrian.child': 'PEDESTRIAN',
+    'human.pedestrian.construction_worker': 'PEDESTRIAN',
+    'human.pedestrian.personal_mobility': 'PEDESTRIAN',
+    'human.pedestrian.police_officer': 'PEDESTRIAN',
+    'human.pedestrian.stroller': 'STROLLER',
+    'human.pedestrian.wheelchair': 'WHEELCHAIR',
+    'movable_object.barrier': 'NONE',
+    'movable_object.debris': 'NONE',
+    'movable_object.pushable_pullable': 'NONE',
+    'movable_object.trafficcone': 'CONSTRUCTION_CONE',
+    'static_object.bicycle_rack': 'NONE',
+    'vehicle.bicycle': 'BICYCLE',
+    'vehicle.bus.bendy': 'ARTICULATED_BUS',
+    'vehicle.bus.rigid': 'BUS',
+    'vehicle.car': 'REGULAR_VEHICLE',
+    'vehicle.construction': 'LARGE_VEHICLE',
+    'vehicle.emergency.ambulance': 'LARGE_VEHICLE',
+    'vehicle.emergency.police': 'REGULAR_VEHICLE',
+    'vehicle.motorcycle': 'MOTORCYCLE',
+    'vehicle.trailer': 'VEHICULAR_TRAILER',
+    'vehicle.truck': 'TRUCK',
+    'flat.driveable_surface': 'NONE',
+    'flat.other': 'NONE',
+    'flat.sidewalk': 'NONE',
+    'flat.terrain': 'NONE',
+    'static.manmade': 'NONE',
+    'static.other': 'NONE',
+    'static.vegetation': 'NONE',
+    'vehicle.ego': 'NONE'
+}

@@ -8,7 +8,7 @@ setup(
     version='1.0.1',
     ext_modules=[
         CUDAExtension(
-            name='mmcv._ext',
+            name='mmcv',
             sources=[
                 "/".join(__file__.split("/")[:-1] + ["scatter_points_cuda.cu"]),
                 "/".join(__file__.split("/")[:-1] + ["scatter_points.cpp"]),

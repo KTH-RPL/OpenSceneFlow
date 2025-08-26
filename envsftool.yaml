@@ -21,11 +21,14 @@ dependencies:
     - nuscenes-devkit
     - av2==0.2.1
     - waymo-open-dataset-tf-2.11.0==1.5.0
-    - linefit
+    - zod==0.5.0
+    - truckscenes-devkit
+    # Qingwen's public pkg:
     - dztimer
-    - dufomap==1.0.0
+    - dufomap==1.1.0
+    - linefit==1.1.0
 
 # Reason about the version fixed:
 # numpy==1.22: package conflicts, need numpy higher or same 1.22
-# dufomap==1.0.0: in case later updating may not compatible with the code.
+# dufomap==1.1.0: in case later updating may not compatible with the code.
 # Pleaase check dataprocess/README.md for more details.

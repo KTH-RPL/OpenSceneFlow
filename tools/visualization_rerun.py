@@ -19,7 +19,7 @@ import os, sys
 BASE_DIR = os.path.abspath(os.path.join( os.path.dirname( __file__ ), '..' ))
 sys.path.append(BASE_DIR)
 from src.utils.mics import HDF5Data, flow_to_rgb
-from src.utils import color_map
+from src.utils.o3d_view import color_map
 import rerun as rr
 import rerun.blueprint as rrb
 import argparse
