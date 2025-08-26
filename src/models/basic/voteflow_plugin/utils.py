@@ -1,7 +1,4 @@
-import math
-import numpy as np
 import torch
-from torch_scatter import scatter_max
 import pytorch3d.ops as pytorch3d_ops
 
 def calculate_unq_voxels(coords, image_dims):

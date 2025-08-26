@@ -57,7 +57,6 @@ class VoteFlow(nn.Module):
         self.point_cloud_range = point_cloud_range
         self.voxel_size = voxel_size
         self.pseudo_image_dims = pseudo_image_dims
-        #self.backbone = Backbone(input_channels, output_channels)
         self.backbone = FastFlow3DUNet() ## output_channel 64
         
         if self.using_voting:

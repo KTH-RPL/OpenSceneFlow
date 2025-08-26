@@ -51,6 +51,7 @@ Additionally, *OpenSceneFlow* integrates following excellent works: [ICLR'24 Zer
 - [x] [NSFP](https://arxiv.org/abs/2111.01253): NeurIPS 2021, faster 3x than original version because of [our CUDA speed up](assets/cuda/README.md), same (slightly better) performance.
 - [x] [FastNSF](https://arxiv.org/abs/2304.09121): ICCV 2023. SSL optimization-based.
 - [ ] [ICP-Flow](https://arxiv.org/abs/2402.17351): CVPR 2024. SSL optimization-based. Done coding, public after review.
+- [ ] [EulerFlow](https://arxiv.org/abs/2410.02031): ICLR 2025. SSL optimization-based. In my plan, haven't coding yet.
 
 </details>
 
@@ -148,7 +149,11 @@ Train VoteFlow with the leaderboard submit config. [Runtime: Around ? hours in ?
 ```bash
 python train.py model=voteflow lr=2e-4 lr_scheduler=step epochs=12 batch_size=16 model.target.m=8 model.target.n=128 loss_fn=seflowLoss "add_seloss={chamfer_dis: 1.0, static_flow_loss: 1.0, dynamic_chamfer_dis: 1.0, cluster_based_pc0pc1: 1.0}"
 ```
-Pretrained weight can be downloaded through the [link](https://surfdrive.surf.nl/files/index.php/s/wxk1GxwvDKe9TWW)
+
+Pretrained weight can be downloaded through:
+```bash
+wget https://huggingface.co/kin-zhang/OpenSceneFlow/resolve/main/voteflow_best.ckpt
+```
 
 ### Flow4D
 
