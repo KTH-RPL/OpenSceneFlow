@@ -1,13 +1,9 @@
 import os
-import math
-import numpy as np
 import warnings
 from glob import glob
 
-import torch
 from torch import nn
 from torch.autograd import Function
-from torch.nn.modules.utils import _pair
 from torch.autograd.function import once_differentiable
 
 def load_cpp_ext(ext_name):
@@ -94,17 +90,6 @@ class IM2HT(nn.Module):
         
         global im2ht
         im2ht = load_cpp_ext("im2ht")
-
-    #     self.extra_repr()
-    #     self.__repr__()
-
-    # def extra_repr(self):
-    #     s = ('size={ht_size}')
-    #     # return s.format(**self.__dict__)
-    #     return print(s.format(**self.__dict__))
-
-    # def __repr__(self):
-    #     return self.__class__.__name__ + f'( m: {self.m:04d}, n: {self.n:04d}, h: {self.h:04d}, w: {self.w:04d}, d: {self.d:04d})'
 
     def forward(self, feats_src_dst, voxels_src, voxels_dst, idxs_src, idxs_dst, h, w, d):  
         # print('IM2HT forward', feats.shape, idxs_fps.shape, idxs_src.shape, idxs_dst.shape, bins_x.shape, bins_y.shape, bins_z.shape)
