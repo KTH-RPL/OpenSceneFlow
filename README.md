@@ -11,15 +11,15 @@
 OpenSceneFlow is a codebase for point cloud scene flow estimation. 
 It is also an official implementation of the following papers (sorted by the time of publication):
 
-- **VoteFlow:VoteFlow: Enforcing Local Rigidity in Self-Supervised Scene Flow**   
-*Yancong Lin\*, Shiming Wang\*, Liangliang Nan, Julian Kooij, Holger Caesar*   
-Conference on Computer Vision and Pattern Recognition (**CVPR**) 2025  
-[ Backbone ] [ Self-Supervised ] - [ [arXiv](https://arxiv.org/abs/2503.22328) ] [ [Project](https://github.com/tudelft-iv/VoteFlow/)]
-
 - **HiMo: High-Speed Objects Motion Compensation in Point Clouds** (SeFlow++)   
 *Qingwen Zhang, Ajinkya Khoche, Yi Yang, Li Ling, Sina Sharif Mansouri, Olov Andersson, Patric Jensfelt*  
 Preprint; Under review; 2025   
 [ Strategy ] [ Self-Supervised ] - [ [arXiv](https://arxiv.org/abs/2503.00803) ] [ [Project](https://kin-zhang.github.io/HiMo/) ]
+
+- **VoteFlow:VoteFlow: Enforcing Local Rigidity in Self-Supervised Scene Flow**   
+*Yancong Lin\*, Shiming Wang\*, Liangliang Nan, Julian Kooij, Holger Caesar*   
+Conference on Computer Vision and Pattern Recognition (**CVPR**) 2025  
+[ Backbone ] [ Self-Supervised ] - [ [arXiv](https://arxiv.org/abs/2503.22328) ] [ [Project](https://github.com/tudelft-iv/VoteFlow/)] &rarr; [here](#VoteFLow)
 
 - **Flow4D: Leveraging 4D Voxel Network for LiDAR Scene Flow Estimation**  
 *Jaeyeul Kim, Jungwan Woo, Ukcheol Shin, Jean Oh, Sunghoon Im*  
@@ -146,12 +146,10 @@ Install torch-scatter
 pip install torch-scatter -f https://data.pyg.org/whl/torch-2.0.0+cu117.html
 ```
 ```bash
-python train.py model=voteflow lr=2e-4 epochs=12 batch_size=16 model.target.m=8 model.target.n=128 loss_fn=seflowLoss "add_seloss={chamfer_dis: 1.0, static_flow_loss: 1.0, dynamic_chamfer_dis: 1.0, cluster_based_pc0pc1: 1.0}"
+python train.py model=voteflow lr=2e-4 lr_scheduler=step epochs=12 batch_size=16 model.target.m=8 model.target.n=128 loss_fn=seflowLoss "add_seloss={chamfer_dis: 1.0, static_flow_loss: 1.0, dynamic_chamfer_dis: 1.0, cluster_based_pc0pc1: 1.0}"
 ```
-Pretrained weight can be downloaded through
-```
-PLACEHOLDER
-```
+Pretrained weight can be downloaded through the [link](https://surfdrive.surf.nl/files/index.php/s/wxk1GxwvDKe9TWW)
+
 ### Flow4D
 
 Train Flow4D with the leaderboard submit config. [Runtime: Around 18 hours in 4x RTX 3090 GPUs.]
