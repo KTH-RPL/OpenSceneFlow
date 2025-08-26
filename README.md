@@ -16,7 +16,7 @@ It is also an official implementation of the following papers (sorted by the tim
 Preprint; Under review; 2025   
 [ Strategy ] [ Self-Supervised ] - [ [arXiv](https://arxiv.org/abs/2503.00803) ] [ [Project](https://kin-zhang.github.io/HiMo/) ]
 
-- **VoteFlow:VoteFlow: Enforcing Local Rigidity in Self-Supervised Scene Flow**   
+- **VoteFlow: Enforcing Local Rigidity in Self-Supervised Scene Flow**   
 *Yancong Lin\*, Shiming Wang\*, Liangliang Nan, Julian Kooij, Holger Caesar*   
 Conference on Computer Vision and Pattern Recognition (**CVPR**) 2025  
 [ Backbone ] [ Self-Supervised ] - [ [arXiv](https://arxiv.org/abs/2503.22328) ] [ [Project](https://github.com/tudelft-iv/VoteFlow/)] &rarr; [here](#VoteFLow)
@@ -138,8 +138,6 @@ Extra pakcges needed for VoteFlow, [pytorch3d](https://pytorch3d.org/) (prefer 0
 
 ```bash
 # Install Pytorch3d
-conda install -c iopath iopath
-conda install -c bottler nvidiacub
 conda install pytorch3d -c pytorch3d
 
 # Install torch-scatter
