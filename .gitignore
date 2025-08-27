@@ -26,3 +26,6 @@ cancel.sh
 *.egg-info
 build*
 dist*
+
+data
+*__pycache__

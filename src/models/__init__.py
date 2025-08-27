@@ -14,6 +14,13 @@ from .deflow import DeFlow, DeFlowPP
 from .fastflow3d import FastFlow3D
 from .nsfp import NSFP
 
+# check README for package:
+try:
+    from .voteflow import VoteFlow
+except ImportError as e:
+    print("\033[93m--- WARNING [model]: VoteFlow is not imported, as it requires some lib which is not installed.")
+    print(f"Detail error message\033[0m: {e}. Just ignore this warning if code runs without these models.")
+
 # following need install extra package: 
 # * pip install spconv-cu117
 try:

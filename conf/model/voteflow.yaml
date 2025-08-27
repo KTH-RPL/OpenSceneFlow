@@ -1,0 +1,18 @@
+name: voteflow
+
+target:
+  _target_: src.models.VoteFlow
+  using_voting: True
+  nframes: 1
+  m: 8
+  n: 128
+  input_channels: 32
+  output_channels: 64
+  point_cloud_range: ${point_cloud_range}
+  voxel_size: ${voxel_size}
+  grid_feature_size: [512, 512]
+  decoder_layers: 4
+  use_ball_query: False
+  vol_conv_hidden_dim: 16
+
+val_monitor: val/Dynamic/Mean

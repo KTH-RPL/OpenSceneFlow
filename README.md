@@ -16,6 +16,11 @@ It is also an official implementation of the following papers (sorted by the tim
 IEEE Transactions on Robotics (**T-RO**) 2025   
 [ Strategy ] [ Self-Supervised ] - [ [arXiv](https://arxiv.org/abs/2503.00803) ] [ [Project](https://kin-zhang.github.io/HiMo/) ] &rarr; [here](#seflow-1)
 
+- **VoteFlow: Enforcing Local Rigidity in Self-Supervised Scene Flow**   
+*Yancong Lin\*, Shiming Wang\*, Liangliang Nan, Julian Kooij, Holger Caesar*   
+Conference on Computer Vision and Pattern Recognition (**CVPR**) 2025  
+[ Backbone ] [ Self-Supervised ] - [ [arXiv](https://arxiv.org/abs/2503.22328) ] [ [Project](https://github.com/tudelft-iv/VoteFlow/) ] &rarr; [here](#VoteFLow)
+
 - **Flow4D: Leveraging 4D Voxel Network for LiDAR Scene Flow Estimation**  
 *Jaeyeul Kim, Jungwan Woo, Ukcheol Shin, Jean Oh, Sunghoon Im*  
 IEEE Robotics and Automation Letters (**RA-L**) 2025  
@@ -46,6 +51,7 @@ Additionally, *OpenSceneFlow* integrates following excellent works: [ICLR'24 Zer
 - [x] [NSFP](https://arxiv.org/abs/2111.01253): NeurIPS 2021, faster 3x than original version because of [our CUDA speed up](assets/cuda/README.md), same (slightly better) performance.
 - [x] [FastNSF](https://arxiv.org/abs/2304.09121): ICCV 2023. SSL optimization-based.
 - [ ] [ICP-Flow](https://arxiv.org/abs/2402.17351): CVPR 2024. SSL optimization-based. Done coding, public after review.
+- [ ] [EulerFlow](https://arxiv.org/abs/2410.02031): ICLR 2025. SSL optimization-based. In my plan, haven't coding yet.
 
 </details>
 
@@ -126,6 +132,27 @@ And free yourself from trainning, you can download the pretrained weight from [H
 
 ```bash
 mamba activate opensf
+```
+
+### VoteFLow
+Extra pakcges needed for VoteFlow, [pytorch3d](https://pytorch3d.org/) (prefer 0.7.7) and [torch-scatter](https://github.com/rusty1s/pytorch_scatter?tab=readme-ov-file) (prefer 2.1.2):
+
+```bash
+# Install Pytorch3d
+conda install pytorch3d -c pytorch3d
+
+# Install torch-scatter
+pip install torch-scatter -f https://data.pyg.org/whl/torch-2.0.0+cu118.html
+```
+
+Train VoteFlow with the leaderboard submit config. [Runtime: Around 32 hours in 4 x V100 GPUs.]
+```bash
+python train.py model=voteflow optimizer.lr=2e-4 +optimizer.scheduler.name=StepLR +optimizer.scheduler.step_size=6 epochs=12 batch_size=4 model.target.m=8 model.target.n=128 loss_fn=seflowLoss "+add_seloss={chamfer_dis: 1.0, static_flow_loss: 1.0, dynamic_chamfer_dis: 1.0, cluster_based_pc0pc1: 1.0}" +ssl_label=seflow_auto
+```
+
+Pretrained weight can be downloaded through:
+```bash
+wget https://huggingface.co/kin-zhang/OpenSceneFlow/resolve/main/voteflow_best.ckpt
 ```
 
 ### Flow4D
@@ -334,6 +361,13 @@ And our excellent collaborators works contributed to this codebase also:
   author={Khoche, Ajinkya and Zhang, Qingwen and Sanchez, Laura Pereira and Asefaw, Aron and Mansouri, Sina Sharif and Jensfelt, Patric},
   journal={arXiv preprint arXiv:2501.17821},
   year={2025}
+}
+
+@inproceedings{lin2025voteflow,
+  title={VoteFlow: Enforcing Local Rigidity in Self-Supervised Scene Flow},
+  author={Lin, Yancong and Wang, Shiming and Nan, Liangliang and Kooij, Julian and Caesar, Holger},
+  booktitle={CVPR},
+  year={2025},
 }
 ```
 
