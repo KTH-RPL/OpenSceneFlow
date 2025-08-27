@@ -145,9 +145,9 @@ conda install pytorch3d -c pytorch3d
 pip install torch-scatter -f https://data.pyg.org/whl/torch-2.0.0+cu117.html
 ```
 
-Train VoteFlow with the leaderboard submit config. [Runtime: Around ? hours in ?x ? GPUs.]
+Train VoteFlow with the leaderboard submit config. [Runtime: Around 32 hours in 4 x V100 GPUs.]
 ```bash
-python train.py model=voteflow lr=2e-4 lr_scheduler=step epochs=12 batch_size=16 model.target.m=8 model.target.n=128 loss_fn=seflowLoss "add_seloss={chamfer_dis: 1.0, static_flow_loss: 1.0, dynamic_chamfer_dis: 1.0, cluster_based_pc0pc1: 1.0}"
+python train.py model=voteflow lr=2e-4 lr_scheduler=step epochs=12 batch_size=4 model.target.m=8 model.target.n=128 loss_fn=seflowLoss "add_seloss={chamfer_dis: 1.0, static_flow_loss: 1.0, dynamic_chamfer_dis: 1.0, cluster_based_pc0pc1: 1.0}"
 ```
 
 Pretrained weight can be downloaded through:
