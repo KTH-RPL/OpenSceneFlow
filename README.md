@@ -11,6 +11,11 @@
 OpenSceneFlow is a codebase for point cloud scene flow estimation. 
 It is also an official implementation of the following papers (sorted by the time of publication):
 
+- **DeltaFlow: An Efficient Multi-frame Scene Flow Estimation Method**   
+*Qingwen Zhang, Xiaomeng Zhu, Yushan Zhang, Yixi Cai, Olov Andersson, Patric Jensfelt*  
+Preprint; Under review; 2025   
+[ Backbone ] [ Supervised ] - [ [arXiv](https://arxiv.org/abs/todo.todo) ] [ [Project](https://github.com/Kin-Zhang/DeltaFlow) ]
+
 - **HiMo: High-Speed Objects Motion Compensation in Point Clouds** (SeFlow++)   
 *Qingwen Zhang, Ajinkya Khoche, Yi Yang, Li Ling, Sina Sharif Mansouri, Olov Andersson, Patric Jensfelt*  
 IEEE Transactions on Robotics (**T-RO**) 2025   
@@ -134,28 +139,9 @@ And free yourself from trainning, you can download the pretrained weight from [H
 mamba activate opensf
 ```
 
-### VoteFLow
-Extra pakcges needed for VoteFlow, [pytorch3d](https://pytorch3d.org/) (prefer 0.7.7) and [torch-scatter](https://github.com/rusty1s/pytorch_scatter?tab=readme-ov-file) (prefer 2.1.2):
+### Supervised Training
 
-```bash
-# Install Pytorch3d
-conda install pytorch3d -c pytorch3d
-
-# Install torch-scatter
-pip install torch-scatter -f https://data.pyg.org/whl/torch-2.0.0+cu118.html
-```
-
-Train VoteFlow with the leaderboard submit config. [Runtime: Around 32 hours in 4 x V100 GPUs.]
-```bash
-python train.py model=voteflow optimizer.lr=2e-4 +optimizer.scheduler.name=StepLR +optimizer.scheduler.step_size=6 epochs=12 batch_size=4 model.target.m=8 model.target.n=128 loss_fn=seflowLoss "+add_seloss={chamfer_dis: 1.0, static_flow_loss: 1.0, dynamic_chamfer_dis: 1.0, cluster_based_pc0pc1: 1.0}" +ssl_label=seflow_auto
-```
-
-Pretrained weight can be downloaded through:
-```bash
-wget https://huggingface.co/kin-zhang/OpenSceneFlow/resolve/main/voteflow_best.ckpt
-```
-
-### Flow4D
+#### Flow4D
 
 Train Flow4D with the leaderboard submit config. [Runtime: Around 18 hours in 4x RTX 3090 GPUs.]
 
@@ -166,7 +152,7 @@ python train.py model=flow4d optimizer.lr=1e-3 epochs=15 batch_size=8 num_frames
 wget https://huggingface.co/kin-zhang/OpenSceneFlow/resolve/main/flow4d_best.ckpt
 ```
 
-### SSF
+#### SSF
 
 Extra pakcges needed for SSF model:
 ```bash
@@ -190,11 +176,23 @@ wget https://huggingface.co/kin-zhang/OpenSceneFlow/resolve/main/ssf_best.ckpt
 wget https://huggingface.co/kin-zhang/OpenSceneFlow/resolve/main/ssf_long.ckpt
 ```
 
-### Feed-Forward Self-Supervised Model Training
+#### DeFlow
 
-Train SeFlow/SeFlow++ needed to:
+Train DeFlow with the leaderboard submit config. [Runtime: Around 6-8 hours in 4x A100 GPUs.] Please change `batch_size&lr` accoordingly if you don't have enough GPU memory. (e.g. `batch_size=6` for 24GB GPU)
+
+```bash
+python train.py model=deflow optimizer.lr=2e-4 epochs=15 batch_size=16 loss_fn=deflowLoss
+
+# Pretrained weight can be downloaded through:
+wget https://huggingface.co/kin-zhang/OpenSceneFlow/resolve/main/deflow_best.ckpt
+```
+
+
+### Self-Supervised Model Training
+
+Train Feed-forward SSL methods (e.g. SeFlow/SeFlow++), we needed to:
 1) process auto-label process.
-2) specify the loss function, we set the config of our best model in the leaderboard.
+2) specify the loss function, below we set the config to align our best model in the leaderboard.
 
 #### SeFlow
 
@@ -216,16 +214,26 @@ python train.py model=deflowpp optimizer.lr=2e-4 epochs=9 batch_size=16 loss_fn=
 wget https://huggingface.co/kin-zhang/OpenSceneFlow/resolve/main/seflowpp_best.ckpt
 ```
 
-### DeFlow
 
-Train DeFlow with the leaderboard submit config. [Runtime: Around 6-8 hours in 4x A100 GPUs.] Please change `batch_size&lr` accoordingly if you don't have enough GPU memory. (e.g. `batch_size=6` for 24GB GPU)
+### VoteFLow
+Extra pakcges needed for VoteFlow, [pytorch3d](https://pytorch3d.org/) (prefer 0.7.7) and [torch-scatter](https://github.com/rusty1s/pytorch_scatter?tab=readme-ov-file) (prefer 2.1.2):
 
 ```bash
-python train.py model=deflow optimizer.lr=2e-4 epochs=15 batch_size=16 loss_fn=deflowLoss
+# Install Pytorch3d
+conda install pytorch3d -c pytorch3d
+
+# Install torch-scatter
+pip install torch-scatter -f https://data.pyg.org/whl/torch-2.0.0+cu118.html
+```
+
+Train VoteFlow with the leaderboard submit config. [Runtime: Around 32 hours in 4 x V100 GPUs.]
+```bash
+python train.py model=voteflow optimizer.lr=2e-4 +optimizer.scheduler.name=StepLR +optimizer.scheduler.step_size=6 epochs=12 batch_size=4 model.target.m=8 model.target.n=128 loss_fn=seflowLoss "+add_seloss={chamfer_dis: 1.0, static_flow_loss: 1.0, dynamic_chamfer_dis: 1.0, cluster_based_pc0pc1: 1.0}" +ssl_label=seflow_auto
 
 # Pretrained weight can be downloaded through:
-wget https://huggingface.co/kin-zhang/OpenSceneFlow/resolve/main/deflow_best.ckpt
+wget https://huggingface.co/kin-zhang/OpenSceneFlow/resolve/main/voteflow_best.ckpt
 ```
+
 
 ## 3. Evaluation
 

@@ -35,10 +35,12 @@ def seflow_auto(input_data):
     return cluster
 
 # based on dufo and nnd for dynamic then cluster-wise checking with reassign. Check HiMo Fig. 6 Bottom
-def seflowpp_auto(input_data, tau1=0.05, tau2=0.1):
+def seflowpp_auto(input_data, tau1=0.05, tau2=0.30):
     """
     check HiMo paper (Eq. 5) to know more about paramter setting here.
     We didn't explore this parameter too much feel free to adjust as you want after reading the paper.
+    * For highway Scania data we set tau1=0.01, tau2=0.05
+    * For urban Argoverse 2 data we set tau1=0.05 tau2=0.3
     """
     dufo = input_data['dufo'][:].astype(np.uint8)
     cluster = shiftClusterid(input_data['cluster'][:].astype(np.int16))
