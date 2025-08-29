@@ -180,7 +180,7 @@ wget https://huggingface.co/kin-zhang/OpenSceneFlow/resolve/main/deflow_best.ckp
 
 ### Feed-Forward Self-Supervised Model Training
 
-Train SeFlow/SeFlow++/VoteFlow needed to:
+Train Feed-forward SSL methods (e.g. SeFlow/SeFlow++/VoteFlow etc), we needed to:
 1) process auto-label process.
 2) specify the loss function, we set the config here for our best model in the leaderboard.
 
@@ -218,7 +218,7 @@ wget https://huggingface.co/kin-zhang/OpenSceneFlow/resolve/main/voteflow_best.c
 
 ```bash
 # [Runtime: Around 10 hours in 4x A100 GPUs.] for Argoverse 2
-python train.py model=deflowpp optimizer.lr=2e-4 epochs=9 batch_size=8 loss_fn=seflowppLoss +ssl_label=seflow_auto "+add_seloss={chamfer_dis: 1.0, static_flow_loss: 1.0, dynamic_chamfer_dis: 1.0, cluster_based_pc0pc1: 1.0}" "model.target.num_iters=2" num_frames=3
+python train.py model=deflowpp save_top_model=3 val_every=3 voxel_size="[0.2, 0.2, 6]" point_cloud_range="[-51.2, -51.2, -3, 51.2, 51.2, 3]" num_workers=16 epochs=9 optimizer.lr=2e-4 +optimizer.scheduler.name=StepLR "+add_seloss={chamfer_dis: 1.0, static_flow_loss: 1.0, dynamic_chamfer_dis: 1.0, cluster_based_pc0pc1: 1.0}" +ssl_label=seflowpp_auto loss_fn=seflowppLoss num_frames=3 batch_size=4
 
 # Pretrained weight can be downloaded through:
 wget https://huggingface.co/kin-zhang/OpenSceneFlow/resolve/main/seflowpp_best.ckpt
