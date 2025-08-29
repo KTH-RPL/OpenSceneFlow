@@ -21,8 +21,8 @@ from src.dataset import HDF5Dataset
 from src.trainer import ModelWrapper
 
 def precheck_cfg_valid(cfg):
-    if os.path.exists(cfg.dataset_path + f"/{cfg.av2_mode}") is False:
-        raise ValueError(f"Dataset {cfg.dataset_path}/{cfg.av2_mode} does not exist. Please check the path.")
+    if os.path.exists(cfg.dataset_path + f"/{cfg.data_mode}") is False:
+        raise ValueError(f"Dataset {cfg.dataset_path}/{cfg.data_mode} does not exist. Please check the path.")
     if cfg.supervised_flag not in [True, False]:
         raise ValueError(f"Supervised flag {cfg.supervised_flag} is not valid. Please set it to True or False.")
     if cfg.leaderboard_version not in [1, 2]:
@@ -37,7 +37,7 @@ def main(cfg):
     if 'iter_only' in cfg.model and cfg.model.iter_only:
         from src.runner import launch_runner
         print(f"---LOG[eval]: Run optmization-based method: {cfg.model.name}")
-        launch_runner(cfg, cfg.av2_mode)
+        launch_runner(cfg, cfg.data_mode)
         return
     
     if not os.path.exists(cfg.checkpoint):
@@ -46,7 +46,7 @@ def main(cfg):
         
     torch_load_ckpt = torch.load(cfg.checkpoint)
     checkpoint_params = DictConfig(torch_load_ckpt["hyper_parameters"])
-    cfg.output = checkpoint_params.cfg.output + f"-e{torch_load_ckpt['epoch']}-{cfg.av2_mode}-v{cfg.leaderboard_version}"
+    cfg.output = checkpoint_params.cfg.output + f"-e{torch_load_ckpt['epoch']}-{cfg.data_mode}-v{cfg.leaderboard_version}"
     cfg.model.update(checkpoint_params.cfg.model)
     cfg.num_frames = cfg.model.target.get('num_frames', checkpoint_params.cfg.get('num_frames', cfg.get('num_frames', 2)))
     
@@ -63,7 +63,7 @@ def main(cfg):
     # NOTE(Qingwen): search & check: def eval_only_step_(self, batch, res_dict)
     trainer.validate(model = mymodel, \
                      dataloaders = DataLoader( \
-                                            HDF5Dataset(cfg.dataset_path + f"/{cfg.av2_mode}", \
+                                            HDF5Dataset(cfg.dataset_path + f"/{cfg.data_mode}", \
                                                         n_frames=cfg.num_frames, \
                                                         eval=True, leaderboard_version=cfg.leaderboard_version), \
                                             batch_size=1, shuffle=False))

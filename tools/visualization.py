@@ -68,7 +68,7 @@ def check_flow(
         o3d_vis.update([pcd, pcd1, pcd2, o3d.geometry.TriangleMesh.create_coordinate_frame(size=2)])
 
 def vis(
-    data_dir: str ="/home/kin/data/av2/preprocess/sensor/mini",
+    data_dir: str ="/home/kin/data/av2/h5py/demo/val",
     res_name: str = "flow", # any res_name we write before in HDF5Data
     start_id: int = 0,
     point_size: float = 2.0,
@@ -124,7 +124,7 @@ def vis(
 
 
 def vis_multiple(
-    data_dir: str ="/home/kin/data/av2/preprocess/sensor/mini",
+    data_dir: str ="/home/kin/data/av2/h5py/demo/val",
     res_name: list = ["flow"],
     start_id: int = 0,
     point_size: float = 3.0,

@@ -102,7 +102,7 @@ If you prefer to build the Docker image by yourself, Check [build-docker-image](
 
 ## 1. Data Preparation
 
-Refer to [dataprocess/README.md](dataprocess/README.md) for dataset download instructions. Currently, we support **Argoverse 2**, **Waymo**, **nuScenes** and **custom datasets** (more datasets will be added in the future). 
+Refer to [dataprocess/README.md](dataprocess/README.md) for dataset download instructions. Currently, we support **Argoverse 2**, **Waymo**, **nuScenes**, **ZOD** and **custom datasets** (more datasets will be added in the future). 
 
 After downloading, convert the raw data to `.h5` format for easy training, evaluation, and visualization. Follow the steps in [dataprocess/README.md#process](dataprocess/README.md#process). 
 
@@ -232,14 +232,14 @@ Since in training, we save all hyper-parameters and model checkpoints, the only 
 
 ```bash
 # (feed-forward): load ckpt and run it, it will directly prints all metric
-python eval.py checkpoint=/home/kin/seflow_best.ckpt av2_mode=val
+python eval.py checkpoint=/home/kin/seflow_best.ckpt data_mode=val
 
 # (optimization-based): it might need take really long time, maybe tmux for run it.
 python eval.py model=nsfp
 
 # it will output the av2_submit.zip or av2_submit_v2.zip for you to submit to leaderboard
-python eval.py checkpoint=/home/kin/seflow_best.ckpt av2_mode=test leaderboard_version=1
-python eval.py checkpoint=/home/kin/seflow_best.ckpt av2_mode=test leaderboard_version=2
+python eval.py checkpoint=/home/kin/seflow_best.ckpt data_mode=test leaderboard_version=1
+python eval.py checkpoint=/home/kin/seflow_best.ckpt data_mode=test leaderboard_version=2
 ```
 
 ### **📊 Range-Wise Metric (New!)**
@@ -256,7 +256,7 @@ In [SSF paper](https://arxiv.org/abs/2501.17821), we introduce a new distance-ba
 
 
 ### Submit result to public leaderboard
-To submit your result to the public Leaderboard, if you select `av2_mode=test`, it should be a zip file for you to submit to the leaderboard.
+To submit your result to the public Leaderboard, if you select `data_mode=test`, it should be a zip file for you to submit to the leaderboard.
 Note: The leaderboard result in DeFlow&SeFlow main paper is [version 1](https://eval.ai/web/challenges/challenge-page/2010/evaluation), as [version 2](https://eval.ai/web/challenges/challenge-page/2210/overview) is updated after DeFlow&SeFlow.
 
 ```bash

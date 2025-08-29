@@ -53,7 +53,7 @@ class ModelWrapper(LightningModule):
             "num_frames": 2,
             "optimizer": None,
             "dataset_path": None,
-            "av2_mode": None,
+            "data_mode": None,
         }
         for key, default in default_self_values.items():
             setattr(self, key, cfg.get(key, default))
@@ -88,13 +88,13 @@ class ModelWrapper(LightningModule):
         self.metrics = OfficialMetrics()
 
         # ---> inference mode
-        if self.save_res and self.av2_mode in ['val', 'valid', 'test']:
+        if self.save_res and self.data_mode in ['val', 'valid', 'test']:
             self.save_res_path = Path(cfg.dataset_path).parent / "results" / cfg.output
             os.makedirs(self.save_res_path, exist_ok=True)
-            print(f"We are in {cfg.av2_mode}, results will be saved in: {self.save_res_path} with version: {self.leaderboard_version} format for online leaderboard.")
+            print(f"We are in {cfg.data_mode}, results will be saved in: {self.save_res_path} with version: {self.leaderboard_version} format for online leaderboard.")
 
         # self.test_total_num = 0
-        if self.av2_mode in ['val', 'valid', 'test']:
+        if self.data_mode in ['val', 'valid', 'test']:
             print(cfg)
         self.save_hyperparameters()
 
@@ -209,7 +209,7 @@ class ModelWrapper(LightningModule):
     def on_validation_epoch_end(self):
         self.model.timer.print(random_colors=False, bold=False)
 
-        if self.av2_mode == 'test':
+        if self.data_mode == 'test':
             print(f"\nModel: {self.model.__class__.__name__}, Checkpoint from: {self.checkpoint}")
             print(f"Test results saved in: {self.save_res_path}, Please run submit command and upload to online leaderboard for results.")
             if self.leaderboard_version == 1:
@@ -222,7 +222,7 @@ class ModelWrapper(LightningModule):
             # wandb.log_artifact(output_file)
             return
         
-        if self.av2_mode == 'val':
+        if self.data_mode == 'val':
             print(f"\nModel: {self.model.__class__.__name__}, Checkpoint from: {self.checkpoint}")
             print(f"More details parameters and training status are in the checkpoint file.")        
 
@@ -241,8 +241,8 @@ class ModelWrapper(LightningModule):
             # Save the dictionaries to a pickle file
             with open(str(self.save_res_path)+'.pkl', 'wb') as f:
                 pickle.dump((self.metrics.epe_3way, self.metrics.bucketed, self.metrics.epe_ssf), f)
-            print(f"We already write the {self.vis_name} into the dataset, please run following commend to visualize the flow. Copy and paste it to your terminal:")
-            print(f"python tools/visualization.py --res_name '{self.vis_name}' --data_dir {self.dataset_path}")
+            print(f"We already write the {self.res_name} into the dataset, please run following commend to visualize the flow. Copy and paste it to your terminal:")
+            print(f"python tools/visualization.py --res_name '{self.res_name}' --data_dir {self.dataset_path}")
             print(f"Enjoy! ^v^ ------ \n")
 
         self.metrics = OfficialMetrics()
@@ -265,7 +265,7 @@ class ModelWrapper(LightningModule):
         else:
             final_flow[~batch['gm0']] = res_dict['flow'] + pose_flow[~batch['gm0']]
 
-        if self.av2_mode == 'val': # since only val we have ground truth flow to eval
+        if self.data_mode == 'val': # since only val we have ground truth flow to eval
             gt_flow = batch["flow"]
             v1_dict = evaluate_leaderboard(final_flow[eval_mask], pose_flow[eval_mask], pc0[eval_mask], \
                                        gt_flow[eval_mask], batch['flow_is_valid'][eval_mask], \
@@ -277,7 +277,7 @@ class ModelWrapper(LightningModule):
             self.metrics.step(v1_dict, v2_dict, ssf_dict)
         
         # NOTE (Qingwen): Since val and test, we will force set batch_size = 1 
-        if self.save_res or self.av2_mode == 'test': # test must save data to submit in the online leaderboard.    
+        if self.save_res or self.data_mode == 'test': # test must save data to submit in the online leaderboard.    
             save_pred_flow = final_flow[eval_mask, :3].cpu().detach().numpy()
             rigid_flow = pose_flow[eval_mask, :3].cpu().detach().numpy()
             is_dynamic = np.linalg.norm(save_pred_flow - rigid_flow, axis=1, ord=2) >= 0.05
@@ -305,7 +305,7 @@ class ModelWrapper(LightningModule):
         return batch, res_dict
     
     def validation_step(self, batch, batch_idx):
-        if self.av2_mode == 'val' or self.av2_mode == 'test':
+        if self.data_mode in ['val', 'test']:
             batch, res_dict = self.run_model_wo_ground_data(batch)
             self.model.timer[13].start("Eval")
             self.eval_only_step_(batch, res_dict)
@@ -337,13 +337,13 @@ class ModelWrapper(LightningModule):
         key = str(batch['timestamp'])
         scene_id = batch['scene_id']
         with h5py.File(os.path.join(self.dataset_path, f'{scene_id}.h5'), 'r+') as f:
-            if self.vis_name in f[key]:
-                del f[key][self.vis_name]
-            f[key].create_dataset(self.vis_name, data=final_flow.cpu().detach().numpy().astype(np.float32))
+            if self.res_name in f[key]:
+                del f[key][self.res_name]
+            f[key].create_dataset(self.res_name, data=final_flow.cpu().detach().numpy().astype(np.float32))
 
     def on_test_epoch_end(self):
         self.model.timer.print(random_colors=False, bold=False)
         print(f"\n\nModel: {self.model.__class__.__name__}, Checkpoint from: {self.checkpoint}")
         print(f"We already write the flow_est into the dataset, please run following commend to visualize the flow. Copy and paste it to your terminal:")
-        print(f"python tools/visualization.py --res_name '{self.vis_name}' --data_dir {self.dataset_path}")
+        print(f"python tools/visualization.py --res_name '{self.res_name}' --data_dir {self.dataset_path}")
         print(f"Enjoy! ^v^ ------ \n")

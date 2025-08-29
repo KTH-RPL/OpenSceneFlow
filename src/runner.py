@@ -106,7 +106,7 @@ class InferenceRunner:
 
     def _setup_dataloader(self):
         if self.mode in ['val', 'test', 'eval']:
-            dataset_path = self.cfg.dataset_path + f"/{self.cfg.av2_mode}"
+            dataset_path = self.cfg.dataset_path + f"/{self.cfg.data_mode}"
             is_eval_mode = True
         else: # 'save'
             dataset_path = self.cfg.dataset_path

@@ -12,9 +12,9 @@ cd /proj/berzelius-2023-364/users/x_qinzh/workspace/OpenSceneFlow
 
 
 # ====> leaderboard model
-# $PYTHON eval.py wandb_mode=online dataset_path=/proj/berzelius-2023-364/users/x_qinzh/data/av2/autolabel av2_mode=test \
+# $PYTHON eval.py wandb_mode=online dataset_path=/proj/berzelius-2023-364/users/x_qinzh/data/av2/autolabel data_mode=test \
 #     checkpoint=/proj/berzelius-2023-154/users/x_qinzh/seflow/logs/wandb/seflow-10086990/checkpoints/epoch_19_seflow.ckpt \
 #     save_res=True
 
-$PYTHON eval.py wandb_mode=online dataset_path=/proj/berzelius-2023-364/users/x_qinzh/data/av2/autolabel av2_mode=val \
+$PYTHON eval.py wandb_mode=online dataset_path=/proj/berzelius-2023-364/users/x_qinzh/data/av2/autolabel data_mode=val \
     checkpoint=/proj/berzelius-2023-154/users/x_qinzh/seflow/logs/wandb/seflow-10086990/checkpoints/epoch_19_seflow.ckpt
