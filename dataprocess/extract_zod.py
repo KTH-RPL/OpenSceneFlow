@@ -22,7 +22,7 @@ from zod._zod_dataset import _create_frame
 
 BASE_DIR = os.path.abspath(os.path.join( os.path.dirname( __file__ ), '..'))
 sys.path.append(BASE_DIR)
-from src.utils.mics import create_reading_index
+from dataprocess.misc_data import create_reading_index
 
 from linefit import ground_seg
 GROUNDSEG_config = f"{BASE_DIR}/conf/ground/zod.toml"
@@ -52,8 +52,8 @@ def process_log(data_dir: Path, log_id: str, output_dir: Path, n: Optional[int] 
             
             # NOTE(Qingwen): for a quick check downsampled data.. otherwise one h5py might have really long frames.
             # FIXME(Qingwen): maybe split too long scene to mini-scene etc later?
-            # if cnt % 4 != 0:
-            #     continue
+            if cnt % 4 != 0:
+                continue
 
             camera_frame, lidar_frame = frame
             # img = camera_frame.read()
@@ -121,7 +121,7 @@ def process_logs(data_dir: Path, output_dir: Path, nproc: int):
     #         res = list(tqdm(p.imap_unordered(proc, args), total=len(logs), ncols=120))
 
 def main(
-    dataset_root: str = "/home/kin/data/zod/drives",
+    dataset_root: str = "/home/kin/DATA_HDD/public_data/zod/drives",
     output_dir: str ="/home/kin/data/zod/h5py/himo",
     nproc: int = (multiprocessing.cpu_count() - 1),
     only_index: bool = False,
