@@ -276,5 +276,5 @@ if __name__ == '__main__':
     fire.Fire(main)
     fire.Fire(run_dufocluster)
     print("\nAlready Finished the main labels: dufo, cluster, ground mask etc.\n")
-    fire.Fire(run_nnd)
+    # fire.Fire(run_nnd)
     print(f"\nScript Time used: {(time.time() - start_time)/60:.2f} mins")

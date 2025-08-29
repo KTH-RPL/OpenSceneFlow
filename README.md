@@ -62,16 +62,6 @@ Additionally, *OpenSceneFlow* integrates following excellent works: [ICLR'24 Zer
 
 💡: Want to learn how to add your own network in this structure? Check [Contribute section](CONTRIBUTING.md#adding-a-new-method) and know more about the code. Fee free to pull request and your bibtex [here](#cite-us).
 
----
-
-<!-- 📜 Changelog:
-
-- 🎁 2025/1/28 14:58: Update the codebase to collect all methods in one repository reference [Pointcept](https://github.com/Pointcept/Pointcept) repo.
-- 🤗 2024/11/18 16:17: Update model and demo data download link through HuggingFace, Personally I found `wget` from HuggingFace link is much faster than Zenodo.
-- 2024/09/26 16:24: All codes already uploaded and tested. You can to try training directly by downloading (through [HuggingFace](https://huggingface.co/kin-zhang/OpenSceneFlow)/[Zenodo](https://zenodo.org/records/13744999)) demo data or pretrained weight for evaluation. 
-- 2024/07/24: Merging SeFlow & DeFlow code together, lighter setup and easier running.
-- 🔥 2024/07/02: Check the self-supervised version in our new ECCV'24 [SeFlow](https://github.com/KTH-RPL/SeFlow). The 1st ranking in new leaderboard among self-supervise methods. -->
-
 ## 0. Installation
 
 There are two ways to install the codebase: directly on your [local machine](#environment-setup) or in a [Docker container](#docker-recommended-for-isolation).
@@ -120,8 +110,9 @@ For a quick start, use our **mini processed dataset**, which includes one scene 
 
 
 ```bash
-wget https://huggingface.co/kin-zhang/OpenSceneFlow/resolve/main/demo_data.zip
-unzip demo_data.zip -d /home/kin/data/av2/h5py
+# around 1.3G
+wget https://huggingface.co/kin-zhang/OpenSceneFlow/resolve/main/demo-data-v2.zip
+unzip demo-data-v2.zip -d /home/kin/data/av2/h5py
 ```
 
 Once extracted, you can directly use this dataset to run the [training script](#2-quick-start) without further processing.
@@ -187,12 +178,11 @@ python train.py model=deflow optimizer.lr=2e-4 epochs=15 batch_size=16 loss_fn=d
 wget https://huggingface.co/kin-zhang/OpenSceneFlow/resolve/main/deflow_best.ckpt
 ```
 
+### Feed-Forward Self-Supervised Model Training
 
-### Self-Supervised Model Training
-
-Train Feed-forward SSL methods (e.g. SeFlow/SeFlow++), we needed to:
+Train SeFlow/SeFlow++/VoteFlow needed to:
 1) process auto-label process.
-2) specify the loss function, below we set the config to align our best model in the leaderboard.
+2) specify the loss function, we set the config here for our best model in the leaderboard.
 
 #### SeFlow
 
@@ -204,18 +194,7 @@ python train.py model=deflow optimizer.lr=2e-4 epochs=9 batch_size=16 loss_fn=se
 wget https://huggingface.co/kin-zhang/OpenSceneFlow/resolve/main/seflow_best.ckpt
 ```
 
-#### SeFlow++
-
-```bash
-# [Runtime: Around ? hours in ? GPUs.]
-python train.py model=deflowpp optimizer.lr=2e-4 epochs=9 batch_size=16 loss_fn=seflowppLoss +ssl_label=seflowpp_auto "+add_seloss={chamfer_dis: 1.0, static_flow_loss: 1.0, dynamic_chamfer_dis: 1.0, cluster_based_pc0pc1: 1.0}" "model.target.num_iters=2" num_frames=3
-
-# Pretrained weight can be downloaded through:
-wget https://huggingface.co/kin-zhang/OpenSceneFlow/resolve/main/seflowpp_best.ckpt
-```
-
-
-### VoteFLow
+#### VoteFLow
 Extra pakcges needed for VoteFlow, [pytorch3d](https://pytorch3d.org/) (prefer 0.7.7) and [torch-scatter](https://github.com/rusty1s/pytorch_scatter?tab=readme-ov-file) (prefer 2.1.2):
 
 ```bash
@@ -234,6 +213,16 @@ python train.py model=voteflow optimizer.lr=2e-4 +optimizer.scheduler.name=StepL
 wget https://huggingface.co/kin-zhang/OpenSceneFlow/resolve/main/voteflow_best.ckpt
 ```
 
+
+#### SeFlow++
+
+```bash
+# [Runtime: Around 10 hours in 4x A100 GPUs.] for Argoverse 2
+python train.py model=deflowpp optimizer.lr=2e-4 epochs=9 batch_size=8 loss_fn=seflowppLoss +ssl_label=seflow_auto "+add_seloss={chamfer_dis: 1.0, static_flow_loss: 1.0, dynamic_chamfer_dis: 1.0, cluster_based_pc0pc1: 1.0}" "model.target.num_iters=2" num_frames=3
+
+# Pretrained weight can be downloaded through:
+wget https://huggingface.co/kin-zhang/OpenSceneFlow/resolve/main/seflowpp_best.ckpt
+```
 
 ## 3. Evaluation
 

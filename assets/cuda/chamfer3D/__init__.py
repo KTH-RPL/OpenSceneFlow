@@ -74,11 +74,11 @@ class nnChamferDis(nn.Module):
         dist0, dist1, _, _ = ChamferDis.apply(input0, input1)
         return dist0, dist1
     
-    def truncated_dis(self, input0, input1):
+    def truncated_dis(self, input0, input1, truncate_dist=2):
         # nsfp: truncated distance way is set >= 2 to 0 but not nanmean
         cham_x, cham_y = self.dis_res(input0, input1)
-        cham_x[cham_x >= 2] = 0.0
-        cham_y[cham_y >= 2] = 0.0
+        cham_x[cham_x >= truncate_dist] = 0.0
+        cham_y[cham_y >= truncate_dist] = 0.0
         return torch.mean(cham_x) + torch.mean(cham_y)
     
     def disid_res(self, input0, input1):

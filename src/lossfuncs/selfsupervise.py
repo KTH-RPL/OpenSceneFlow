@@ -44,15 +44,9 @@ def seflowppLoss(res_dict, timer=None):
     # NOTE(Qingwen): since we set THREADS_PER_BLOCK is 256
     have_dynamic_cluster = (pc0_dynamic.shape[0] > 256) & (pc1_dynamic.shape[0] > 256)
 
-    # 
-
     # first item loss: chamfer distance
     # timer[5][1].start("MyCUDAChamferDis")
-    # raw: pc0 to pc1, est: pseudo_pc1from0 to pc1, idx means the nearest index
-    est_dist0, est_dist1, _, _ = MyCUDAChamferDis.disid_res(pseudo_pc1from0, pc1)
-    raw_dist0, raw_dist1, raw_idx0, _ = MyCUDAChamferDis.disid_res(pc0, pc1)
-    chamfer_dis = torch.nanmean(est_dist0[est_dist0 <= TRUNCATED_DIST]) + torch.nanmean(est_dist1[est_dist1 <= TRUNCATED_DIST])
-    chamfer_dis += MyCUDAChamferDis(pseduo_pch1from0, pch1, truncate_dist=TRUNCATED_DIST)
+    chamfer_dis = MyCUDAChamferDis(pseudo_pc1from0, pc1, truncate_dist=TRUNCATED_DIST) + MyCUDAChamferDis(pseduo_pch1from0, pch1, truncate_dist=TRUNCATED_DIST)
     # timer[5][1].stop()
     
     # second item loss: dynamic chamfer distance
@@ -70,12 +64,14 @@ def seflowppLoss(res_dict, timer=None):
     
     # fourth item loss: same label points' flow should be the same
     # timer[5][3].start("SameClusterLoss")
+    # raw: pc0 to pc1, est: pseudo_pc1from0 to pc1, idx means the nearest index
+    raw_dist0, raw_dist1, raw_idx0, _ = MyCUDAChamferDis.disid_res(pc0, pc1)
     moved_cluster_loss = torch.tensor(0.0, device=est_flow.device)
     moved_cluster_norms = torch.tensor([], device=est_flow.device)
     for label in unique_labels:
         mask = pc0_label == label
         if label == 0:
-            # Eq. 6 in the paper
+            # Eq. 6 in the SeFlow paper
             static_cluster_loss += torch.linalg.vector_norm(est_flow[mask, :], dim=-1).mean()
         # NOTE(Qingwen) 2025-04-23: label=1 is dynamic but no cluster id satisfied
         elif label > 1 and have_dynamic_cluster:
@@ -84,7 +80,7 @@ def seflowppLoss(res_dict, timer=None):
             if cluster_nnd.shape[0] <= 0:
                 continue
 
-            # Eq. 8 in the paper
+            # Eq. 8 in the SeFlow paper
             sorted_idxs = torch.argsort(cluster_nnd, descending=True)
             nearby_label = pc1_label[raw_idx0[mask][sorted_idxs]] # nonzero means dynamic in label
             non_zero_valid_indices = torch.nonzero(nearby_label > 0)
@@ -92,14 +88,14 @@ def seflowppLoss(res_dict, timer=None):
                 continue
             max_idx = sorted_idxs[non_zero_valid_indices.squeeze(1)[0]]
             
-            # Eq. 9 in the paper
+            # Eq. 9 in the SeFlow paper
             max_flow = pc1[raw_idx0[mask][max_idx]] - pc0[mask][max_idx]
 
-            # Eq. 10 in the paper
+            # Eq. 10 in the SeFlow paper
             moved_cluster_norms = torch.cat((moved_cluster_norms, torch.linalg.vector_norm((cluster_id_flow - max_flow), dim=-1)))
     
     if moved_cluster_norms.shape[0] > 0:
-        moved_cluster_loss = moved_cluster_norms.mean() # Eq. 11 in the paper
+        moved_cluster_loss = moved_cluster_norms.mean() # Eq. 11 in the SeFlow paper
     elif have_dynamic_cluster:
         moved_cluster_loss = torch.mean(raw_dist0[raw_dist0 <= TRUNCATED_DIST]) + torch.mean(raw_dist1[raw_dist1 <= TRUNCATED_DIST])
     # timer[5][3].stop()

@@ -26,6 +26,8 @@ WORKDIR /home/kin/workspace/OpenSceneFlow
 # need read the gpu device info to compile the cuda extension
 RUN /opt/conda/bin/pip install -r /home/kin/workspace/OpenSceneFlow/requirements.txt
 RUN /opt/conda/bin/pip install FastGeodis --no-build-isolation
+RUN /opt/conda/bin/conda install pytorch3d -c pytorch3d
+RUN /opt/conda/bin/pip install FastGeodis --no-build-isolation
 RUN /opt/conda/bin/pip install --no-cache-dir -e ./assets/cuda/chamfer3D && /opt/conda/bin/pip install --no-cache-dir -e ./assets/cuda/mmcv
 
 # environment for dataprocessing includes data-api

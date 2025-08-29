@@ -94,7 +94,8 @@ class ModelWrapper(LightningModule):
             print(f"We are in {cfg.av2_mode}, results will be saved in: {self.save_res_path} with version: {self.leaderboard_version} format for online leaderboard.")
 
         # self.test_total_num = 0
-        print(cfg)
+        if self.av2_mode in ['val', 'valid', 'test']:
+            print(cfg)
         self.save_hyperparameters()
 
     # FIXME(Qingwen 2025-08-20): update the loss_calculation fn alone to make all things pretty here....
