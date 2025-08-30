@@ -17,7 +17,14 @@ def main(
     model['hyper_parameters']['cfg']['model']['target']['_target_'] = new_path
     torch.save(model, output_path)
 
+def readmodel(
+    model_path: str = "/home/kin/model_zoo/seflowpp.ckpt"
+):
+    model = torch.load(model_path)
+    print(model['hyper_parameters']['cfg'], model['epoch'])
+
 if __name__ == '__main__':
     start_time = time.time()
-    fire.Fire(main)
+    # fire.Fire(main)
+    fire.Fire(readmodel)
     print(f"Time used: {time.time() - start_time:.2f} s")

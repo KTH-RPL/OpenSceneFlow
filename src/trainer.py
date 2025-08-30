@@ -137,7 +137,7 @@ class ModelWrapper(LightningModule):
             if 'pc0_dynamic' in batch:
                 dict2loss['pc0_labels'] = batch['pc0_dynamic'][batch_id][pc0_valid_from_pc2res]
                 dict2loss['pc1_labels'] = batch['pc1_dynamic'][batch_id][pc1_valid_from_pc2res]
-            if 'pch1_dynamic' in batch:
+            if 'pch1_dynamic' in batch and 'pch1_valid_point_idxes' in res_dict:
                 dict2loss['pch1_labels'] = batch['pch1_dynamic'][batch_id][res_dict['pch1_valid_point_idxes'][batch_id]]
 
             # different methods may don't have this in the res_dict

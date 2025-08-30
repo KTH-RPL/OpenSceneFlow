@@ -147,9 +147,8 @@ wget https://huggingface.co/kin-zhang/OpenSceneFlow/resolve/main/flow4d_best.ckp
 
 Extra pakcges needed for SSF model:
 ```bash
-pip install mmengine-lite torch-scatter
-# torch-scatter might not working, then reinstall by:
-pip install https://data.pyg.org/whl/torch-2.0.0%2Bcu118/torch_scatter-2.1.2%2Bpt20cu118-cp310-cp310-linux_x86_64.whl
+pip install mmengine-lite
+pip install torch-scatter -f https://data.pyg.org/whl/torch-2.0.0+cu117.html
 ```
 
 Train SSF with the leaderboard submit config. [Runtime: Around 6 hours in 8x A100 GPUs.]
@@ -202,7 +201,7 @@ Extra pakcges needed for VoteFlow, [pytorch3d](https://pytorch3d.org/) (prefer 0
 conda install pytorch3d -c pytorch3d
 
 # Install torch-scatter
-pip install torch-scatter -f https://data.pyg.org/whl/torch-2.0.0+cu118.html
+pip install torch-scatter -f https://data.pyg.org/whl/torch-2.0.0+cu117.html
 ```
 
 Train VoteFlow with the leaderboard submit config. [Runtime: Around 32 hours in 4 x V100 GPUs.]
