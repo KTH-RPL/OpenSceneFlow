@@ -14,7 +14,7 @@ It is also an official implementation of the following papers (sorted by the tim
 - **DeltaFlow: An Efficient Multi-frame Scene Flow Estimation Method**   
 *Qingwen Zhang, Xiaomeng Zhu, Yushan Zhang, Yixi Cai, Olov Andersson, Patric Jensfelt*  
 Preprint; Under review; 2025   
-[ Backbone ] [ Supervised ] - [ [arXiv](https://arxiv.org/abs/todo.todo) ] [ [Project](https://github.com/Kin-Zhang/DeltaFlow) ]
+[ Backbone ] [ Supervised ] - [ [arXiv](https://arxiv.org/abs/2508.17054) ] [ [Project](https://github.com/Kin-Zhang/DeltaFlow) ]
 
 - **HiMo: High-Speed Objects Motion Compensation in Point Clouds** (SeFlow++)   
 *Qingwen Zhang, Ajinkya Khoche, Yi Yang, Li Ling, Sina Sharif Mansouri, Olov Andersson, Patric Jensfelt*  
@@ -72,7 +72,7 @@ We use conda to manage the environment, you can install it follow [here](assets/
 
 ```bash
 git clone --recursive https://github.com/KTH-RPL/OpenSceneFlow.git
-cd OpenSceneFlow && mamba env create -f environment.yaml
+cd OpenSceneFlow && conda env create -f environment.yaml
 
 # You may need export your LD_LIBRARY_PATH with env lib
 # export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/home/kin/mambaforge/lib
@@ -95,7 +95,7 @@ cd /home/kin/workspace/OpenSceneFlow && git pull
 cd /home/kin/workspace/OpenSceneFlow/assets/cuda/mmcv && /opt/conda/envs/opensf/bin/python ./setup.py install
 cd /home/kin/workspace/OpenSceneFlow/assets/cuda/chamfer3D && /opt/conda/envs/opensf/bin/python ./setup.py install
 cd /home/kin/workspace/OpenSceneFlow
-mamba activate opensf
+conda activate opensf
 ```
 
 If you prefer to build the Docker image by yourself, Check [build-docker-image](assets/README.md#build-docker-image) section for more details.
@@ -127,7 +127,7 @@ Some tips before running the code:
 And free yourself from trainning, you can download the pretrained weight from [HuggingFace](https://huggingface.co/kin-zhang/OpenSceneFlow) and we provided the detail `wget` command in each model section. For optimization-based method, it's train-free so you can directly run with [3. Evaluation](#3-evaluation) (check more in the evaluation section).
 
 ```bash
-mamba activate opensf
+conda activate opensf
 ```
 
 ### Supervised Training
@@ -260,8 +260,8 @@ Note: The leaderboard result in DeFlow&SeFlow main paper is [version 1](https://
 
 ```bash
 # since the env may conflict we set new on deflow, we directly create new one:
-mamba create -n py37 python=3.7
-mamba activate py37
+conda create -n py37 python=3.7
+conda activate py37
 pip install "evalai"
 
 # Step 2: login in eval and register your team
