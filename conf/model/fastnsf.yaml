@@ -13,5 +13,4 @@ target:
   early_patience: 10 # default is 10, set 30 to get better results
   point_cloud_range: [-51.2, -51.2, -3, 51.2, 51.2, 3]
   
-val_monitor: val/Dynamic/Mean
 iter_only: True
