@@ -156,3 +156,34 @@ NusNamMap = {
     'static.vegetation': 'NONE',
     'vehicle.ego': 'NONE'
 }
+
+## ====> MAN to Argoverse Mapping
+ManNamMap = {
+    "animal": 'NONE',
+    "human.pedestrian.adult": 'PEDESTRIAN',
+    "human.pedestrian.child": 'PEDESTRIAN',
+    "human.pedestrian.construction_worker": 'PEDESTRIAN',
+    "human.pedestrian.personal_mobility": 'PEDESTRIAN',
+    "human.pedestrian.police_officer": 'PEDESTRIAN',
+    "human.pedestrian.stroller": 'STROLLER',
+    "human.pedestrian.wheelchair": 'WHEELCHAIR',
+    "movable_object.barrier": 'NONE',
+    "movable_object.debris": 'NONE',
+    "movable_object.pushable_pullable": 'NONE',
+    "movable_object.trafficcone": 'CONSTRUCTION_CONE',
+    "static_object.bicycle_rack": 'NONE',
+    "static_object.traffic_sign": 'SIGN',
+    "vehicle.bicycle": 'BICYCLE',
+    "vehicle.bus.bendy": 'ARTICULATED_BUS',
+    "vehicle.bus.rigid": 'BUS',
+    "vehicle.car": 'REGULAR_VEHICLE',
+    "vehicle.construction": 'LARGE_VEHICLE',
+    "vehicle.emergency.ambulance": 'LARGE_VEHICLE',
+    "vehicle.emergency.police": 'REGULAR_VEHICLE',
+    "vehicle.motorcycle": 'MOTORCYCLE',
+    "vehicle.trailer": 'VEHICULAR_TRAILER',
+    "vehicle.truck": 'TRUCK',
+    "vehicle.train": 'NONE',
+    "vehicle.other": 'NONE',
+    "vehicle.ego_trailer": 'NONE',
+}
