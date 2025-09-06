@@ -25,7 +25,7 @@ MAX_AXIS_RANGE = 60
 
 def vis(pc0, labels, title='HDBSCAN'):
     # visualize
-    vis = MyVisualizer(view_file=f'{BASEF_DIR}/assets/view/av2.json', window_title=title)
+    vis = MyVisualizer(view_file=f'{BASEF_DIR}/assets/view/demo.json', window_title=title)
     pcd = o3d.geometry.PointCloud()
     num_points = pc0.shape[0]
     pcd.points = o3d.utility.Vector3dVector(pc0)

@@ -45,7 +45,7 @@ from linefit import ground_seg
 GROUNDSEG_config = f"{PARENT_DIR}/conf/others/truckscenes.toml"
 # NOTE(Qingwen): we only select 2x64 long-range LiDARs for processing, you can add more sensors if needed
 # The timestamp reference will always be the last item in this list
-SelectedSensor = ['LIDAR_LEFT', 'LIDAR_RIGHT'] # 2x64
+SelectedSensor = ['LIDAR_RIGHT', 'LIDAR_LEFT'] # 2x64
 # SelectedSensor = ['LIDAR_TOP_FRONT', 'LIDAR_TOP_LEFT', 'LIDAR_TOP_RIGHT', 'LIDAR_REAR'] # 4x32
 # SelectedSensor = ['LIDAR_LEFT', 'LIDAR_RIGHT', 'LIDAR_TOP_FRONT', 'LIDAR_TOP_LEFT', 'LIDAR_TOP_RIGHT', 'LIDAR_REAR'] # all 6 LiDARs
 
@@ -89,8 +89,12 @@ def process_log(data_mode, data_dir: Path, scene_num_id: int, output_dir: Path, 
             ann_vel = ann_vel @ pose0[:3,:3]
             cls = ann.name
 
-            points_in_box_mask = points_in_box(ann, world_pc0[:,:3].T, wlh_factor=1.2)
+            # extend box length according to velocity, ref HiMo.
+            ann.wlh[1] = ann.wlh[1] + (np.linalg.norm(ann_vel) * delta_t / 2)
+            ann.wlh[2] = ann.wlh[2] + 0.2 # some truck top missing points, extend a bit
+            points_in_box_mask = points_in_box(ann, world_pc0[:,:3].T, wlh_factor=1.1)
             classes[points_in_box_mask] = CATEGORY_TO_INDEX[DataNameMap[cls]]
+
             if np.sum(points_in_box_mask) > 5:
                 obj_flow = np.ones_like(pc0[points_in_box_mask,:3]) * ann_vel * delta_t
                 flow[points_in_box_mask] += obj_flow
@@ -177,17 +181,6 @@ def process_log(data_mode, data_dir: Path, scene_num_id: int, output_dir: Path, 
             points = remove_ego_points(points, length_threshold=2.0, width_threshold=7.0)
             is_ground_0 = np.array(mygroundseg.run(points[:, :3]))
 
-            # # debug visualization
-            # import open3d as o3d
-            # pcd = o3d.geometry.PointCloud()
-            # pcd.points = o3d.utility.Vector3dVector(points[:,:3])
-            # # pcd.colors = o3d.utility.Vector3dVector(np.zeros((points.shape[0], 3)))
-            # show_lits = [pcd, o3d.geometry.TriangleMesh.create_coordinate_frame(size=1)] # ego frame
-            # for lidar_id_ in range(lidar_center.shape[0]):
-            #     show_lits.append(o3d.geometry.TriangleMesh.create_coordinate_frame(size=1).transform(lidar_center[lidar_id_]))
-            # o3d.visualization.draw_geometries(show_lits)
-            # exit(0)
-
             if cnt == len(full_sweep_data_dict[SelectedSensor[-1]]) - 1:
                 group = f.create_group(str(ts0))
                 create_group_data(group=group, pc=points, gm=is_ground_0.astype(np.bool_), pose=pose0, \
@@ -234,23 +227,23 @@ def process_logs(data_mode, data_dir: Path, scene_list: list, output_dir: Path, 
     args = sorted([(data_mode, data_dir, scene_num_id, output_dir) for scene_num_id in range(len(scene_list))])
     print(f'Using {nproc} processes')
     
-    # for debug
-    for x in tqdm(args[1:]):
-        proc(x, ignore_current_process=True)
-        break
+    # # for debug
+    # for x in tqdm(args[1:]):
+    #     proc(x, ignore_current_process=True)
+    #     break
 
-    # if nproc <= 1:
-    #     for x in tqdm(args):
-    #         proc(x, ignore_current_process=True)
-    # else:
-    #     with Pool(processes=nproc) as p:
-    #         res = list(tqdm(p.imap_unordered(proc, args), total=len(scene_list), ncols=100))
+    if nproc <= 1:
+        for x in tqdm(args):
+            proc(x, ignore_current_process=True)
+    else:
+        with Pool(processes=nproc) as p:
+            res = list(tqdm(p.imap_unordered(proc, args), total=len(scene_list), ncols=100))
 
 def main(
     data_dir: str = "/home/kin/data/truckscenes/man-truckscenes",
     mode: str = "v1.0-mini",
     output_dir: str ="/home/kin/data/truckscenes/h5py",
-    nproc: int = 1,
+    nproc: int = (multiprocessing.cpu_count() - 1),
     only_index: bool = False,
     split_name = None
 ):
@@ -274,12 +267,12 @@ def main(
     elif mode == 'v1.0-mini':
         train_scenes = splits.mini_train
         val_scenes = splits.mini_val
-        # input_dict = {
-        #     'train': train_scenes,
-        #     'val': val_scenes
-        # }
+        input_dict = {
+            'train': train_scenes,
+            'val': val_scenes
+        }
         # NOTE(Qingwen): or if you don't want to split mini, use below
-        input_dict = {'mini': train_scenes + val_scenes}
+        # input_dict = {'mini': train_scenes + val_scenes}
     else:
         raise ValueError('unknown')
 
