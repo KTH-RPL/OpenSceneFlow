@@ -3,6 +3,10 @@ import pickle, h5py, os, time
 from pathlib import Path
 from tqdm import tqdm
 
+from typing import Tuple, cast
+
+NDArrayInt = np.typing.NDArray[np.int64]
+
 def check_h5py_file_exists(h5py_file: Path, timestamps: list, verbose: bool = False) -> bool:
     if not h5py_file.exists():
         return False
@@ -51,6 +55,32 @@ def create_reading_index(data_dir: Path, flow_inside_check=False):
     with open(data_dir/pkl_file_name, 'wb') as f:
         pickle.dump(data_index, f)
         print(f"Create {pkl_file_name} index Successfully, cost: {time.time() - start_time:.2f} s")
+
+def find_closest_integer_in_ref_arr(
+    query_int: int, ref_arr: NDArrayInt
+) -> Tuple[int, int, int]:
+    """Find the closest integer to any integer inside a reference array, and the corresponding difference.
+
+    In our use case, the query integer represents a nanosecond-discretized timestamp, and the
+    reference array represents a numpy array of nanosecond-discretized timestamps.
+
+    Instead of sorting the whole array of timestamp differences, we just
+    take the minimum value (to speed up this function).
+
+    Args:
+        query_int: query integer,
+        ref_arr: Numpy array of integers
+
+    Returns:
+        integer, representing the closest integer found in a reference array to a query
+        integer, representing the integer difference between the match and query integers
+    """
+    closest_ind = np.argmin(np.absolute(ref_arr - query_int))
+    closest_int = cast(
+        int, ref_arr[closest_ind]
+    )  # mypy does not understand numpy arrays
+    int_diff = np.absolute(query_int - closest_int)
+    return closest_ind, closest_int, int_diff
 
 class SE2:
 

@@ -25,7 +25,7 @@ sys.path.append(BASE_DIR)
 from dataprocess.misc_data import create_reading_index
 
 from linefit import ground_seg
-GROUNDSEG_config = f"{BASE_DIR}/conf/ground/zod.toml"
+GROUNDSEG_config = f"{BASE_DIR}/conf/others/zod.toml"
 
 def process_log(data_dir: Path, log_id: str, output_dir: Path, n: Optional[int] = None) :
 
