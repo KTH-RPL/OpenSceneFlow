@@ -73,7 +73,7 @@ def get_pose(data_fn, sweep_data, w2stf=True):
     world2ego = data_fn.get('ego_pose', sweep_data['ego_pose_token'])
     # without considering the sensor to ego transform, we will do it outside if multiple sensors are used.
     if not w2stf:
-        return transform_matrix(world2ego['translation'], Quaternion(world2ego['rotation']))
+        return transform_matrix(world2ego['translation'], Quaternion(world2ego['rotation'])).astype(np.float64)
 
     ego2lidar = data_fn.get('calibrated_sensor', sweep_data['calibrated_sensor_token'])
     ego2lidar_np = transform_matrix(ego2lidar['translation'], Quaternion(ego2lidar['rotation']))

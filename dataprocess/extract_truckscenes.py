@@ -196,15 +196,15 @@ def process_log(data_mode, data_dir: Path, scene_num_id: int, output_dir: Path, 
                     curr_scene_ann = mants.get_boxes(sweep_data['token'])
                     scene_flow = compute_flow_simple(mants, points, pose0, pose1, ts0, ts1, curr_scene_ann, dclass, DataNameMap=ManNamMap)
 
-                    create_group_data(group=group, pc=points, gm=is_ground_0.astype(np.bool_), pose=pose0.astype(np.float32), \
+                    create_group_data(group=group, pc=points, gm=is_ground_0.astype(np.bool_), pose=pose0, \
                                     lidar_id=lidar_id, lidar_center=lidar_center, \
                                     flow_0to1=scene_flow['flow_0_1'], flow_valid=scene_flow['valid_0'], flow_category=scene_flow['classes_0'], \
                                     flow_instance=scene_flow['flow_instance_id'],
-                                    ego_motion=scene_flow['ego_motion'].astype(np.float32))
+                                    ego_motion=scene_flow['ego_motion'])
                 else: # no annotations, only save data
-                    create_group_data(group=group, pc=points, gm=is_ground_0.astype(np.bool_), pose=pose0.astype(np.float32), \
+                    create_group_data(group=group, pc=points, gm=is_ground_0.astype(np.bool_), pose=pose0, \
                                         lidar_id=lidar_id, lidar_center=lidar_center, \
-                                        ego_motion=(np.linalg.inv(pose1) @ pose0).astype(np.float32))
+                                        ego_motion=npcal_pose0to1(pose0, pose1))
 
 def proc(x, ignore_current_process=False):
     if not ignore_current_process:
@@ -228,9 +228,9 @@ def process_logs(data_mode, data_dir: Path, scene_list: list, output_dir: Path, 
     print(f'Using {nproc} processes')
     
     # # for debug
-    # for x in tqdm(args[1:]):
+    # for x in tqdm(args[:2]):
     #     proc(x, ignore_current_process=True)
-    #     break
+    #     # break
 
     if nproc <= 1:
         for x in tqdm(args):

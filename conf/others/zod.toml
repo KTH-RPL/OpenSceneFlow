@@ -23,7 +23,7 @@ max_start_height = 0.2  # Maximum heigh of starting line to be labelled ground.
 max_fit_error = 0.1  # maximum error of a point during line fit. [T_RMSE: will sqaure inside code.]
 
 # 判断是否是地面点的时候，需要满足的条件：
-max_dist_to_line = 0.2   # maximum vertical distance of point to line to be considered ground. [T_d_ground]
+max_dist_to_line = 0.25   # maximum vertical distance of point to line to be considered ground. [T_d_ground]
 line_search_angle = 2.0 # How far to search for a line in angular direction [rad].
 
 [general]
