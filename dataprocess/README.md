@@ -164,14 +164,15 @@ truckscene/
   — samples/
   — sweeps/
   — v1.0-mini/
+  — v1.0-trainval/
 ```
 
 #### Dataset frames
 
 | Dataset | # Total Scene | # Total Frames |
 | ------- | ------------- | -------------- |
-| train   | -           | -         |
-| val     | -           | -          |
+| train   | 524           | 101902 / 20380 (w. gt)         |
+| val     | 75           | 14625 / 2925 (w. gt)          |
 
 
 
@@ -185,7 +186,7 @@ This directory contains the scripts to preprocess the datasets into `.h5` files.
 - `extract_zod.py`: Process the datasets in ZOD.
 - `extract_truckscene.py`: Process the datasets in TruckScene.
 
-Example Running command:
+Example Running command, you can also check our [slurm data-process script](../assets/slurm/data-process.sh) for more details.:
 ```bash
 # av2:
 python dataprocess/extract_av2.py --av2_type sensor --data_mode train --argo_dir /home/kin/data/av2 --output_dir /home/kin/data/av2/h5py
@@ -197,7 +198,7 @@ python dataprocess/extract_waymo.py --mode train --flow_data_dir /home/kin/data/
 python dataprocess/extract_nus.py --mode v1.0-trainval --output_dir /home/kin/data/nus/h5py/full --nproc 24
 
 # truckscene:
-python dataprocess/extract_truckscene.py TODO
+python dataprocess/extract_truckscene.py --data_dir /home/kin/data/man-truckscenes --mode v1.0-mini --output_dir /home/kin/data/nus/h5py
 ```
 
 
