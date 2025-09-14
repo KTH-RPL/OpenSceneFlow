@@ -48,6 +48,6 @@ except ImportError:
 # * pip install pytorch3d assets/cuda/histlib
 try:
     from .icpflow import ICPFlow
-except ImportError:
+except ImportError as e:
     print("--- WARNING [model]: ICPFlow is not imported, as it requires pytorch3d lib which is not installed.")
     print(f"Detail error message\033[0m: {e}. Just ignore this warning if code runs without these models.")
