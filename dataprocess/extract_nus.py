@@ -18,7 +18,7 @@ import os
 import multiprocessing
 from pathlib import Path
 from multiprocessing import Pool, current_process
-from typing import Optional, Final
+from typing import Optional
 from tqdm import tqdm
 import numpy as np
 import fire, time, h5py
@@ -57,7 +57,7 @@ def remove_ego_points(pc: np.ndarray,
     y_filt = np.logical_and(pc[:, 1] > -length_threshold, pc[:, 1] < length_threshold)
     not_close = np.logical_not(np.logical_and(x_filt, y_filt))
     not_close = not_close.astype(bool)
-    return pc[not_close]
+    return pc[not_close], not_close
 
 def _load_points_from_file(filename: str) -> np.ndarray:
     """
@@ -69,10 +69,13 @@ def _load_points_from_file(filename: str) -> np.ndarray:
     pc = pc.reshape((-1, 5))[:, :4]
     return pc
         
-def get_pose(nusc, sweep_data):
-    # pose from lidar to world
-    ego2lidar = nusc.get('calibrated_sensor', sweep_data['calibrated_sensor_token'])
-    world2ego = nusc.get('ego_pose', sweep_data['ego_pose_token'])
+def get_pose(data_fn, sweep_data, w2stf=True):
+    world2ego = data_fn.get('ego_pose', sweep_data['ego_pose_token'])
+    # without considering the sensor to ego transform, we will do it outside if multiple sensors are used.
+    if not w2stf:
+        return transform_matrix(world2ego['translation'], Quaternion(world2ego['rotation'])).astype(np.float64)
+
+    ego2lidar = data_fn.get('calibrated_sensor', sweep_data['calibrated_sensor_token'])
     ego2lidar_np = transform_matrix(ego2lidar['translation'], Quaternion(ego2lidar['rotation']))
     world2ego_np = transform_matrix(world2ego['translation'], Quaternion(world2ego['rotation']))
     return np.dot(world2ego_np, ego2lidar_np)
@@ -85,13 +88,13 @@ def if_annotated_frame(sample_ann_dict, ts0):
             break
     return gt_flow_flag
 
-def _resample_data(nusc, sample_data, sample_ann_dict, resample2frequency=10):
+def _resample_data(nusc, sample_data, sample_ann_dict, datafrequency=20, resample2frequency=10):
     """
     NOTE(Qingwen) - 2025-05-18:
     We always want to start from the first GT frame, and then resample the data! So we have as many GT frames as possible...
     """
     sweep_data_lst, timestamps_lst = [], []
-    skipFrame = int(20 / resample2frequency)  # since nuscenes sweep at 20Hz, we want to resample to 10Hz
+    skipFrame = int(datafrequency / resample2frequency)  # since nuscenes sweep at 20Hz, we want to resample to 10Hz
     cnt = 0
 
     # Find the first GT frame
@@ -232,7 +235,7 @@ def process_log(nusc_mode, data_dir: Path, scene_num_id: int, output_dir: Path, 
             ts0 = sweep_data['timestamp']
             # lidar point cloud
             pc0 = _load_points_from_file(os.path.join(nusc.dataroot, sweep_data['filename']))
-            pc0 = remove_ego_points(pc0)
+            pc0, not_close = remove_ego_points(pc0)
             if pc0.shape[0] < 10:
                 print(f'{log_id}/{ts0} has no points....')
                 continue
@@ -268,18 +271,17 @@ def proc(x, ignore_current_process=False):
         pos = 1
     process_log(*x, n=pos)
     
-def process_logs(nusc_mode, data_dir: Path, scene_list: list, output_dir: Path, nproc: int):
-    """Compute sceneflow for all logs in the dataset. Logs are processed in parallel.
-       Args:
-         data_dir: Argoverse 2.0 directory
-         output_dir: Output directory.
+def process_logs(data_mode, data_dir: Path, scene_list: list, output_dir: Path, nproc: int):
     """
-    
+    Compute sceneflow for all logs in the dataset. 
+    Logs are processed in parallel.
+    """
+
     if not (data_dir).exists():
         print(f'{data_dir} not found')
         return
 
-    args = sorted([(nusc_mode, data_dir, scene_num_id, output_dir) for scene_num_id in range(len(scene_list))])
+    args = sorted([(data_mode, data_dir, scene_num_id, output_dir) for scene_num_id in range(len(scene_list))])
     print(f'Using {nproc} processes')
     
     # # for debug
@@ -295,7 +297,7 @@ def process_logs(nusc_mode, data_dir: Path, scene_list: list, output_dir: Path, 
             res = list(tqdm(p.imap_unordered(proc, args), total=len(scene_list), ncols=100))
 
 def main(
-    data_dir: str = "/home/kin/data/nus/v1.0",
+    data_dir: str = "/home/kin/data/nus/raw",
     mode: str = "v1.0-mini",
     output_dir: str ="/home/kin/data/nus/h5py/demo",
     nproc: int = (multiprocessing.cpu_count() - 1),

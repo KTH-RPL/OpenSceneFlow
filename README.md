@@ -13,7 +13,7 @@ It is also an official implementation of the following papers (sorted by the tim
 
 - **DeltaFlow: An Efficient Multi-frame Scene Flow Estimation Method**   
 *Qingwen Zhang, Xiaomeng Zhu, Yushan Zhang, Yixi Cai, Olov Andersson, Patric Jensfelt*  
-Preprint; Under review; 2025   
+Conference on Neural Information Processing Systems (**NeurIPS**) 2025 - Spotlight   
 [ Backbone ] [ Supervised ] - [ [arXiv](https://arxiv.org/abs/2508.17054) ] [ [Project](https://github.com/Kin-Zhang/DeltaFlow) ]
 
 - **HiMo: High-Speed Objects Motion Compensation in Point Clouds** (SeFlow++)   
@@ -106,7 +106,7 @@ If you prefer to build the Docker image by yourself, Check [build-docker-image](
 
 ## 1. Data Preparation
 
-Refer to [dataprocess/README.md](dataprocess/README.md) for dataset download instructions. Currently, we support **Argoverse 2**, **Waymo**, **nuScenes**, **ZOD** and **custom datasets** (more datasets will be added in the future). 
+Refer to [dataprocess/README.md](dataprocess/README.md) for dataset download instructions. Currently, we support **Argoverse 2**, **Waymo**, **nuScenes**, [**MAN-TruckScene**](https://github.com/TUMFTM/truckscenes-devkit), [**ZOD**](https://github.com/zenseact/zod) and **custom datasets** (more datasets will be added in the future). 
 
 After downloading, convert the raw data to `.h5` format for easy training, evaluation, and visualization. Follow the steps in [dataprocess/README.md#process](dataprocess/README.md#process). 
 
@@ -359,6 +359,12 @@ If you find it useful, please cite our works:
     author={Zhang, Qingwen and Khoche, Ajinkya and Yang, Yi and Ling, Li and Sina, Sharif Mansouri and Andersson, Olov and Jensfelt, Patric},
     year={2025},
     journal={arXiv preprint arXiv:2503.00803},
+}
+@article{zhang2025deltaflow,
+    title={{DeltaFlow}: An Efficient Multi-frame Scene Flow Estimation Method},
+    author={Zhang, Qingwen and Zhu, Xiaomeng and Zhang, Yushan and Cai, Yixi and Andersson, Olov and Jensfelt, Patric},
+    year={2025},
+    journal={arXiv preprint arXiv:2508.17054},
 }
 ```
 

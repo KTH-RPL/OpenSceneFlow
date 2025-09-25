@@ -282,10 +282,10 @@ class HDF5Data:
         }
         with h5py.File(os.path.join(self.directory, f'{scene_id}.h5'), 'r') as f:
             # original data
-            data_dict['pc0'] = f[key]['lidar'][:]
+            data_dict['pc0'] = f[key]['lidar'][:][:,:3]
             data_dict['gm0'] = f[key]['ground_mask'][:]
             data_dict['pose0'] = f[key]['pose'][:]
-            for flow_key in self.vis_name + ['dufo', 'label']:
+            for flow_key in self.vis_name + ['dufo', 'label', 'lidar_id', 'lidar_center']:
                 if flow_key in f[key]:
                     data_dict[flow_key] = f[key][flow_key][:]
 

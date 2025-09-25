@@ -30,7 +30,7 @@ from src.utils.mics import HDF5Data, flow_to_rgb
 from src.utils.o3d_view import MyVisualizer, MyMultiVisualizer, color_map, create_bev_square
 
 
-VIEW_FILE = f"{BASE_DIR}/assets/view/av2.json"
+VIEW_FILE = f"{BASE_DIR}/assets/view/demo.json"
 
 def check_flow(
     data_dir: str ="/home/kin/data/av2/preprocess/sensor/mini",

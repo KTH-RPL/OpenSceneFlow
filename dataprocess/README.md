@@ -6,13 +6,13 @@ README for downloading and preprocessing the dataset. We includes waymo, argover
 - [Download](#download): includes how to download the dataset.
 - [Process](#process): run script to preprocess the dataset.
 
-We've updated the process dataset for:
+We've updated the process dataset for (Please cite the original dataset paper and involved work if you use them):
 
 - [x] Argoverse 2.0: check [here](#argoverse-20). The process script Involved from [DeFlow](https://github.com/KTH-RPL/DeFlow).
 - [x] Waymo: check [here](#waymo-dataset). The process script was involved from [SeFlow](https://github.com/KTH-RPL/SeFlow).
 - [x] nuScenes: check [here](#nuscenes), The process script was involved from [DeltaFlow](https://github.com/Kin-Zhang/DeltaFlow).
 - [x] ZOD (w/o gt): check [here](#zod-dataset). The process script was involved from [HiMo](https://kin-zhang.github.io/HiMo). (It could be a good first reference for users to extract other datasets in the future.)
-- [ ] TruckScene: done coding, public after review. Will be involved later by another paper.
+- [x] TruckScene: check [here](#truckscene). The process script was involved from [DoGFlow](https://github.com/ajinkyakhoche/DoGFlow).
 
 If you want to **use all datasets above**, there is a **specific environment** in [envsftool.yaml](../envsftool.yaml) to install all the necessary packages. As Waymo package have different configuration and conflict with the main environment. Setup through the following command:
 
@@ -134,6 +134,46 @@ For HiMo, we only downloaded [drives-set](https://zod.zenseact.com/drives/) for 
 
 Please check the scripts: [dataprocess/extract_zod.py](./extract_zod.py) in detail, current we only process one scene while feel free to comment out for all scene etc.
 
+### TruckScene
+
+Please visit the [TruckScene dataset](https://brandportal.man/d/QSf8mPdU5Hgj/downloads#/-/dataset) page for privacy policy. You can download the dataset by following command:
+
+```bash
+# mini set, ~11G recommended for debugging purpose
+cd /home/kin/data/truckscene/mini
+wget https://man-truckscenes.s3.eu-central-1.amazonaws.com/release/mini/man-truckscenes_metadata_v1.0-mini.zip
+wget https://man-truckscenes.s3.eu-central-1.amazonaws.com/release/mini/man-truckscenes_sensordata_v1.0-mini.zip
+unzip "man-truckscenes_*.zip"
+
+# full trainval set, ~630G
+cd /home/kin/data/truckscene/trainval
+wget https://man-truckscenes.s3.eu-central-1.amazonaws.com/release/trainval/man-truckscenes_metadata_v1.0-trainval.zip
+wget https://man-truckscenes.s3.eu-central-1.amazonaws.com/release/trainval/man-truckscenes_sensordata01_v1.0-trainval.zip
+wget https://man-truckscenes.s3.eu-central-1.amazonaws.com/release/trainval/man-truckscenes_sensordata02_v1.0-trainval.zip
+wget https://man-truckscenes.s3.eu-central-1.amazonaws.com/release/trainval/man-truckscenes_sensordata03_v1.0-trainval.zip
+wget https://man-truckscenes.s3.eu-central-1.amazonaws.com/release/trainval/man-truckscenes_sensordata04_v1.0-trainval.zip
+wget https://man-truckscenes.s3.eu-central-1.amazonaws.com/release/trainval/man-truckscenes_sensordata05_v1.0-trainval.zip
+wget https://man-truckscenes.s3.eu-central-1.amazonaws.com/release/trainval/man-truckscenes_sensordata06_v1.0-trainval.zip
+wget https://man-truckscenes.s3.eu-central-1.amazonaws.com/release/trainval/man-truckscenes_sensordata07_v1.0-trainval.zip
+unzip "man-truckscenes_*.zip"
+```
+
+Folder structure:
+```
+truckscene/
+  — samples/
+  — sweeps/
+  — v1.0-mini/
+  — v1.0-trainval/
+```
+
+#### Dataset frames
+
+| Dataset | # Total Scene | # Total Frames |
+| ------- | ------------- | -------------- |
+| train   | 524           | 101902 / 20380 (w. gt)         |
+| val     | 75           | 14625 / 2925 (w. gt)          |
+
 
 
 ## Process
@@ -144,8 +184,9 @@ This directory contains the scripts to preprocess the datasets into `.h5` files.
 - `extract_nus.py`: Process the datasets in nuScenes.
 - `extract_waymo.py`: Process the datasets in Waymo.
 - `extract_zod.py`: Process the datasets in ZOD.
+- `extract_truckscene.py`: Process the datasets in TruckScene.
 
-Example Running command:
+Example Running command, you can also check our [slurm data-process script](../assets/slurm/data-process.sh) for more details.:
 ```bash
 # av2:
 python dataprocess/extract_av2.py --av2_type sensor --data_mode train --argo_dir /home/kin/data/av2 --output_dir /home/kin/data/av2/h5py
@@ -155,6 +196,9 @@ python dataprocess/extract_waymo.py --mode train --flow_data_dir /home/kin/data/
 
 # nus:
 python dataprocess/extract_nus.py --mode v1.0-trainval --output_dir /home/kin/data/nus/h5py/full --nproc 24
+
+# truckscene:
+python dataprocess/extract_truckscene.py --data_dir /home/kin/data/man-truckscenes --mode v1.0-mini --output_dir /home/kin/data/nus/h5py
 ```
 
 

@@ -24,7 +24,7 @@ dependencies:
     - av2==0.2.1
     - waymo-open-dataset-tf-2.11.0==1.5.0
     - zod==0.5.0
-    - truckscenes-devkit
+    - truckscenes-devkit==1.0.0
     # Qingwen's public pkg:
     - dztimer
     - dufomap==1.1.0

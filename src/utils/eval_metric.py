@@ -147,9 +147,12 @@ class BucketResultMatrix:
         average_range: float,
         count: int,
     ):
-        assert count > 0, f"count must be greater than 0, got {count}"
-        assert np.isfinite(average_epe), f"average_epe must be finite, got {average_epe}"
-        assert np.isfinite(average_range), f"average_range must be finite, got {average_range}"
+        if count == 0 or np.isnan(average_epe) or np.isnan(average_range):
+            print("Warning in accumulate_value: count is 0 or average_epe/average_range is NaN, skip this entry.")
+            return
+        # assert count > 0, f"count must be greater than 0, got {count}"
+        # assert np.isfinite(average_epe), f"average_epe must be finite, got {average_epe}"
+        # assert np.isfinite(average_range), f"average_range must be finite, got {average_range}"
 
         class_idx = self.class_names.index(class_name)
         range_bucket_idx = self.range_buckets.index(range_bucket)
