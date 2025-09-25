@@ -41,6 +41,11 @@ International Conference on Robotics and Automation (**ICRA**) 2025
 European Conference on Computer Vision (**ECCV**) 2024  
 [ Strategy ] [ Self-Supervised ] - [ [arXiv](https://arxiv.org/abs/2407.01702) ] [ [Project](https://github.com/KTH-RPL/SeFlow) ] &rarr; [here](#seflow)
 
+- **ICP-Flow: LiDAR Scene Flow Estimation with ICP**  
+*Yancong Lin, Holger Caesar*  
+Conference on Computer Vision and Pattern Recognition (**CVPR**) 2024  
+[ Optimization-based ] [ Self-Supervised ] - [ [arXiv](https://arxiv.org/abs/2402.17351) ] [ [Project](https://github.com/yanconglin/ICP-Flow) ] &rarr; [here](#icp-flow)
+
 - **DeFlow: Decoder of Scene Flow Network in Autonomous Driving**  
 *Qingwen Zhang, Yi Yang, Heng Fang, Ruoyu Geng, Patric Jensfelt*  
 International Conference on Robotics and Automation (**ICRA**) 2024  
@@ -55,7 +60,6 @@ Additionally, *OpenSceneFlow* integrates following excellent works: [ICLR'24 Zer
 - [x] [ZeroFlow](https://arxiv.org/abs/2305.10424): ICLR 2024, their pre-trained weight can covert into our format easily through [the script](tools/zerof2ours.py).
 - [x] [NSFP](https://arxiv.org/abs/2111.01253): NeurIPS 2021, faster 3x than original version because of [our CUDA speed up](assets/cuda/README.md), same (slightly better) performance.
 - [x] [FastNSF](https://arxiv.org/abs/2304.09121): ICCV 2023. SSL optimization-based.
-- [ ] [ICP-Flow](https://arxiv.org/abs/2402.17351): CVPR 2024. SSL optimization-based. Done coding, public after review.
 - [ ] [EulerFlow](https://arxiv.org/abs/2410.02031): ICLR 2025. SSL optimization-based. In my plan, haven't coding yet.
 
 </details>
@@ -145,7 +149,7 @@ wget https://huggingface.co/kin-zhang/OpenSceneFlow/resolve/main/flow4d_best.ckp
 
 #### SSF
 
-Extra pakcges needed for SSF model:
+Extra packages needed for SSF model:
 ```bash
 pip install mmengine-lite
 pip install torch-scatter -f https://data.pyg.org/whl/torch-2.0.0+cu117.html
@@ -222,6 +226,25 @@ python train.py model=deflowpp save_top_model=3 val_every=3 voxel_size="[0.2, 0.
 # Pretrained weight can be downloaded through:
 wget https://huggingface.co/kin-zhang/OpenSceneFlow/resolve/main/seflowpp_best.ckpt
 ```
+
+
+### Optimization-based Unsupervised Methods
+
+For all optimization-based methods, you can directly run `eval.py`/`save.py` to get the result without training, while the running might take really long time, maybe tmux for run it.
+
+#### ICP-Flow
+
+Extra packages needed for ICP-Flow model:
+```bash
+pip install pytorch3d assets/cuda/histlib
+```
+
+Then run as:
+```bash
+python eval.py model=icpflow
+python save.py model=icpflow
+```
+
 
 ## 3. Evaluation
 
@@ -370,6 +393,12 @@ And our excellent collaborators works contributed to this codebase also:
   author={Lin, Yancong and Wang, Shiming and Nan, Liangliang and Kooij, Julian and Caesar, Holger},
   booktitle={CVPR},
   year={2025},
+}
+@article{lin2024icp,
+  title={ICP-Flow: LiDAR Scene Flow Estimation with ICP},
+  author={Lin, Yancong and Caesar, Holger},
+  booktitle={Proceedings of the IEEE/CVF Conference on Computer Vision and Pattern Recognition (CVPR)},
+  year={2024}
 }
 ```
 
