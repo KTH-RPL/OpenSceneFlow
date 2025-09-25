@@ -16,7 +16,49 @@ import numpy as np
 import os, sys
 BASE_DIR = os.path.abspath(os.path.join( os.path.dirname( __file__ ), '../..' ))
 sys.path.append(BASE_DIR)
+from src.utils.av2_eval import CATEGORY_TO_INDEX, BUCKETED_METACATAGORIES
 
+# check: https://arxiv.org/abs/2508.17054
+def deltaflowLoss(res_dict):
+    pred = res_dict['est_flow']
+    gt = res_dict['gt_flow']
+    classes = res_dict['gt_classes']
+    instances = res_dict['gt_instance']
+    
+    reassign_meta = torch.zeros_like(classes, dtype=torch.int, device=classes.device)
+    for i, cats in enumerate(BUCKETED_METACATAGORIES):
+        selected_classes_ids = [CATEGORY_TO_INDEX[cat] for cat in BUCKETED_METACATAGORIES[cats]]
+        reassign_meta[torch.isin(classes, torch.tensor(selected_classes_ids, device=classes.device))] = i
+
+    pts_loss = torch.linalg.vector_norm(pred - gt, dim=-1)
+    speed = torch.linalg.vector_norm(gt, dim=-1) / 0.1
+    
+    weight_loss = deflowLoss(res_dict)['loss']
+
+    classes_loss = 0.0
+    weight = [0.1, 1.0, 2.0, 2.5, 1.5] # BACKGROUND, CAR, PEDESTRIAN, WHEELED, OTHER
+    for class_id in range(len(BUCKETED_METACATAGORIES)):
+        mask = reassign_meta == class_id
+        for loss_ in [0.1 * pts_loss[(speed < 0.4) & mask].mean(), 
+                      0.4 * pts_loss[(speed >= 0.4) & (speed <= 1.0) & mask].mean(), 
+                      0.5 * pts_loss[(speed > 1.0) & mask].mean()]:
+            classes_loss += torch.nan_to_num(loss_, nan=0.0) * weight[class_id]
+
+    instance_loss, cnt = 0.0, 0
+    if instances is not None:
+        for instance_id in torch.unique(instances):
+            mask = instances == instance_id
+            reassign_meta_instance = reassign_meta[mask]
+            class_id = torch.mode(reassign_meta_instance, 0).values.item()
+            loss_ = pts_loss[mask].mean()
+            if speed[mask].mean() <= 0.4:
+                continue
+            instance_loss += (loss_ * torch.exp(loss_) * weight[class_id])
+            cnt += 1
+        instance_loss /= (cnt if cnt > 0 else 1)
+    return {'loss': weight_loss + classes_loss + instance_loss}
+
+# check: https://arxiv.org/abs/2401.16122
 def deflowLoss(res_dict):
     pred = res_dict['est_flow']
     gt = res_dict['gt_flow']

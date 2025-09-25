@@ -14,7 +14,7 @@ It is also an official implementation of the following papers (sorted by the tim
 - **DeltaFlow: An Efficient Multi-frame Scene Flow Estimation Method**   
 *Qingwen Zhang, Xiaomeng Zhu, Yushan Zhang, Yixi Cai, Olov Andersson, Patric Jensfelt*  
 Conference on Neural Information Processing Systems (**NeurIPS**) 2025 - Spotlight   
-[ Backbone ] [ Supervised ] - [ [arXiv](https://arxiv.org/abs/2508.17054) ] [ [Project](https://github.com/Kin-Zhang/DeltaFlow) ]
+[ Backbone ] [ Supervised ] - [ [arXiv](https://arxiv.org/abs/2508.17054) ] [ [Project](https://github.com/Kin-Zhang/DeltaFlow) ]&rarr; [here](#deltaflow)
 
 - **HiMo: High-Speed Objects Motion Compensation in Point Clouds** (SeFlow++)   
 *Qingwen Zhang, Ajinkya Khoche, Yi Yang, Li Ling, Sina Sharif Mansouri, Olov Andersson, Patric Jensfelt*  
@@ -131,6 +131,18 @@ conda activate opensf
 ```
 
 ### Supervised Training
+
+#### DeltaFlow
+
+Train DeltaFlow with the leaderboard submit config. [Runtime: Around 18 hours in 10x RTX 3080 GPUs.]
+
+```bash
+# total bz then it's 10x2 under above training setup.
+python train.py model=deltaFlow optimizer.lr=2e-3 epochs=20 batch_size=2 num_frames=5 loss_fn=deflowLoss "voxel_size=[0.15, 0.15, 0.15]" "point_cloud_range=[-38.4, -38.4, -3.2, 38.4, 38.4, 3.2]" +optimizer.scheduler.name=WarmupCosLR +optimizer.scheduler.max_lr=2e-3 +optimizer.scheduler.total_steps=20000
+
+# Pretrained weight can be downloaded through:
+wget https://huggingface.co/kin-zhang/OpenSceneFlow/resolve/main/flow4d_best.ckpt
+```
 
 #### Flow4D
 

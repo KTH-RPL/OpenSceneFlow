@@ -300,6 +300,7 @@ def _run_process(cfg, mode):
 def _spawn_wrapper(rank, world_size, cfg, mode):
     torch.cuda.set_device(rank)
 
+    # FIXME(Qingwen): better to set these through command, since we might have more nodes to connected.
     os.environ['RANK'] = str(rank)
     os.environ['WORLD_SIZE'] = str(world_size)
     os.environ['MASTER_ADDR'] = 'localhost'

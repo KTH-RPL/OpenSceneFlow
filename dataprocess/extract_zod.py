@@ -122,11 +122,7 @@ def process_logs(data_dir: Path, output_dir: Path, nproc: int):
 
 def main(
     dataset_root: str = "/home/kin/DATA_HDD/public_data/zod/drives",
-    output_dir: str ="/home/kin/data/zod/h5py/himo",
-    nproc: int = (multiprocessing.cpu_count() - 1),
-    only_index: bool = False,
 ):
-    output_dir_ = Path(output_dir)
     if only_index:
         create_reading_index(output_dir_)
         return

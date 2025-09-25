@@ -11,5 +11,4 @@ target:
   early_patience: 30 # default is 30, set 100 to get better results (zeroflow setting.)
   point_cloud_range: [-51.2, -51.2, -3, 51.2, 51.2, 3]
   
-val_monitor: val/Dynamic/Mean
 iter_only: True
