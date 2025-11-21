@@ -13,12 +13,13 @@
 import torch
 from torch.utils.data import DataLoader
 import lightning.pytorch as pl
-from lightning.pytorch.loggers import WandbLogger
+from lightning.pytorch.loggers import TensorBoardLogger, WandbLogger
 from omegaconf import DictConfig
 import hydra, wandb, os, sys
 from hydra.core.hydra_config import HydraConfig
 from src.dataset import HDF5Dataset
 from src.trainer import ModelWrapper
+from src.utils import InlineTee
 
 def precheck_cfg_valid(cfg):
     if os.path.exists(cfg.dataset_path + f"/{cfg.data_mode}") is False:
@@ -36,8 +37,8 @@ def main(cfg):
 
     if 'iter_only' in cfg.model and cfg.model.iter_only:
         from src.runner import launch_runner
-        print(f"---LOG[eval]: Run optmization-based method: {cfg.model.name}")
-        launch_runner(cfg, cfg.data_mode)
+        launch_runner(cfg, cfg.data_mode, output_dir)
+        print(f"---LOG[eval]: Finished optimization-based evaluation. Logging saved to {output_dir}/output.log")
         return
     
     if not os.path.exists(cfg.checkpoint):
@@ -47,19 +48,29 @@ def main(cfg):
     torch_load_ckpt = torch.load(cfg.checkpoint)
     checkpoint_params = DictConfig(torch_load_ckpt["hyper_parameters"])
     cfg.output = checkpoint_params.cfg.output + f"-e{torch_load_ckpt['epoch']}-{cfg.data_mode}-v{cfg.leaderboard_version}"
+    # replace output_dir ${old_output_dir} with ${output_dir}
+    output_dir = output_dir.replace(HydraConfig.get().runtime.output_dir.split('/')[-2], checkpoint_params.cfg.output.split('/')[-1])
     cfg.model.update(checkpoint_params.cfg.model)
     cfg.num_frames = cfg.model.target.get('num_frames', checkpoint_params.cfg.get('num_frames', cfg.get('num_frames', 2)))
     
     mymodel = ModelWrapper.load_from_checkpoint(cfg.checkpoint, cfg=cfg, eval=True)
-    print(f"\n---LOG[eval]: Loaded model from {cfg.checkpoint}. The backbone network is {checkpoint_params.cfg.model.name}.\n")
+    os.makedirs(output_dir, exist_ok=True)
+    sys.stdout = InlineTee(f"{output_dir}/output.log")
+    print(f"---LOG[eval]: Loaded model from {cfg.checkpoint}. The backbone network is {checkpoint_params.cfg.model.name}.")
+    print(f"---LOG[eval]: Evaluation data: {cfg.dataset_path}/{cfg.data_mode} set.\n")
 
-    wandb_logger = WandbLogger(save_dir=output_dir,
-                               entity="kth-rpl",
-                               project=f"deflow-eval", 
-                               name=f"{cfg.output}",
-                               offline=(cfg.wandb_mode == "offline"))
+    if cfg.wandb_mode != "disabled":
+        logger = WandbLogger(save_dir=output_dir,
+                            entity="kth-rpl",
+                            project=f"opensf-eval", 
+                            name=f"{cfg.output}",
+                            offline=(cfg.wandb_mode == "offline"))
+        logger.watch(mymodel, log_graph=False)
+    else:
+        # check local tensorboard logging: tensorboard --logdir logs/jobs/{log folder}
+        logger = TensorBoardLogger(save_dir=output_dir, name="logs")
     
-    trainer = pl.Trainer(logger=wandb_logger, devices=1)
+    trainer = pl.Trainer(logger=logger, devices=1)
     # NOTE(Qingwen): search & check: def eval_only_step_(self, batch, res_dict)
     trainer.validate(model = mymodel, \
                      dataloaders = DataLoader( \
@@ -67,7 +78,9 @@ def main(cfg):
                                                         n_frames=cfg.num_frames, \
                                                         eval=True, leaderboard_version=cfg.leaderboard_version), \
                                             batch_size=1, shuffle=False))
-    wandb.finish()
+    if cfg.wandb_mode != "disabled":
+        wandb.finish()
+    print(f"---LOG[eval]: Finished feed-forward evaluation. Logging saved to {output_dir}/output.log")
 
 if __name__ == "__main__":
     main()

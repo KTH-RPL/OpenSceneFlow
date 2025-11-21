@@ -30,3 +30,47 @@ def npcal_pose0to1(pose0, pose1):
     pose1_inv[:3,3] = (pose1[:3,:3].T * -pose1[:3,3]).sum(axis=1)
     pose_0to1 = pose1_inv @ pose0.astype(np.float64)
     return pose_0to1.astype(np.float32)
+
+
+# a quick inline tee class to log stdout to file
+import sys
+import re
+from datetime import datetime
+class InlineTee:
+    def __init__(self, filepath, append=False, timestamp_per_line=False):
+        mode = "a" if append else "w"
+        self.file = open(filepath, mode)
+        self.stdout = sys.stdout
+        self.newline = True
+        self.timestamp_per_line = timestamp_per_line
+        self.first_write = True
+        self.ansi_pattern = re.compile(r'\x1b\[[0-9;]*m')
+        
+        # write header timestamp
+        if not self.timestamp_per_line:
+            self.file.write(f"=== Log started at {datetime.now().strftime('%Y-%m-%d %H:%M:%S')} ===\n\n")
+
+    def write(self, data):
+        self.stdout.write(data)
+        
+        clean_data = self.ansi_pattern.sub('', data)
+        
+        if self.timestamp_per_line and clean_data.strip():
+            lines = clean_data.split('\n')
+            for i, line in enumerate(lines):
+                if line and self.newline:
+                    timestamp = datetime.now().strftime("[%Y-%m-%d %H:%M:%S] ")
+                    self.file.write(timestamp + line)
+                else:
+                    self.file.write(line)
+                if i < len(lines) - 1:
+                    self.file.write('\n')
+                    self.newline = True
+                else:
+                    self.newline = line == ''
+        else:
+            self.file.write(clean_data)
+
+    def flush(self):
+        self.file.flush()
+        self.stdout.flush()

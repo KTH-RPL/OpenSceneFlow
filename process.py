@@ -186,7 +186,6 @@ def main(
     if not os.path.exists(gm_config_path) and run_gm:
         raise FileNotFoundError(f"Ground segmentation config file not found: {gm_config_path}. Please check folder")
     
-    
     data_path = Path(data_dir)
     dataset = HDF5Data(data_path) # single frame reading.
     all_scene_ids = list(dataset.scene_id_bounds.keys())

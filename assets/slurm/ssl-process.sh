@@ -18,7 +18,7 @@ cd /proj/berzelius-2023-154/users/x_qinzh/OpenSceneFlow
 
 
 # data directory containing the extracted h5py files
-DATA_DIR="/proj/berzelius-2023-364/data/truckscenes/h5py/val"
+DATA_DIR="/proj/berzelius-2023-364/data/av2/h5py/sensor/train"
 
 TOTAL_SCENES=$(ls ${DATA_DIR}/*.h5 | wc -l)
 # Process every n-th frame into DUFOMap, no need to change at least for now.

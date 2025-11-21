@@ -272,3 +272,44 @@ class ConvWithNorms(nn.Module):
         else:
             batchnorm_res = self.batchnorm(conv_res)
         return self.nonlinearity(batchnorm_res)
+
+"""
+Note(2024/7/18 21:11 Qingwen):
+This is the decoder idea from DeFlow: https://github.com/KTH-RPL/DeFlow
+If you use/find this helpful, please cite the respective publication as listed on the above website.
+"""
+class SparseGRUHead(ConvGRUDecoder):
+    def __init__(self, voxel_feat_dim: int = 96, point_feat_dim: int = 32, num_iters = 2):
+        super(SparseGRUHead, self).__init__(pseudoimage_channels=point_feat_dim, num_iters=num_iters)
+        self.offset_encoder = None # otherwise DDP may find parameter not used in training.
+        self.gru = ConvGRU(input_dim=point_feat_dim, hidden_dim=voxel_feat_dim)
+        self.decoder = nn.Sequential(
+            nn.Linear(voxel_feat_dim + point_feat_dim, 32),
+            nn.BatchNorm1d(32),
+            nn.GELU(),
+            nn.Linear(32, 3))
+        
+    def forward_single(self, voxel_feat, voxel_coords, point_offsets):
+        # [N, voxel_feat_dim] -> [N, voxel_feat_dim, 1]
+        concatenated_vectors = (voxel_feat[:, voxel_coords[:,2], voxel_coords[:,1], voxel_coords[:,0]].T).unsqueeze(2)
+        for itr in range(self.num_iters):
+            concatenated_vectors = self.gru(concatenated_vectors, point_offsets.unsqueeze(2))
+
+        flow = self.decoder(torch.cat([concatenated_vectors.squeeze(2), point_offsets], dim=1))
+        return flow
+    
+    def forward(self, sparse_tensor, voxelizer_infos, pc0_point_feats_lst): 
+        
+        voxel_feats = sparse_tensor.dense()
+
+        flow_outputs = []
+        batch_idx = 0
+        for voxelizer_info in voxelizer_infos:
+            voxel_coords = voxelizer_info["voxel_coords"]
+            point_feat = pc0_point_feats_lst[batch_idx]
+            voxel_feat = voxel_feats[batch_idx, :]
+            flow = self.forward_single(voxel_feat, voxel_coords, point_feat)
+            batch_idx += 1 
+            flow_outputs.append(flow)
+
+        return flow_outputs

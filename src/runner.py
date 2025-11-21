@@ -15,7 +15,7 @@
 # 
 """
 
-import os
+import os, sys
 import torch
 import torch.distributed as dist
 import torch.multiprocessing as mp
@@ -34,7 +34,7 @@ from .models.basic import cal_pose0to1
 from .utils.eval_metric import OfficialMetrics, evaluate_leaderboard, evaluate_leaderboard_v2, evaluate_ssf
 from .utils.av2_eval import write_output_file
 from .utils.mics import zip_res
-
+from .utils import InlineTee
 class SceneDistributedSampler(Sampler):
     """
     A DistributedSampler that distributes data based on scene IDs, not individual indices.
@@ -268,15 +268,17 @@ def _run_process(cfg, mode):
                     final_metrics.epe_3way[key].extend(val_list)
 
                 for class_idx, class_name in enumerate(metrics_obj.bucketedMatrix.class_names):
-                    for range_idx, range_bucket in enumerate(metrics_obj.bucketedMatrix.range_buckets):
-                        count = metrics_obj.bucketedMatrix.count_storage_matrix[class_idx, range_idx]
+                    # NOTE(Qingwen): for bucketedMatrix range_buckets = speed_buckets
+                    for speed_idx, speed_bucket in enumerate(metrics_obj.bucketedMatrix.range_buckets):
+                        count = metrics_obj.bucketedMatrix.count_storage_matrix[class_idx, speed_idx]
                         if count > 0:
-                            avg_epe = metrics_obj.bucketedMatrix.epe_storage_matrix[class_idx, range_idx]
-                            avg_range = metrics_obj.bucketedMatrix.range_storage_matrix[class_idx, range_idx]
+                            avg_epe = metrics_obj.bucketedMatrix.epe_storage_matrix[class_idx, speed_idx]
+                            avg_speed = metrics_obj.bucketedMatrix.range_storage_matrix[class_idx, speed_idx]
                             final_metrics.bucketedMatrix.accumulate_value(
-                                class_name, range_bucket, avg_epe, avg_range, count
+                                class_name, speed_bucket, avg_epe, avg_speed, count
                             )
                 for class_idx, class_name in enumerate(metrics_obj.distanceMatrix.class_names):
+                    # NOTE(Qingwen): for distanceMatrix range_buckets = distance_buckets
                     for range_idx, range_bucket in enumerate(metrics_obj.distanceMatrix.range_buckets):
                         count = metrics_obj.distanceMatrix.count_storage_matrix[class_idx, range_idx]
                         if count > 0:
@@ -298,7 +300,12 @@ def _run_process(cfg, mode):
         
     runner.cleanup()
 
-def _spawn_wrapper(rank, world_size, cfg, mode):
+def _spawn_wrapper(rank, world_size, cfg, mode, output_dir):
+    log_filepath = f"{output_dir}/output.log" if output_dir else None
+    if log_filepath and rank==0:
+        sys.stdout = InlineTee(log_filepath, append=True)
+    if rank == 0:
+        print(f"---LOG[eval]: Run optimization-based method: {cfg.model.name} on {cfg.dataset_path}/{cfg.data_mode} set.\n")
     torch.cuda.set_device(rank)
     os.environ['RANK'] = str(rank)
     os.environ['WORLD_SIZE'] = str(world_size)
@@ -306,7 +313,7 @@ def _spawn_wrapper(rank, world_size, cfg, mode):
     os.environ['MASTER_PORT'] = str(cfg.get('master_port', 12355))
     _run_process(cfg, mode)
 
-def launch_runner(cfg, mode):
+def launch_runner(cfg, mode, output_dir):
     is_slurm_job = 'SLURM_PROCID' in os.environ
     
     if not is_slurm_job and not dist.is_initialized():
@@ -318,7 +325,7 @@ def launch_runner(cfg, mode):
             cfg.save_res_path = Path(cfg.dataset_path).parent / "results" / cfg.output
             
         mp.spawn(_spawn_wrapper,
-                 args=(world_size, cfg, mode),
+                 args=(world_size, cfg, mode, output_dir),
                  nprocs=world_size,
                  join=True)
         

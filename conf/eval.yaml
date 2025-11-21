@@ -1,6 +1,6 @@
 
 dataset_path: /home/kin/data/av2/h5py/sensor
-checkpoint: /home/kin/model_zoo/deflow.ckpt
+checkpoint: /home/kin/data/model_zoo/deltaflow_public/deltaflow-av2.ckpt
 data_mode: val # [val, test]
 save_res: False # [True, False]
 
@@ -15,7 +15,7 @@ output: ${model.name}-${slurm_id}
 gpus: 1
 seed: 42069
 eval_only: True
-wandb_mode: offline # [offline, disabled, online]
+wandb_mode: disabled # [offline, disabled, online]
 defaults:
   - hydra: default
   - model: deflow

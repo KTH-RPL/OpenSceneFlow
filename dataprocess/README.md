@@ -247,3 +247,6 @@ Process train data for self-supervised learning. Only training data needs this s
 ```bash
 python process.py --data_dir /home/kin/data/av2/h5py/sensor/train --scene_range 0,701
 ```
+
+As some users must have multi-nodes for running, here I provide an example SLURM script to run the data process in parallel. 
+Check [assets/slurm/ssl-process.sh](../assets/slurm/ssl-process.sh) for more details.

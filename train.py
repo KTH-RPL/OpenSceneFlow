@@ -25,7 +25,8 @@ import hydra, wandb, os, math
 from hydra.core.hydra_config import HydraConfig
 from pathlib import Path
 
-from src.dataset import HDF5Dataset, collate_fn_pad
+from src.dataset import HDF5Dataset, collate_fn_pad, RandomHeight, RandomFlip, RandomJitter, ToTensor
+from torchvision import transforms
 from src.trainer import ModelWrapper
 
 def precheck_cfg_valid(cfg):
@@ -57,14 +58,20 @@ def main(cfg):
     precheck_cfg_valid(cfg)
     pl.seed_everything(cfg.seed, workers=True)
 
-    train_dataset = HDF5Dataset(cfg.train_data, n_frames=cfg.num_frames, ssl_label=cfg.get('ssl_label', None))
+    train_aug = transforms.Compose([RandomHeight(p=0.8), RandomFlip(p=0.2), RandomJitter(), ToTensor()] if cfg.get('train_aug', False) else [ToTensor()])
+    train_dataset = HDF5Dataset(cfg.train_data, 
+                    n_frames=cfg.num_frames,
+                    ssl_label=cfg.get('ssl_label', None),
+                    transform=train_aug)
     train_loader = DataLoader(train_dataset,
                               batch_size=cfg.batch_size,
                               shuffle=True,
                               num_workers=cfg.num_workers,
                               collate_fn=collate_fn_pad,
                               pin_memory=True)
-    val_loader = DataLoader(HDF5Dataset(cfg.val_data, n_frames=cfg.num_frames),
+    val_loader = DataLoader(HDF5Dataset(cfg.val_data, \
+                                n_frames=cfg.num_frames,\
+                                transform=transforms.Compose([ToTensor()])),
                             batch_size=cfg.batch_size,
                             shuffle=False,
                             num_workers=cfg.num_workers,

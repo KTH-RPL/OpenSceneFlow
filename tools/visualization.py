@@ -102,7 +102,7 @@ def vis(
         if res_name == 'raw': # no result, only show **raw point cloud**
             pcd.points = o3d.utility.Vector3dVector(pc0[:, :3])
             pcd.paint_uniform_color([1.0, 1.0, 1.0])
-        elif res_name in ['dufo_label', 'label']:
+        elif res_name in ['dufo', 'label']:
             labels = data[res_name]
             pcd_i = o3d.geometry.PointCloud()
             for label_i in np.unique(labels):
@@ -169,7 +169,7 @@ def vis_multiple(
         pcd_list = []
         for mode in res_name:
             pcd = o3d.geometry.PointCloud()
-            if mode in ['dufo_label', 'label']:
+            if mode in ['dufo', 'label']:
                 labels = data[mode]
                 pcd_i = o3d.geometry.PointCloud()
                 for label_i in np.unique(labels):

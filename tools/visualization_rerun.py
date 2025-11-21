@@ -104,7 +104,7 @@ def main(
             flow_color = np.tile(pcd_color, (pc0.shape[0], 1))
             flow_color[gm0] = ground_color
 
-            if mode in ['dufo_label', 'label']:
+            if mode in ['dufo', 'label']:
                 if mode in data:
                     labels = data[mode]
                     for label_i in np.unique(labels):

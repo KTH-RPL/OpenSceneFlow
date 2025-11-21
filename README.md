@@ -11,10 +11,15 @@
 OpenSceneFlow is a codebase for point cloud scene flow estimation. 
 It is also an official implementation of the following papers (sorted by the time of publication):
 
+<!-- - **TeFlow: An Efficient Multi-frame Scene Flow Estimation Method**   
+*Qingwen Zhang, Chenhan Jiang, Xiaomeng Zhu, Yunqi Miao, Yushan Zhang, Olov Andersson, Patric Jensfelt*  
+Under Review   
+[ Strategy ] [ Self-Supervised ] - [ [OpenReview](https://openreview.net/forum?id=h70FLgnIAw) ] [ [Project](https://github.com/Kin-Zhang/TeFlow) ]&rarr; [here](#teflow) -->
+
 - **DeltaFlow: An Efficient Multi-frame Scene Flow Estimation Method**   
 *Qingwen Zhang, Xiaomeng Zhu, Yushan Zhang, Yixi Cai, Olov Andersson, Patric Jensfelt*  
 Conference on Neural Information Processing Systems (**NeurIPS**) 2025 - Spotlight   
-[ Backbone ] [ Supervised ] - [ [arXiv](https://arxiv.org/abs/2508.17054) ] [ [Project](https://github.com/Kin-Zhang/DeltaFlow) ]
+[ Backbone ] [ Supervised ] - [ [arXiv](https://arxiv.org/abs/2508.17054) ] [ [Project](https://github.com/Kin-Zhang/DeltaFlow) ]&rarr; [here](#deltaflow)
 
 - **HiMo: High-Speed Objects Motion Compensation in Point Clouds** (SeFlow++)   
 *Qingwen Zhang, Ajinkya Khoche, Yi Yang, Li Ling, Sina Sharif Mansouri, Olov Andersson, Patric Jensfelt*  
@@ -103,11 +108,11 @@ If you prefer to build the Docker image by yourself, Check [build-docker-image](
 
 ## 1. Data Preparation
 
-Refer to [dataprocess/README.md](dataprocess/README.md) for dataset download instructions. Currently, we support **Argoverse 2**, **Waymo**, **nuScenes**, [**MAN-TruckScene**](https://github.com/TUMFTM/truckscenes-devkit), [**ZOD**](https://github.com/zenseact/zod) and **custom datasets** (more datasets will be added in the future). 
+Refer to [dataprocess/README.md](dataprocess/README.md) for dataset download instructions. Currently, we support [**Argoverse 2**](https://www.argoverse.org/av2.html), [**Waymo**](https://waymo.com/open/), [**nuScenes**](https://www.nuscenes.org/), [**MAN-TruckScene**](https://github.com/TUMFTM/truckscenes-devkit), [**ZOD**](https://github.com/zenseact/zod) and **custom datasets** (more datasets will be added in the future). 
 
 After downloading, convert the raw data to `.h5` format for easy training, evaluation, and visualization. Follow the steps in [dataprocess/README.md#process](dataprocess/README.md#process). 
 
-For a quick start, use our **mini processed dataset**, which includes one scene in `train` and `val`. It is pre-converted to `.h5` format with label data ([HuggingFace](https://huggingface.co/kin-zhang/OpenSceneFlow/blob/main/demo_data.zip)/[Zenodo](https://zenodo.org/records/13744999/files/demo_data.zip)).
+For a quick start, use our **mini processed dataset**, which includes one scene in `train` and `val`. It is pre-converted to `.h5` format with label data ([HuggingFace](https://huggingface.co/kin-zhang/OpenSceneFlow/resolve/main/demo-data-v2.zip)).
 
 
 ```bash
@@ -125,13 +130,25 @@ Some tips before running the code:
 * If you want to use [wandb](wandb.ai), replace all `entity="kth-rpl",` to your own entity otherwise tensorboard will be used locally.
 * Set correct data path by passing the config, e.g. `train_data=/home/kin/data/av2/h5py/demo/train val_data=/home/kin/data/av2/h5py/demo/val`.
 
-And free yourself from trainning, you can download the pretrained weight from [HuggingFace](https://huggingface.co/kin-zhang/OpenSceneFlow) and we provided the detail `wget` command in each model section. For optimization-based method, it's train-free so you can directly run with [3. Evaluation](#3-evaluation) (check more in the evaluation section).
+And free yourself from trainning, you can download the pretrained weight from [**HuggingFace - OpenSceneFlow**](https://huggingface.co/kin-zhang/OpenSceneFlow) and we provided the detail `wget` command in each model section. For optimization-based method, it's train-free so you can directly run with [3. Evaluation](#3-evaluation) (check more in the evaluation section).
 
 ```bash
 conda activate opensf
 ```
 
 ### Supervised Training
+
+#### DeltaFlow
+
+Train DeltaFlow with the leaderboard submit config. [Runtime: Around 18 hours in 10x RTX 3080 GPUs.]
+
+```bash
+# total bz then it's 10x2 under above training setup.
+python train.py model=deltaFlow optimizer.lr=2e-3 epochs=20 batch_size=2 num_frames=5 loss_fn=deflowLoss train_aug=True "voxel_size=[0.15, 0.15, 0.15]" "point_cloud_range=[-38.4, -38.4, -3.2, 38.4, 38.4, 3.2]" +optimizer.scheduler.name=WarmupCosLR +optimizer.scheduler.max_lr=2e-3 +optimizer.scheduler.total_steps=20000
+
+# Pretrained weight can be downloaded through (av2), check all other datasets in the same folder.
+wget https://huggingface.co/kin-zhang/OpenSceneFlow/resolve/main/deltaflow/deltaflow-av2.ckpt
+```
 
 #### Flow4D
 
@@ -181,7 +198,7 @@ wget https://huggingface.co/kin-zhang/OpenSceneFlow/resolve/main/deflow_best.ckp
 ### Feed-Forward Self-Supervised Model Training
 
 Train Feed-forward SSL methods (e.g. SeFlow/SeFlow++/VoteFlow etc), we needed to:
-1) process auto-label process.
+1) process auto-label process for training. Check [dataprocess/README.md#self-supervised-process](dataprocess/README.md#self-supervised-process) for more details. We provide these inside the demo dataset already.
 2) specify the loss function, we set the config here for our best model in the leaderboard.
 
 #### SeFlow
@@ -240,7 +257,8 @@ python save.py model=fastnsf
 
 ## 3. Evaluation
 
-You can view Wandb dashboard for the training and evaluation results or upload result to online leaderboard.
+You can view Wandb dashboard for the training and evaluation results or upload result to online leaderboard. 
+<!-- Three-way EPE and Dynamic Bucket-normalized are evaluated within a 70x70m range (followed Argoverse 2 online leaderboard). No ground points are considered in the evaluation. -->
 
 Since in training, we save all hyper-parameters and model checkpoints, the only thing you need to do is to specify the checkpoint path. Remember to set the data path correctly also.
 
@@ -249,7 +267,7 @@ Since in training, we save all hyper-parameters and model checkpoints, the only 
 python eval.py checkpoint=/home/kin/seflow_best.ckpt data_mode=val
 
 # (optimization-based): it might need take really long time, maybe tmux for run it.
-python eval.py model=nsfp
+python eval.py model=nsfp +master_port=12344 # change diff port if you want to have multiple runners.
 
 # it will output the av2_submit.zip or av2_submit_v2.zip for you to submit to leaderboard
 python eval.py checkpoint=/home/kin/seflow_best.ckpt data_mode=test leaderboard_version=1
@@ -326,6 +344,7 @@ https://github.com/user-attachments/assets/07e8d430-a867-42b7-900a-11755949de21
 ## Cite Us
 
 [*OpenSceneFlow*](https://github.com/KTH-RPL/OpenSceneFlow) is originally designed by [Qingwen Zhang](https://kin-zhang.github.io/) from DeFlow and SeFlow. 
+It is actively maintained and developed by the community (ref. below works).
 If you find it useful, please cite our works:
 
 ```bibtex
@@ -347,16 +366,26 @@ If you find it useful, please cite our works:
   doi={10.1109/ICRA57147.2024.10610278}
 }
 @article{zhang2025himo,
-    title={HiMo: High-Speed Objects Motion Compensation in Point Clouds},
-    author={Zhang, Qingwen and Khoche, Ajinkya and Yang, Yi and Ling, Li and Sina, Sharif Mansouri and Andersson, Olov and Jensfelt, Patric},
-    year={2025},
-    journal={arXiv preprint arXiv:2503.00803},
+  title={{HiMo}: High-Speed Objects Motion Compensation in Point Cloud},
+  author={Zhang, Qingwen and Khoche, Ajinkya and Yang, Yi and Ling, Li and Mansouri, Sina Sharif and Andersson, Olov and Jensfelt, Patric},
+  journal={IEEE Transactions on Robotics}, 
+  year={2025},
+  volume={41},
+  pages={5896-5911},
+  doi={10.1109/TRO.2025.3619042}
 }
-@article{zhang2025deltaflow,
-    title={{DeltaFlow}: An Efficient Multi-frame Scene Flow Estimation Method},
-    author={Zhang, Qingwen and Zhu, Xiaomeng and Zhang, Yushan and Cai, Yixi and Andersson, Olov and Jensfelt, Patric},
-    year={2025},
-    journal={arXiv preprint arXiv:2508.17054},
+@inproceedings{zhang2025deltaflow,
+  title={{DeltaFlow}: An Efficient Multi-frame Scene Flow Estimation Method},
+  author={Zhang, Qingwen and Zhu, Xiaomeng and Zhang, Yushan and Cai, Yixi and Andersson, Olov and Jensfelt, Patric},
+  booktitle={The Thirty-ninth Annual Conference on Neural Information Processing Systems},
+  year={2025},
+  url={https://openreview.net/forum?id=T9qNDtvAJX}
+}
+@misc{zhang2025teflow,
+  title={{TeFlow}: Enabling Multi-frame Supervision for Feed-forward Scene Flow Estimation},
+  author={Zhang, Qingwen and Jiang, Chenhan and Zhu, Xiaomeng and Miao, Yunqi and Zhang, Yushan and Andersson, Olov and Jensfelt, Patric},
+  year={2025},
+  url={https://openreview.net/forum?id=h70FLgnIAw}
 }
 ```
 
@@ -373,13 +402,14 @@ And our excellent collaborators works contributed to this codebase also:
   pages={3462-3469},
   doi={10.1109/LRA.2025.3542327}
 }
-@article{khoche2025ssf,
-  title={SSF: Sparse Long-Range Scene Flow for Autonomous Driving},
+@inproceedings{khoche2025ssf,
+  title={{SSF}: Sparse Long-Range Scene Flow for Autonomous Driving},
   author={Khoche, Ajinkya and Zhang, Qingwen and Sanchez, Laura Pereira and Asefaw, Aron and Mansouri, Sina Sharif and Jensfelt, Patric},
-  journal={arXiv preprint arXiv:2501.17821},
-  year={2025}
+  booktitle={2025 IEEE International Conference on Robotics and Automation (ICRA)}, 
+  year={2025},
+  pages={6394-6400},
+  doi={10.1109/ICRA55743.2025.11128770}
 }
-
 @inproceedings{lin2025voteflow,
   title={VoteFlow: Enforcing Local Rigidity in Self-Supervised Scene Flow},
   author={Lin, Yancong and Wang, Shiming and Nan, Liangliang and Kooij, Julian and Caesar, Holger},

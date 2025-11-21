@@ -9,6 +9,7 @@ wandb_mode: disabled # [offline, disabled, online]
 wandb_project_name: seflow
 
 train_data: /home/kin/data/av2/h5py/demo/train
+train_aug: False # involved by deltaflow
 val_data: /home/kin/data/av2/h5py/demo/val
 
 output: ${model.name}-${slurm_id}
@@ -28,8 +29,8 @@ gradient_clip_val: 5.0
 # optimizer ==> Adam
 optimizer:
   name: Adam # [Adam, AdamW]
-  lr: 1e-4
-loss_fn: seflowLoss # choices: [ff3dLoss, zeroflowLoss, deflowLoss, seflowLoss]
+  lr: 2e-4
+loss_fn: deflowLoss # choices: [ff3dLoss, zeroflowLoss, deflowLoss, seflowLoss]
 # add_seloss: {chamfer_dis: 1.0, static_flow_loss: 1.0, dynamic_chamfer_dis: 1.0, cluster_based_pc0pc1: 1.0}
 # ssl_label:
 

@@ -1,0 +1,15 @@
+name: deltaflow
+
+target:
+  _target_: src.models.DeltaFlow
+  voxel_size: ${voxel_size}
+  point_cloud_range: ${point_cloud_range}
+  num_frames: ${num_frames}
+  planes: [16, 32, 64, 128, 256, 256, 128, 64, 32, 16] # 1st is #input channel, last is #output channel
+  # num_layer: [1, 1, 1, 1, 1, 1, 1, 1, 1] # the smallest model
+  num_layer: [2, 2, 2, 2, 2, 2, 2, 2, 2] # MinkUnet 18
+  # num_layer: [2, 3, 4, 6, 2, 2, 2, 2, 2] # MinkUnet 34
+  decay_factor: 0.4
+  decoder_option: default # choices: [default, deflow]
+
+val_monitor: val/Dynamic/Mean
