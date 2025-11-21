@@ -48,7 +48,7 @@ International Conference on Robotics and Automation (**ICRA**) 2024
 [ Backbone ] [ Supervised ] - [ [arXiv](https://arxiv.org/abs/2401.16122) ] [ [Project](https://github.com/KTH-RPL/DeFlow) ] &rarr; [here](#deflow)
 
 🎁 <b>One repository, All methods!</b> 
-Additionally, *OpenSceneFlow* integrates following excellent works: [ICLR'24 ZeroFlow](https://arxiv.org/abs/2305.10424), [ICCV'23 FastNSF](https://arxiv.org/abs/2304.09121), [RA-L'21 FastFlow3D](https://arxiv.org/abs/2103.01306), [NeurIPS'21 NSFP](https://arxiv.org/abs/2111.01253). (More on the way...)
+Additionally, *OpenSceneFlow* integrates following excellent works: [ICLR'24 ZeroFlow](https://arxiv.org/abs/2305.10424), [CVPR'24 ICP-Flow](https://arxiv.org/abs/2402.17351), [ICCV'23 FastNSF](https://arxiv.org/abs/2304.09121), [RA-L'21 FastFlow3D](https://arxiv.org/abs/2103.01306), [NeurIPS'21 NSFP](https://arxiv.org/abs/2111.01253). (More on the way...)
 
 <details> <summary> Summary of them:</summary>
 
@@ -227,7 +227,7 @@ wget https://huggingface.co/kin-zhang/OpenSceneFlow/resolve/main/seflowpp_best.c
 
 ### Optimization-based Unsupervised Methods
 
-For all optimization-based methods, you can directly run `eval.py`/`save.py` to get the result without training, while the running might take really long time, maybe tmux for run it.
+For all optimization-based methods, you can directly run `eval.py`/`save.py` to get the result without training, while the running might take really long time, maybe tmux for run it. For multi-program running, the master port can be set through `+master_port=12346`.
 
 ```bash
 # you can change another model by passing model name.

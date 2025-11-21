@@ -101,11 +101,12 @@ class InferenceRunner:
         self.mode = mode
 
         self.model.to(self.device)
-        self.metrics = OfficialMetrics() if self.mode in ['val', 'eval'] else None
+        self.metrics = OfficialMetrics() if self.mode in ['val', 'eval', 'valid'] else None
+        self.res_name = cfg.get('res_name', cfg.model.name)
         self.save_res_path = cfg.get('save_res_path', None)
 
     def _setup_dataloader(self):
-        if self.mode in ['val', 'test', 'eval']:
+        if self.mode in ['val', 'test', 'eval', 'valid']:
             dataset_path = self.cfg.dataset_path + f"/{self.cfg.data_mode}"
             is_eval_mode = True
         else: # 'save'
@@ -153,7 +154,7 @@ class InferenceRunner:
         final_flow = pose_flow.clone()
         final_flow[~batch['gm0']] = res_dict['flow'] + pose_flow[~batch['gm0']]
 
-        if self.mode in ['val', 'eval']:
+        if self.mode in ['val', 'eval', 'valid']:
             eval_mask = batch['eval_mask'].squeeze()
             gt_flow = batch["flow"]
             v1_dict = evaluate_leaderboard(final_flow[eval_mask], pose_flow[eval_mask], pc0[eval_mask], \
@@ -257,7 +258,7 @@ def _run_process(cfg, mode):
         gathered_metrics_objects = [runner.metrics]
 
     if rank == 0:
-        if mode in ['val', 'eval']:
+        if mode in ['val', 'eval', 'valid']:
             final_metrics = OfficialMetrics()
             print(f"\n--- [LOG] Finished processing. Aggregating results from {world_size} GPUs with {len(gathered_metrics_objects)} metrics objects...")
             for metrics_obj in gathered_metrics_objects:
@@ -299,12 +300,10 @@ def _run_process(cfg, mode):
 
 def _spawn_wrapper(rank, world_size, cfg, mode):
     torch.cuda.set_device(rank)
-
-    # FIXME(Qingwen): better to set these through command, since we might have more nodes to connected.
     os.environ['RANK'] = str(rank)
     os.environ['WORLD_SIZE'] = str(world_size)
     os.environ['MASTER_ADDR'] = 'localhost'
-    os.environ['MASTER_PORT'] = cfg.get('master_port', '12355')
+    os.environ['MASTER_PORT'] = str(cfg.get('master_port', 12355))
     _run_process(cfg, mode)
 
 def launch_runner(cfg, mode):
