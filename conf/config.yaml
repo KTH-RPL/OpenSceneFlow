@@ -9,6 +9,7 @@ wandb_mode: disabled # [offline, disabled, online]
 wandb_project_name: seflow
 
 train_data: /home/kin/data/av2/h5py/demo/train
+train_aug: False # involved by deltaflow
 val_data: /home/kin/data/av2/h5py/demo/val
 
 output: ${model.name}-${slurm_id}
