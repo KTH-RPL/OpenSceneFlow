@@ -2,10 +2,9 @@ from setuptools import setup
 from torch.utils.cpp_extension import BuildExtension, CUDAExtension
 
 extra_compile_args = {
-    'cxx': ['-DCCCL_IGNORE_DEPRECATED_CUDA_BELOW_12'],
-    'nvcc': ['-DCCCL_IGNORE_DEPRECATED_CUDA_BELOW_12'],
+    'cxx': ['-DCCCL_IGNORE_DEPRECATED_CUDA_BELOW_12', '-DTHRUST_IGNORE_CUB_VERSION_CHECK'],
+    'nvcc': ['-DCCCL_IGNORE_DEPRECATED_CUDA_BELOW_12', '-DTHRUST_IGNORE_CUB_VERSION_CHECK'],
 }
-
 setup(
     name='chamfer3D',
     ext_modules=[
@@ -21,5 +20,5 @@ setup(
     cmdclass={
         'build_ext': BuildExtension
     },
-    version='1.0.2'
+    version='1.0.5'
 )

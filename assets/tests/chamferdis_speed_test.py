@@ -76,8 +76,8 @@ if __name__ == "__main__":
         start_time = time.time()
         loss0, _ = my_chamfer_fn(pc0.unsqueeze(0), pc1.unsqueeze(0), truncate_dist=False)
 
-        print(f"Pytorch3d Chamfer Distance Cal time: {(time.time() - start_time)*1000:.3f} ms")
         print("loss: ", loss0)
+        print(f"Pytorch3d Chamfer Distance Cal time: {(time.time() - start_time)*1000:.3f} ms")
         print()
 
     if MMCV_TEST:

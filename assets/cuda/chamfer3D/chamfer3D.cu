@@ -32,20 +32,22 @@
 
 __global__ void NmDistanceKernel(const int pc0_n, const float *pc0_xyz, const int pc1_n, const float *pc1_xyz, float *result, int *result_i){
     int tid = blockIdx.x * blockDim.x + threadIdx.x;
-    
-    if (tid >= pc0_n) return;
 
-    float x0 = pc0_xyz[tid * 3 + 0];
-    float y0 = pc0_xyz[tid * 3 + 1];
-    float z0 = pc0_xyz[tid * 3 + 2];
+    // Load point coordinates for valid threads
+    float x0, y0, z0;
+    int best_i = -1;
+    float best = 1e20;
+    
+    if (tid < pc0_n) {
+        x0 = pc0_xyz[tid * 3 + 0];
+        y0 = pc0_xyz[tid * 3 + 1];
+        z0 = pc0_xyz[tid * 3 + 2];
+    }
 
     __shared__ float shared_pc1[THREADS_PER_BLOCK * 3];
 
-    int best_i = -1;
-    float best = 1e20;
-
     for (int i = 0; i < pc1_n; i += THREADS_PER_BLOCK) {
-        // Copy a block of pc1 to shared memory
+        // All threads cooperate to load shared memory
         int pc1_idx = i + threadIdx.x;
         if (pc1_idx < pc1_n) {
             shared_pc1[threadIdx.x * 3 + 0] = pc1_xyz[pc1_idx * 3 + 0];
@@ -54,26 +56,30 @@ __global__ void NmDistanceKernel(const int pc0_n, const float *pc0_xyz, const in
         }
 
         __syncthreads();
-
-        // Compute the distance between pc0[tid] and the points in shared_pc1
-        int num_elems = min(THREADS_PER_BLOCK, pc1_n - i);
-        for (int j = 0; j < num_elems; j++) {
-            float x1 = shared_pc1[j * 3 + 0];
-            float y1 = shared_pc1[j * 3 + 1];
-            float z1 = shared_pc1[j * 3 + 2];
-            float d = (x1 - x0) * (x1 - x0) + (y1 - y0) * (y1 - y0) + (z1 - z0) * (z1 - z0);
-            if (d < best) {
-                best = d;
-                best_i = j + i;
+ 
+        // Only valid threads compute distances
+        if (tid < pc0_n) {
+            int num_elems = min(THREADS_PER_BLOCK, pc1_n - i);
+            for (int j = 0; j < num_elems; j++) {
+                float x1 = shared_pc1[j * 3 + 0];
+                float y1 = shared_pc1[j * 3 + 1];
+                float z1 = shared_pc1[j * 3 + 2];
+                float d = (x1 - x0) * (x1 - x0) + (y1 - y0) * (y1 - y0) + (z1 - z0) * (z1 - z0);
+                if (d < best) {
+                    best = d;
+                    best_i = j + i;
+                }
             }
         }
 
         __syncthreads();
     }
-
-    // done with this thread in tid in pc_0, save the result to global memory
-	atomicExch(&result[tid], best);
-	atomicExch(&result_i[tid], best_i);
+    
+    // Only valid threads write results
+    if (tid < pc0_n) {
+        result[tid] = best;
+        result_i[tid] = best_i;
+    }
 }
 
 int chamfer_cuda_forward(const at::Tensor &pc0, const at::Tensor &pc1, at::Tensor &dist0, at::Tensor &dist1, at::Tensor &idx0, at::Tensor &idx1)
