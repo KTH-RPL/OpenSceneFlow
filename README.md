@@ -46,22 +46,21 @@ International Conference on Robotics and Automation (**ICRA**) 2025
 European Conference on Computer Vision (**ECCV**) 2024  
 [ Strategy ] [ Self-Supervised ] - [ [arXiv](https://arxiv.org/abs/2407.01702) ] [ [Project](https://github.com/KTH-RPL/SeFlow) ] &rarr; [here](#seflow)
 
-
 - **DeFlow: Decoder of Scene Flow Network in Autonomous Driving**  
 *Qingwen Zhang, Yi Yang, Heng Fang, Ruoyu Geng, Patric Jensfelt*  
 International Conference on Robotics and Automation (**ICRA**) 2024  
 [ Backbone ] [ Supervised ] - [ [arXiv](https://arxiv.org/abs/2401.16122) ] [ [Project](https://github.com/KTH-RPL/DeFlow) ] &rarr; [here](#deflow)
 
 🎁 <b>One repository, All methods!</b> 
-Additionally, *OpenSceneFlow* integrates following excellent works: [ICLR'24 ZeroFlow](https://arxiv.org/abs/2305.10424), [CVPR'24 ICP-Flow](https://arxiv.org/abs/2402.17351), [ICCV'23 FastNSF](https://arxiv.org/abs/2304.09121), [RA-L'21 FastFlow3D](https://arxiv.org/abs/2103.01306), [NeurIPS'21 NSFP](https://arxiv.org/abs/2111.01253). (More on the way...)
+Additionally, *OpenSceneFlow* integrates following excellent works: [ICLR'24 ZeroFlow](https://arxiv.org/abs/2305.10424), [ICCV'23 FastNSF](https://arxiv.org/abs/2304.09121), [RA-L'21 FastFlow3D](https://arxiv.org/abs/2103.01306), [NeurIPS'21 NSFP](https://arxiv.org/abs/2111.01253). (More on the way...)
 
 <details> <summary> Summary of them:</summary>
 
 - [x] [FastFlow3D](https://arxiv.org/abs/2103.01306): RA-L 2021, a basic backbone model.
 - [x] [ZeroFlow](https://arxiv.org/abs/2305.10424): ICLR 2024, their pre-trained weight can covert into our format easily through [the script](tools/zerof2ours.py).
 - [x] [NSFP](https://arxiv.org/abs/2111.01253): NeurIPS 2021, faster 3x than original version because of [our CUDA speed up](assets/cuda/README.md), same (slightly better) performance.
-- [x] [FastNSF](https://arxiv.org/abs/2304.09121): ICCV 2023. SSL Optimization-based.
-- [x] [ICP-Flow](https://arxiv.org/abs/2402.17351): CVPR 2024. SSL Optimization-based.
+- [x] [FastNSF](https://arxiv.org/abs/2304.09121): ICCV 2023. SSL optimization-based.
+- [ ] [ICP-Flow](https://arxiv.org/abs/2402.17351): CVPR 2024. SSL optimization-based. Done coding, public after review.
 - [ ] [EulerFlow](https://arxiv.org/abs/2410.02031): ICLR 2025. SSL optimization-based. In my plan, haven't coding yet.
 
 </details>
@@ -163,7 +162,7 @@ wget https://huggingface.co/kin-zhang/OpenSceneFlow/resolve/main/flow4d_best.ckp
 
 #### SSF
 
-Extra packages needed for SSF model:
+Extra pakcges needed for SSF model:
 ```bash
 pip install mmengine-lite
 pip install torch-scatter -f https://data.pyg.org/whl/torch-2.0.0+cu117.html
@@ -240,20 +239,6 @@ python train.py model=deflowpp save_top_model=3 val_every=3 voxel_size="[0.2, 0.
 # Pretrained weight can be downloaded through:
 wget https://huggingface.co/kin-zhang/OpenSceneFlow/resolve/main/seflowpp_best.ckpt
 ```
-
-
-### Optimization-based Unsupervised Methods
-
-For all optimization-based methods, you can directly run `eval.py`/`save.py` to get the result without training, while the running might take really long time, maybe tmux for run it. For multi-program running, the master port can be set through `+master_port=12346`.
-
-```bash
-# you can change another model by passing model name.
-python eval.py model=fastnsf
-
-# or save the result directly
-python save.py model=fastnsf
-```
-
 
 ## 3. Evaluation
 
