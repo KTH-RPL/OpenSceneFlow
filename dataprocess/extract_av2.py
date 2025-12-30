@@ -312,7 +312,7 @@ def process_logs(data_dir: Path, output_dir: Path, nproc: int):
 
 def main(
     argo_dir: str = "/home/kin/data/av2",
-    output_dir: str ="/home/kin/data/av2/preprocess",
+    output_dir: str ="/home/kin/data/av2/h5py",
     av2_type: str = "sensor",
     data_mode: str = "val",
     mask_dir: str = "/home/kin/data/av2/3d_scene_flow",
