@@ -54,7 +54,7 @@ def main(cfg):
     # NOTE(Qingwen): search & check in pl_model.py : def test_step(self, batch, res_dict)
     trainer.test(model = mymodel, \
                  dataloaders = DataLoader(\
-                     HDF5Dataset(cfg.dataset_path, n_frames=cfg.num_frames), \
+                     HDF5Dataset(cfg.dataset_path, n_frames=cfg.num_frames, eval=cfg.val_index_only), \
                     batch_size=1, shuffle=False))
 
 if __name__ == "__main__":
