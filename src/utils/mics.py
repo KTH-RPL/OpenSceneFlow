@@ -172,6 +172,78 @@ def make_colorwheel(transitions: tuple=DEFAULT_TRANSITIONS) -> np.ndarray:
     return colorwheel
 
 
+def error_to_color(
+    error_magnitude: np.ndarray,
+    max_error: float,
+    color_map: str = "jet"
+) -> np.ndarray:
+    """
+    Convert flow error to RGB color visualization.
+    Args:
+        color_map: Color map to use for visualization ("jet" recommended for error visualization)
+        
+    Returns:
+        RGB color representation of the error of shape (..., 3)
+    """
+    if max_error > 0:
+        normalized_error = np.clip(error_magnitude / max_error, 0, 1)
+    else:
+        normalized_error = np.zeros_like(error_magnitude)
+    
+    # Create colormap
+    if color_map == "jet":
+        # Simple jet colormap implementation
+        colors = np.zeros((*normalized_error.shape, 3), dtype=np.uint8)
+        
+        # Blue to cyan to green to yellow to red
+        # Blue (low error)
+        idx = normalized_error < 0.25
+        colors[idx, 2] = 255
+        colors[idx, 0] = 0
+        colors[idx, 1] = np.uint8(255 * normalized_error[idx] * 4)
+        
+        # Cyan to green
+        idx = (normalized_error >= 0.25) & (normalized_error < 0.5)
+        colors[idx, 1] = 255
+        colors[idx, 0] = 0
+        colors[idx, 2] = np.uint8(255 * (1 - (normalized_error[idx] - 0.25) * 4))
+        
+        # Green to yellow
+        idx = (normalized_error >= 0.5) & (normalized_error < 0.75)
+        colors[idx, 1] = 255
+        colors[idx, 2] = 0
+        colors[idx, 0] = np.uint8(255 * (normalized_error[idx] - 0.5) * 4)
+        
+        # Yellow to red (high error)
+        idx = normalized_error >= 0.75
+        colors[idx, 0] = 255
+        colors[idx, 2] = 0
+        colors[idx, 1] = np.uint8(255 * (1 - (normalized_error[idx] - 0.75) * 4))
+    
+    elif color_map == "hot":
+        # Hot colormap: black -> red -> yellow -> white
+        colors = np.zeros((*normalized_error.shape, 3), dtype=np.uint8)
+        
+        # Black to red
+        idx = normalized_error < 0.33
+        colors[idx, 0] = np.uint8(255 * normalized_error[idx] * 3)
+        
+        # Red to yellow
+        idx = (normalized_error >= 0.33) & (normalized_error < 0.67)
+        colors[idx, 0] = 255
+        colors[idx, 1] = np.uint8(255 * (normalized_error[idx] - 0.33) * 3)
+        
+        # Yellow to white
+        idx = normalized_error >= 0.67
+        colors[idx, 0] = 255
+        colors[idx, 1] = 255
+        colors[idx, 2] = np.uint8(255 * (normalized_error[idx] - 0.67) * 3)
+    
+    else:
+        raise ValueError(f"Unsupported color map: {color_map}. Use 'jet' or 'hot'.")
+    
+    return colors
+
 def flow_to_rgb(
     flow: np.ndarray,
     flow_max_radius: Optional[float]=None,
