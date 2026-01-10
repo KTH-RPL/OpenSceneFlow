@@ -243,7 +243,7 @@ class ModelWrapper(LightningModule):
             with open(str(self.save_res_path)+'.pkl', 'wb') as f:
                 pickle.dump((self.metrics.epe_3way, self.metrics.bucketed, self.metrics.epe_ssf), f)
             print(f"We already write the {self.res_name} into the dataset, please run following commend to visualize the flow. Copy and paste it to your terminal:")
-            print(f"python tools/visualization.py --res_name '{self.res_name}' --data_dir {self.dataset_path}")
+            print(f"python tools/visualization.py vis --res_name '{self.res_name}' --data_dir {self.dataset_path}")
             print(f"Enjoy! ^v^ ------ \n")
 
         self.metrics = OfficialMetrics()

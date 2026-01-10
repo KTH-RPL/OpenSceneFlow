@@ -347,7 +347,7 @@ class HDF5Dataset(Dataset):
                     data_dict[f'gmh{i+1}'] = past_gm
                     data_dict[f'poseh{i+1}'] = past_pose
 
-            for data_key in self.vis_name + ['ego_motion', 'lidar_dt', 
+            for data_key in self.vis_name + ['ego_motion', 'lidar_dt', 'lidar_center',
                              # ground truth information:
                              'flow', 'flow_is_valid', 'flow_category_indices', 'flow_instance_id', 'dufo']:
                 if data_key in f[key]:
