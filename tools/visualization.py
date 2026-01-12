@@ -103,7 +103,7 @@ class SceneFlowVisualizer:
     def _load_dataset(self, vis_name=None, n_frames=2):
         """Load HDF5 dataset."""
         vis_name = vis_name or self.res_names
-        return HDF5Dataset(self.data_dir, vis_name=vis_name, n_frames=n_frames)
+        return HDF5Dataset(self.data_dir, vis_name=vis_name, n_frames=n_frames, index_flow='flow' in vis_name)
     
     def _create_visualizer(self, res_name=None):
         """Create O3DVisualizer instance."""
@@ -289,7 +289,8 @@ class SceneFlowVisualizer:
             
             # Blue: pc1
             pcd1 = o3d.geometry.PointCloud()
-            pcd1.points = o3d.utility.Vector3dVector(data['pc1'][:, :3][~data['gm1']])
+            gm1 = self._filter_ground_and_distance(data['pc1'], data['gm1'])
+            pcd1.points = o3d.utility.Vector3dVector(data['pc1'][:, :3][~gm1])
             pcd1.paint_uniform_color([0.0, 0.0, 1])
             
             # Red: flow vectors
