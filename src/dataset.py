@@ -187,7 +187,7 @@ class HDF5Dataset(Dataset):
     def __init__(self, directory, \
                 transform=None, n_frames=2, ssl_label=None, \
                 eval = False, leaderboard_version=1, \
-                vis_name=''):
+                vis_name='', index_flow=False):
         '''
         Args:
             directory: the directory of the dataset, the folder should contain some .h5 file and index_total.pkl.
@@ -199,6 +199,7 @@ class HDF5Dataset(Dataset):
             * eval: if True, use the eval index (only used it for leaderboard evaluation)
             * leaderboard_version: 1st or 2nd, default is 1. If '2', we will use the index_eval_v2.pkl from assets/docs.
             * vis_name: the data of the visualization, default is ''.
+            * index_flow: if True, use the flow index for training or visualization.
         '''
         super(HDF5Dataset, self).__init__()
         self.directory = directory
@@ -247,7 +248,7 @@ class HDF5Dataset(Dataset):
         
         # for some dataset that annotated HZ is different.... like truckscene and nuscene etc.
         self.train_index = None
-        if not eval and ssl_label is None and transform is not None: # transform indicates whether we are in training mode.
+        if (not eval and ssl_label is None and transform is not None) or index_flow: # transform indicates whether we are in training mode.
             # check if train seq all have gt.
             one_scene_id = list(self.scene_id_bounds.keys())[0]
             check_flow_exist = True
@@ -347,7 +348,7 @@ class HDF5Dataset(Dataset):
                     data_dict[f'gmh{i+1}'] = past_gm
                     data_dict[f'poseh{i+1}'] = past_pose
 
-            for data_key in self.vis_name + ['ego_motion', 'lidar_dt', 
+            for data_key in self.vis_name + ['ego_motion', 'lidar_dt', 'lidar_center',
                              # ground truth information:
                              'flow', 'flow_is_valid', 'flow_category_indices', 'flow_instance_id', 'dufo']:
                 if data_key in f[key]:
