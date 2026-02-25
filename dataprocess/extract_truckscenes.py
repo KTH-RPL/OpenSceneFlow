@@ -68,9 +68,12 @@ def process_log(data_mode, data_dir: Path, scene_num_id: int, output_dir: Path, 
     def compute_flow_simple(data_fn, pc0, pose0, pose1, ts0, ts1, sample_ann_list, dclass, DataNameMap=ManNamMap):
         # compute delta transform between pose0 and pose1
         ego1_SE3_ego0 = npcal_pose0to1(pose0, pose1)
-        # flow due to ego motion
-        flow = np.zeros_like(pc0[:,:3])
-        flow = pc0[:,:3] @ ego1_SE3_ego0[:3,:3].T + ego1_SE3_ego0[:3,3] - pc0[:,:3] # pose flow
+        # flow due to ego motion (baseline for all points)
+        ego_flow = pc0[:,:3] @ ego1_SE3_ego0[:3,:3].T + ego1_SE3_ego0[:3,3] - pc0[:,:3]
+        
+        # object flow (without ego motion), used to track max flow magnitude
+        obj_flow_all = np.zeros_like(pc0[:,:3])
+        obj_flow_magnitude = np.zeros(len(pc0), dtype=np.float32)
 
         valid = np.ones(len(pc0), dtype=np.bool_)
         classes = np.zeros(len(pc0), dtype=np.uint8)
@@ -96,12 +99,20 @@ def process_log(data_mode, data_dir: Path, scene_num_id: int, output_dir: Path, 
             classes[points_in_box_mask] = CATEGORY_TO_INDEX[DataNameMap[cls]]
 
             if np.sum(points_in_box_mask) > 5:
-                obj_flow = np.ones_like(pc0[points_in_box_mask,:3]) * ann_vel * delta_t
-                flow[points_in_box_mask] += obj_flow
-                instances[points_in_box_mask] = (dclass[id_]+1)
+                obj_flow = ann_vel * delta_t
+                obj_flow_mag = np.linalg.norm(obj_flow)
+                
+                # For overlapping boxes, keep the flow with higher magnitude
+                higher_flow_mask = points_in_box_mask & (obj_flow_mag > obj_flow_magnitude)
+                obj_flow_all[higher_flow_mask] = obj_flow
+                obj_flow_magnitude[higher_flow_mask] = obj_flow_mag
+                instances[higher_flow_mask] = (dclass[id_]+1)
                 id_ += 1
             else:
                 valid[points_in_box_mask] = False
+
+        # Final flow = ego motion + object flow (with max magnitude selection)
+        flow = ego_flow + obj_flow_all
 
         return {'flow_0_1': flow, 'valid_0': valid, 'classes_0': classes, 
                 'ego_motion': ego1_SE3_ego0, 'flow_instance_id': instances}
@@ -183,8 +194,11 @@ def process_log(data_mode, data_dir: Path, scene_num_id: int, output_dir: Path, 
             # lidar_dt = lidar_dt[not_close]
             is_ground_0 = np.array(mygroundseg.run(points[:, :3]))
 
+            # HARDCODE: for TruckScenes, add all points below 0.2m as ground
+            is_ground_0 = is_ground_0 | (points[:,2] < 0.2)
+
+            group = f.create_group(str(ts0))
             if cnt == len(full_sweep_data_dict[SelectedSensor[-1]]) - 1:
-                group = f.create_group(str(ts0))
                 create_group_data(group=group, pc=points, gm=is_ground_0.astype(np.bool_), pose=pose0, \
                                 lidar_id=lidar_id, lidar_center=lidar_center)
             else:
@@ -192,7 +206,6 @@ def process_log(data_mode, data_dir: Path, scene_num_id: int, output_dir: Path, 
                 ts1 = sweep_data_next['timestamp']
                 pose1 = get_pose(mants, sweep_data_next, w2stf=False)
                 
-                group = f.create_group(str(ts0))
                 # annotated frame, compute flow
                 if sweep_data['is_key_frame'] and sweep_data['prev'] != "":
                     curr_scene_ann = mants.get_boxes(sweep_data['token'])
@@ -242,7 +255,7 @@ def process_logs(data_mode, data_dir: Path, scene_list: list, output_dir: Path, 
             res = list(tqdm(p.imap_unordered(proc, args), total=len(scene_list), ncols=100))
 
 def main(
-    data_dir: str = "/home/kin/data/truckscenes/man-truckscenes",
+    data_dir: str = "/home/kin/data/man-demo/man-truckscenes",
     mode: str = "v1.0-mini",
     output_dir: str ="/home/kin/data/truckscenes/h5py",
     nproc: int = (multiprocessing.cpu_count() - 1),

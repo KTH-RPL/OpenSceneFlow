@@ -11,10 +11,10 @@
 OpenSceneFlow is a codebase for point cloud scene flow estimation. 
 It is also an official implementation of the following papers (sorted by the time of publication):
 
-<!-- - **TeFlow: An Efficient Multi-frame Scene Flow Estimation Method**   
+- **TeFlow: Enabling Multi-frame Supervision for Self-Supervised Feed-forward Scene Flow Estimation**   
 *Qingwen Zhang, Chenhan Jiang, Xiaomeng Zhu, Yunqi Miao, Yushan Zhang, Olov Andersson, Patric Jensfelt*  
-Under Review   
-[ Strategy ] [ Self-Supervised ] - [ [OpenReview](https://openreview.net/forum?id=h70FLgnIAw) ] [ [Project](https://github.com/Kin-Zhang/TeFlow) ]&rarr; [here](#teflow) -->
+Conference on Computer Vision and Pattern Recognition (**CVPR**) 2026  
+[ Strategy ] [ Self-Supervised ] - [ [arXiv](https://arxiv.org/abs/2602.19053) ] [ [Project]() ]
 
 - **DeltaFlow: An Efficient Multi-frame Scene Flow Estimation Method**   
 *Qingwen Zhang, Xiaomeng Zhu, Yushan Zhang, Yixi Cai, Olov Andersson, Patric Jensfelt*  
@@ -25,6 +25,11 @@ Conference on Neural Information Processing Systems (**NeurIPS**) 2025 - Spotlig
 *Qingwen Zhang, Ajinkya Khoche, Yi Yang, Li Ling, Sina Sharif Mansouri, Olov Andersson, Patric Jensfelt*  
 IEEE Transactions on Robotics (**T-RO**) 2025   
 [ Strategy ] [ Self-Supervised ] - [ [arXiv](https://arxiv.org/abs/2503.00803) ] [ [Project](https://kin-zhang.github.io/HiMo/) ] &rarr; [here](#seflow-1)
+
+- **DoGFlow: Self-Supervised LiDAR Scene Flow via Cross-Modal Doppler Guidance**   
+*Ajinkya Khoche, Qingwen Zhang, Yixi Cai, Sina Sharif Mansouri and Patric Jensfelt*    
+IEEE Robotics and Automation Letters (**RA-L**) 2026  
+[ Multi-Model ] [ Self-Supervised ] - [ [arXiv](https://arxiv.org/abs/2508.18506) ] [ [Project](https://ajinkyakhoche.github.io/DogFlow/) ]&rarr; [here](https://github.com/ajinkyakhoche/DoGFlow)
 
 - **VoteFlow: Enforcing Local Rigidity in Self-Supervised Scene Flow**   
 *Yancong Lin\*, Shiming Wang\*, Liangliang Nan, Julian Kooij, Holger Caesar*   
@@ -46,7 +51,6 @@ International Conference on Robotics and Automation (**ICRA**) 2025
 European Conference on Computer Vision (**ECCV**) 2024  
 [ Strategy ] [ Self-Supervised ] - [ [arXiv](https://arxiv.org/abs/2407.01702) ] [ [Project](https://github.com/KTH-RPL/SeFlow) ] &rarr; [here](#seflow)
 
-
 - **DeFlow: Decoder of Scene Flow Network in Autonomous Driving**  
 *Qingwen Zhang, Yi Yang, Heng Fang, Ruoyu Geng, Patric Jensfelt*  
 International Conference on Robotics and Automation (**ICRA**) 2024  
@@ -62,6 +66,7 @@ Additionally, *OpenSceneFlow* integrates following excellent works: [ICLR'24 Zer
 - [x] [NSFP](https://arxiv.org/abs/2111.01253): NeurIPS 2021, faster 3x than original version because of [our CUDA speed up](assets/cuda/README.md), same (slightly better) performance.
 - [x] [FastNSF](https://arxiv.org/abs/2304.09121): ICCV 2023. SSL Optimization-based.
 - [x] [ICP-Flow](https://arxiv.org/abs/2402.17351): CVPR 2024. SSL Optimization-based.
+- [ ] [Floxels](https://arxiv.org/abs/2503.04718): CVPR 2025. SSL optimization-based. coding now but not yet ready for release as lower performance than reported. check [branch code](https://github.com/Kin-Zhang/OpenSceneFlow/tree/feature/floxels) for more details.
 - [ ] [EulerFlow](https://arxiv.org/abs/2410.02031): ICLR 2025. SSL optimization-based. In my plan, haven't coding yet.
 
 </details>
@@ -144,7 +149,7 @@ Train DeltaFlow with the leaderboard submit config. [Runtime: Around 18 hours in
 
 ```bash
 # total bz then it's 10x2 under above training setup.
-python train.py model=deltaFlow optimizer.lr=2e-3 epochs=20 batch_size=2 num_frames=5 loss_fn=deflowLoss train_aug=True "voxel_size=[0.15, 0.15, 0.15]" "point_cloud_range=[-38.4, -38.4, -3.2, 38.4, 38.4, 3.2]" +optimizer.scheduler.name=WarmupCosLR +optimizer.scheduler.max_lr=2e-3 +optimizer.scheduler.total_steps=20000
+python train.py model=deltaFlow optimizer.lr=2e-3 epochs=20 batch_size=2 num_frames=5 loss_fn=deflowLoss train_aug=True "voxel_size=[0.15, 0.15, 0.15]" "point_cloud_range=[-38.4, -38.4, -3, 38.4, 38.4, 3]" +optimizer.scheduler.name=WarmupCosLR +optimizer.scheduler.max_lr=2e-3 +optimizer.scheduler.total_steps=20000
 
 # Pretrained weight can be downloaded through (av2), check all other datasets in the same folder.
 wget https://huggingface.co/kin-zhang/OpenSceneFlow/resolve/main/deltaflow/deltaflow-av2.ckpt
@@ -211,7 +216,7 @@ python train.py model=deflow optimizer.lr=2e-4 epochs=9 batch_size=16 loss_fn=se
 wget https://huggingface.co/kin-zhang/OpenSceneFlow/resolve/main/seflow_best.ckpt
 ```
 
-#### VoteFLow
+#### VoteFlow
 Extra pakcges needed for VoteFlow, [pytorch3d](https://pytorch3d.org/) (prefer 0.7.7) and [torch-scatter](https://github.com/rusty1s/pytorch_scatter?tab=readme-ov-file) (prefer 2.1.2):
 
 ```bash
@@ -350,6 +355,13 @@ It is actively maintained and developed by the community (ref. below works).
 If you find it useful, please cite our works:
 
 ```bibtex
+@inproceedings{zhang2026teflow,
+  title = {{TeFlow}: Enabling Multi-frame Supervision for Self-Supervised Feed-forward Scene Flow Estimation},
+  author={Zhang, Qingwen and Jiang, Chenhan and Zhu, Xiaomeng and Miao, Yunqi and Zhang, Yushan and Andersson, Olov and Jensfelt, Patric},
+  year = {2026},
+  booktitle = {Proceedings of the IEEE/CVF conference on computer vision and pattern recognition},
+  pages = {},
+}
 @inproceedings{zhang2024seflow,
   author={Zhang, Qingwen and Yang, Yi and Li, Peizheng and Andersson, Olov and Jensfelt, Patric},
   title={{SeFlow}: A Self-Supervised Scene Flow Method in Autonomous Driving},
@@ -383,17 +395,21 @@ If you find it useful, please cite our works:
   year={2025},
   url={https://openreview.net/forum?id=T9qNDtvAJX}
 }
-@misc{zhang2025teflow,
-  title={{TeFlow}: Enabling Multi-frame Supervision for Feed-forward Scene Flow Estimation},
-  author={Zhang, Qingwen and Jiang, Chenhan and Zhu, Xiaomeng and Miao, Yunqi and Zhang, Yushan and Andersson, Olov and Jensfelt, Patric},
-  year={2025},
-  url={https://openreview.net/forum?id=h70FLgnIAw}
-}
 ```
 
 And our excellent collaborators works contributed to this codebase also:
 
 ```bibtex
+@article{khoche2026dogflow,
+  author={Khoche, Ajinkya and Zhang, Qingwen and Cai, Yixi and Mansouri, Sina Sharif and Jensfelt, Patric},
+  journal = {IEEE Robotics and Automation Letters},
+  title = {{DoGFlow}: Self-Supervised LiDAR Scene Flow via Cross-Modal Doppler Guidance},
+  year = {2026},
+  volume = {11},
+  number = {3},
+  pages = {3836-3843},
+  doi = {10.1109/LRA.2026.3662592},
+}
 @article{kim2025flow4d,
   author={Kim, Jaeyeul and Woo, Jungwan and Shin, Ukcheol and Oh, Jean and Im, Sunghoon},
   journal={IEEE Robotics and Automation Letters}, 
