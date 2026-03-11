@@ -212,10 +212,10 @@ Train Feed-forward SSL methods (e.g. SeFlow/SeFlow++/VoteFlow etc), we needed to
 
 ```bash
 # [Runtime: Around ? hours in 10x GPUs.]
-python train.py model=deltaflow epochs=21 batch_size=2 num_frames=5 train_aug=True \
+python train.py model=deltaflow epochs=15 batch_size=2 num_frames=5 train_aug=True \
   loss_fn=teflowLoss "voxel_size=[0.15, 0.15, 0.15]" "point_cloud_range=[-38.4, -38.4, -3, 38.4, 38.4, 3]" \
   +ssl_label=seflow_auto "+add_seloss={chamfer_dis: 1.0, static_flow_loss: 1.0, dynamic_chamfer_dis: 1.0, cluster_based_pc0pc1: 1.0}" \
-  optimizer.name=Adam optimizer.lr=1e-4 +optimizer.scheduler.name=StepLR +optimizer.scheduler.step_size=9 +optimizer.scheduler.gamma=0.5
+  optimizer.name=Adam optimizer.lr=2e-3 +optimizer.scheduler.name=StepLR +optimizer.scheduler.step_size=9 +optimizer.scheduler.gamma=0.5
 
 # Pretrained weight can be downloaded through:
 wget https://huggingface.co/kin-zhang/OpenSceneFlow/resolve/main/teflow/teflow-av2.ckpt
