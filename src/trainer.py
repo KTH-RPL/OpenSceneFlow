@@ -273,6 +273,8 @@ class ModelWrapper(LightningModule):
                 print(f"\nevalai challenge 2010 phase 4018 submit --file {self.save_res_path}.zip --large --private\n")
             elif self.leaderboard_version == 2:
                 print(f"\nevalai challenge 2210 phase 4396 submit --file {self.save_res_path}.zip --large --private\n")
+            elif self.leaderboard_version == 3:
+                print(f"\nevalai challenge .todo. phase .todo. submit --file {self.save_res_path}.zip --large --private\n")
             else:
                 print(f"Please check the leaderboard version in the config file. We only support version 1 and 2.")
             output_file = zip_res(self.save_res_path, leaderboard_version=self.leaderboard_version, is_supervised = self.supervised_flag, output_file=self.save_res_path.as_posix() + ".zip")
@@ -347,7 +349,7 @@ class ModelWrapper(LightningModule):
             rigid_flow = pose_flow[eval_mask, :3].cpu().detach().numpy()
             is_dynamic = np.linalg.norm(save_pred_flow - rigid_flow, axis=1, ord=2) >= 0.05
             sweep_uuid = (batch['scene_id'], batch['timestamp'])
-            if self.leaderboard_version == 2:
+            if self.leaderboard_version in [2, 3]:
                 save_pred_flow = (final_flow - pose_flow).cpu().detach().numpy() # all points here... since 2rd version we need to save the relative flow.
             write_output_file(save_pred_flow, is_dynamic, sweep_uuid, self.save_res_path, leaderboard_version=self.leaderboard_version)
 

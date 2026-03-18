@@ -799,7 +799,16 @@ def write_output_file(
             }
         )
         output.to_feather(output_log_dir / f"{sweep_uuid[1]}.feather")
-    
+    elif leaderboard_version == 3:
+        output = pd.DataFrame(
+            {
+                "flow_tx_m": fx_m,
+                "flow_ty_m": fy_m,
+                "flow_tz_m": fz_m,
+            }
+        )
+        output.to_feather(output_log_dir / f"{sweep_uuid[1]}.feather")
+        
 from zipfile import ZipFile
 from torch import BoolTensor
 import torch
