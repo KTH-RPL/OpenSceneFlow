@@ -28,9 +28,9 @@ from pathlib import Path
 from src.dataset import HDF5Dataset, collate_fn_pad, RandomHeight, RandomFlip, RandomJitter, ToTensor
 from torchvision import transforms
 from src.trainer import ModelWrapper
-
+from src.lossfuncs import SSL_LOSSES_FN
 def precheck_cfg_valid(cfg):
-    if cfg.loss_fn in ['seflowLoss', 'seflowppLoss'] and (cfg.add_seloss is None or cfg.ssl_label is None):
+    if cfg.loss_fn in SSL_LOSSES_FN and (cfg.add_seloss is None or cfg.ssl_label is None):
         raise ValueError("Please specify the self-supervised loss items and auto-label source for seflow-series loss.")
     
     grid_size = [(cfg.point_cloud_range[3] - cfg.point_cloud_range[0]) * (1/cfg.voxel_size[0]),
@@ -83,7 +83,7 @@ def main(cfg):
 
     output_dir = HydraConfig.get().runtime.output_dir
     # overwrite logging folder name for SSL.
-    if cfg.loss_fn in ['seflowLoss', 'seflowppLoss']:
+    if cfg.loss_fn in SSL_LOSSES_FN:
         tmp_ = cfg.loss_fn.split('Loss')[0] + '-' + cfg.model.name
         cfg.output = cfg.output.replace(cfg.model.name, tmp_)
         output_dir = output_dir.replace(cfg.model.name, tmp_)

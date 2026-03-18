@@ -398,7 +398,7 @@ def zip_res(res_folder, output_file="av2_submit.zip", leaderboard_version=2, is_
                         continue
                     file_path = os.path.join(scene, log)
                     myzip.write(os.path.join(res_folder, file_path), arcname=file_path)
-    else:
+    elif leaderboard_version == 2:
         output_file = output_file.replace(".zip", f"_v{leaderboard_version}.zip") if output_file=="av2_submit.zip" else output_file
         metadata = {"Is Supervised?": is_supervised}
         with ZipFile(output_file, "w") as myzip:
@@ -412,5 +412,17 @@ def zip_res(res_folder, output_file="av2_submit.zip", leaderboard_version=2, is_
                     file_path = os.path.join(scene, log)
                     myzip.write(os.path.join(res_folder, file_path), arcname=os.path.join(scene, f"{relative_idx:010d}.feather"))
                     relative_idx += 5
+    elif leaderboard_version == 3:
+        output_file = output_file.replace(".zip", f"_v{leaderboard_version}.zip") if output_file=="av2_submit.zip" else output_file
+        with ZipFile(output_file, "w") as myzip:
+            for scene in all_scenes:
+                scene_folder = os.path.join(res_folder, scene)
+                all_logs = os.listdir(scene_folder)
+                for log in all_logs:
+                    if not log.endswith(".feather"):
+                        continue
+                    file_path = os.path.join(scene, log)
+                    myzip.write(os.path.join(res_folder, file_path), arcname=file_path)
+                    
     print(f"Time cost: {time.time()-start_time:.2f}s, check the zip file: {output_file}")
     return output_file

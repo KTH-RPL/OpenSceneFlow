@@ -1,6 +1,11 @@
 from setuptools import setup
 from torch.utils.cpp_extension import BuildExtension, CUDAExtension
 
+extra_compile_args = {
+    'cxx': ['-DCCCL_IGNORE_DEPRECATED_CUDA_BELOW_12', '-DTHRUST_IGNORE_CUB_VERSION_CHECK'],
+    'nvcc': ['-DCCCL_IGNORE_DEPRECATED_CUDA_BELOW_12', '-DTHRUST_IGNORE_CUB_VERSION_CHECK'],
+}
+
 setup(
     name='im2ht',
     # ext_modules=[
@@ -8,7 +13,8 @@ setup(
     #     extra_compile_args={'cxx': ['-g'], 'nvcc': ['-arch=sm_60']}),
     # ],
     ext_modules=[
-        CUDAExtension(name='im2ht', sources=['im2ht.cpp', 'ht_cuda.cu']),
+        CUDAExtension(name='im2ht', sources=['im2ht.cpp', 'ht_cuda.cu'],
+        extra_compile_args=extra_compile_args),
     ],
     cmdclass={
         'build_ext': BuildExtension

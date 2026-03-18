@@ -7,22 +7,27 @@ from torch.autograd import Function
 from torch.autograd.function import once_differentiable
 
 def load_cpp_ext(ext_name):
-    root_dir = os.path.join(os.path.split(__file__)[0])
-    src_dir = os.path.join(root_dir, "cpp_im2ht")
-    tar_dir = os.path.join(src_dir, "build", ext_name)
-    os.makedirs(tar_dir, exist_ok=True)
-    srcs = glob(f"{src_dir}/*.cu") + glob(f"{src_dir}/*.cpp")
+    try:
+        import im2ht
+        ext = im2ht
+    except ImportError:
+        print(f"Compiling {ext_name} cpp/cuda extension...")
+        root_dir = os.path.join(os.path.split(__file__)[0])
+        src_dir = os.path.join(root_dir, "cpp_im2ht")
+        tar_dir = os.path.join(src_dir, "build", ext_name)
+        os.makedirs(tar_dir, exist_ok=True)
+        srcs = glob(f"{src_dir}/*.cu") + glob(f"{src_dir}/*.cpp")
 
-    with warnings.catch_warnings():
-        warnings.simplefilter("ignore")
-        from torch.utils.cpp_extension import load
-        ext = load(
-            name=ext_name,
-            sources=srcs,
-            extra_cflags=["-O3"],
-            extra_cuda_cflags=[],
-            build_directory=tar_dir,
-        )
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            from torch.utils.cpp_extension import load
+            ext = load(
+                name=ext_name,
+                sources=srcs,
+                extra_cflags=["-O3"],
+                extra_cuda_cflags=["-DTHRUST_IGNORE_CUB_VERSION_CHECK"],
+                build_directory=tar_dir,
+            )
     return ext
 
 # defer calling load_cpp_ext to make CUDA_VISIBLE_DEVICES happy

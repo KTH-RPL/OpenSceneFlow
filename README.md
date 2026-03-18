@@ -14,7 +14,7 @@ It is also an official implementation of the following papers (sorted by the tim
 - **TeFlow: Enabling Multi-frame Supervision for Self-Supervised Feed-forward Scene Flow Estimation**   
 *Qingwen Zhang, Chenhan Jiang, Xiaomeng Zhu, Yunqi Miao, Yushan Zhang, Olov Andersson, Patric Jensfelt*  
 Conference on Computer Vision and Pattern Recognition (**CVPR**) 2026  
-[ Strategy ] [ Self-Supervised ] - [ [arXiv](https://arxiv.org/abs/2602.19053) ] [ [Project]() ]
+[ Strategy ] [ Self-Supervised ] - [ [arXiv](https://arxiv.org/abs/2602.19053) ] [ [Project]() ]&rarr; [here](#teflow)
 
 - **DeltaFlow: An Efficient Multi-frame Scene Flow Estimation Method**   
 *Qingwen Zhang, Xiaomeng Zhu, Yushan Zhang, Yixi Cai, Olov Andersson, Patric Jensfelt*  
@@ -149,7 +149,9 @@ Train DeltaFlow with the leaderboard submit config. [Runtime: Around 18 hours in
 
 ```bash
 # total bz then it's 10x2 under above training setup.
-python train.py model=deltaFlow optimizer.lr=2e-3 epochs=20 batch_size=2 num_frames=5 loss_fn=deflowLoss train_aug=True "voxel_size=[0.15, 0.15, 0.15]" "point_cloud_range=[-38.4, -38.4, -3, 38.4, 38.4, 3]" +optimizer.scheduler.name=WarmupCosLR +optimizer.scheduler.max_lr=2e-3 +optimizer.scheduler.total_steps=20000
+python train.py model=deltaflow optimizer.lr=2e-3 epochs=20 batch_size=2 num_frames=5 \
+  loss_fn=deflowLoss train_aug=True "voxel_size=[0.15, 0.15, 0.15]" "point_cloud_range=[-38.4, -38.4, -3, 38.4, 38.4, 3]" \
+  optimizer.lr=2e-4 +optimizer.scheduler.name=WarmupCosLR +optimizer.scheduler.max_lr=2e-3 +optimizer.scheduler.warmup_epochs=2
 
 # Pretrained weight can be downloaded through (av2), check all other datasets in the same folder.
 wget https://huggingface.co/kin-zhang/OpenSceneFlow/resolve/main/deltaflow/deltaflow-av2.ckpt
@@ -205,6 +207,19 @@ wget https://huggingface.co/kin-zhang/OpenSceneFlow/resolve/main/deflow_best.ckp
 Train Feed-forward SSL methods (e.g. SeFlow/SeFlow++/VoteFlow etc), we needed to:
 1) process auto-label process for training. Check [dataprocess/README.md#self-supervised-process](dataprocess/README.md#self-supervised-process) for more details. We provide these inside the demo dataset already.
 2) specify the loss function, we set the config here for our best model in the leaderboard.
+
+#### TeFlow
+
+```bash
+# [Runtime: Around ? hours in 10x GPUs.]
+python train.py model=deltaflow epochs=15 batch_size=2 num_frames=5 train_aug=True \
+  loss_fn=teflowLoss "voxel_size=[0.15, 0.15, 0.15]" "point_cloud_range=[-38.4, -38.4, -3, 38.4, 38.4, 3]" \
+  +ssl_label=seflow_auto "+add_seloss={chamfer_dis: 1.0, static_flow_loss: 1.0, dynamic_chamfer_dis: 1.0, cluster_based_pc0pc1: 1.0}" \
+  optimizer.name=Adam optimizer.lr=2e-3 +optimizer.scheduler.name=StepLR +optimizer.scheduler.step_size=9 +optimizer.scheduler.gamma=0.5
+
+# Pretrained weight can be downloaded through:
+wget https://huggingface.co/kin-zhang/OpenSceneFlow/resolve/main/teflow/teflow-av2.ckpt
+```
 
 #### SeFlow
 
