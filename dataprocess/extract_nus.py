@@ -154,9 +154,12 @@ def process_log(nusc_mode, data_dir: Path, scene_num_id: int, output_dir: Path, 
         # compute delta transform between pose0 and pose1
         ego1_SE3_ego0 = npcal_pose0to1(pose0, pose1)
         # flow due to ego motion
-        flow = np.zeros_like(pc0[:,:3])
-        flow = pc0[:,:3] @ ego1_SE3_ego0[:3,:3].T + ego1_SE3_ego0[:3,3] - pc0[:,:3] # pose flow
-        
+        ego_flow = pc0[:,:3] @ ego1_SE3_ego0[:3,:3].T + ego1_SE3_ego0[:3,3] - pc0[:,:3] # pose flow
+
+        # object flow (without ego motion), used to track max flow magnitude
+        obj_flow_all = np.zeros_like(pc0[:,:3])
+        obj_flow_magnitude = np.zeros(len(pc0), dtype=np.float32)
+
         valid = np.ones(len(pc0), dtype=np.bool_)
         classes = np.zeros(len(pc0), dtype=np.uint8)
         instances = np.zeros(len(pc0), dtype=np.int16)
@@ -180,13 +183,21 @@ def process_log(nusc_mode, data_dir: Path, scene_num_id: int, output_dir: Path, 
             points_in_box_mask = points_in_box(box0, world_pc0[:,:3].T, wlh_factor=1.1)
             classes[points_in_box_mask] = CATEGORY_TO_INDEX[NusNamMap[cls]]
             if np.sum(points_in_box_mask) > 5:
-                obj_flow = np.ones_like(pc0[points_in_box_mask,:3]) * ann_vel * delta_t
-                flow[points_in_box_mask] += obj_flow
-                instances[points_in_box_mask] = (dclass[id_]+1)
+                obj_flow = ann_vel * delta_t
+                obj_flow_mag = np.linalg.norm(obj_flow)
+
+
+                higher_flow_mask = points_in_box_mask & (obj_flow_mag > obj_flow_magnitude)
+                obj_flow_all[higher_flow_mask] = obj_flow
+                obj_flow_magnitude[higher_flow_mask] = obj_flow_mag
+                instances[higher_flow_mask] = (dclass[id_]+1)
                 id_ += 1
             else:
                 valid[points_in_box_mask] = False
 
+        # Final flow = ego motion + object flow (with max magnitude selection)
+        flow = ego_flow + obj_flow_all
+        
         return {'flow_0_1': flow,
                 'valid_0': valid, 'classes_0': classes, 
                 'ego_motion': ego1_SE3_ego0,
@@ -239,7 +250,7 @@ def process_log(nusc_mode, data_dir: Path, scene_num_id: int, output_dir: Path, 
             if pc0.shape[0] < 10:
                 print(f'{log_id}/{ts0} has no points....')
                 continue
-            is_ground_0 = mygroundseg.run(pc0[:, :3])
+            is_ground_0 = mygroundseg.run(pc0[:, :3]) | (pc0[:,2] < -1.82)
             pose0 = get_pose(nusc, sweep_data)
 
             if cnt == len(sweep_data_lst) - 1:
