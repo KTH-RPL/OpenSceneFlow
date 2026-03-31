@@ -57,12 +57,8 @@ class nnChamferDis(nn.Module):
     Methods
     -------
     forward(pc0, pc1)
-        Single-sample loss. Used by seflowLoss / seflowppLoss.
-
-    batched/batched_disid_res (pc0_list, pc1_list)
-        Parallel loss across B samples via CUDA streams.
-        Returns mean-over-samples scalar.
-        Used by batched_chamfer_related() for chamfer_dis / dynamic_chamfer_dis.
+        Single-sample or list-of-samples loss. Used by seflowLoss / seflowppLoss.
+        If a list is provided, it processes it in parallel via CUDA streams.
 
     dis_res(pc0, pc1)        → (dist0, dist1), no reduction
     disid_res(pc0, pc1)      → (dist0, dist1, idx0, idx1), no reduction
@@ -80,32 +76,21 @@ class nnChamferDis(nn.Module):
             self._streams.append(torch.cuda.Stream())
         return self._streams[:n]
 
-    # ── single-sample forward ─────────────────────────────────────────────────
+    # ── forward ─────────────────────────────────────────────────
 
-    def forward(self, input0: torch.Tensor, input1: torch.Tensor,
-                truncate_dist: float = -1, **_ignored) -> torch.Tensor:
-        """Single-sample Chamfer loss. truncate_dist<=0 → no truncation."""
-        dist0, dist1, _, _ = ChamferDis.apply(input0.contiguous(), input1.contiguous())
-        if truncate_dist <= 0:
-            return dist0.mean() + dist1.mean()
-        v0, v1 = dist0 <= truncate_dist, dist1 <= truncate_dist
-        return torch.nanmean(dist0[v0]) + torch.nanmean(dist1[v1])
+    def forward(self, input0, input1, truncate_dist: float = -1, **_ignored) -> torch.Tensor:
+        """Chamfer loss. Supports single tensor or list of tensors."""
+        if not isinstance(input0, list):
+            dist0, dist1, _, _ = ChamferDis.apply(input0.contiguous(), input1.contiguous())
+            if truncate_dist <= 0:
+                return dist0.mean() + dist1.mean()
+            v0, v1 = dist0 <= truncate_dist, dist1 <= truncate_dist
+            return torch.nanmean(dist0[v0]) + torch.nanmean(dist1[v1])
 
-    # ── batched loss via CUDA streams ─────────────────────────────────────────
-
-    def batched(self,
-                pc0_list: List[torch.Tensor],
-                pc1_list: List[torch.Tensor],
-                truncate_dist: float = -1) -> torch.Tensor:
-        """Parallel Chamfer loss via B CUDA streams.
-
-        Returns mean-over-samples: (1/B) * Σ_i [mean(dist0_i) + mean(dist1_i)].
-        ~1.14× faster than serial loop on RTX 3090 @ 88K pts/sample;
-        more importantly, keeps GPU busy with one sustained work block per frame.
-        """
-        B = len(pc0_list)
+        # Batched processing via CUDA streams
+        B = len(input0)
         if B == 1:
-            return self.forward(pc0_list[0], pc1_list[0], truncate_dist)
+            return self.forward(input0[0], input1[0], truncate_dist)
 
         streams  = self._ensure_streams(B)
         main     = torch.cuda.current_stream()
@@ -114,8 +99,8 @@ class nnChamferDis(nn.Module):
         for i in range(B):
             streams[i].wait_stream(main)
             with torch.cuda.stream(streams[i]):
-                d0, d1, _, _ = ChamferDis.apply(pc0_list[i].contiguous(),
-                                                 pc1_list[i].contiguous())
+                d0, d1, _, _ = ChamferDis.apply(input0[i].contiguous(),
+                                                 input1[i].contiguous())
                 if truncate_dist <= 0:
                     per_loss[i] = d0.mean() + d1.mean()
                 else:
@@ -201,7 +186,7 @@ if __name__ == "__main__":
     print(f"Single:          {loss_s.item():.6f}")
 
     for B in [2, 4, 8]:
-        lb = fn.batched([pc0.clone()]*B, [pc1.clone()]*B)
+        lb = fn([pc0.clone()]*B, [pc1.clone()]*B)
         print(f"Batched   B={B}: {lb.item():.6f}  {'✓' if torch.allclose(loss_s, lb, atol=1e-5) else '✗'}")
 
     # Test batched_disid_res global indexing

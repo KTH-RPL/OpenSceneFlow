@@ -90,7 +90,7 @@ def batched_chamfer_related(res_dict, timer=None):
                      for p0, fv in zip(pc0_list, flow_list)]
 
         if chamfer_w > 0:
-            total_chamfer_dis += MyCUDAChamferDis.batched(
+            total_chamfer_dis += MyCUDAChamferDis(
                 proj_list, target_list, truncate_dist=TRUNCATED_DIST * factor
             ) * weight
 
@@ -107,12 +107,8 @@ def batched_chamfer_related(res_dict, timer=None):
                 proj_dyn.append(dp)
                 tgt_dyn.append(dt)
 
-        if len(proj_dyn) == 1:
+        if len(proj_dyn) >= 1:
             total_dynamic_chamfer_dis += MyCUDAChamferDis(
-                proj_dyn[0], tgt_dyn[0], truncate_dist=TRUNCATED_DIST * factor
-            ) * weight
-        elif len(proj_dyn) > 1:
-            total_dynamic_chamfer_dis += MyCUDAChamferDis.batched(
                 proj_dyn, tgt_dyn, truncate_dist=TRUNCATED_DIST * factor
             ) * weight
 
@@ -326,8 +322,8 @@ def seflowppLoss(res_dict, timer=None):
     bwd_list  = [p0 - fv for p0, fv in zip(pc0_list, flow_list)]
 
     # Chamfer: both temporal directions concurrently
-    chamfer_dis  = MyCUDAChamferDis.batched(fwd_list, pc1_list,  truncate_dist=TRUNCATED_DIST)
-    chamfer_dis += MyCUDAChamferDis.batched(bwd_list, pch1_list, truncate_dist=TRUNCATED_DIST)
+    chamfer_dis  = MyCUDAChamferDis(fwd_list, pc1_list,  truncate_dist=TRUNCATED_DIST)
+    chamfer_dis += MyCUDAChamferDis(bwd_list, pch1_list, truncate_dist=TRUNCATED_DIST)
 
     # Dynamic chamfer
     dyn_fwd, dyn_pc1   = [], []
@@ -343,14 +339,10 @@ def seflowppLoss(res_dict, timer=None):
             if dph.shape[0]  > 256: dyn_bwd.append(bwd_i[dyn_mask]); dyn_pch1.append(dph)
 
     dynamic_chamfer_dis = torch.tensor(0.0, device=dev)
-    if len(dyn_fwd) == 1:
-        dynamic_chamfer_dis += MyCUDAChamferDis(dyn_fwd[0], dyn_pc1[0], truncate_dist=TRUNCATED_DIST)
-    elif len(dyn_fwd) > 1:
-        dynamic_chamfer_dis += MyCUDAChamferDis.batched(dyn_fwd, dyn_pc1, truncate_dist=TRUNCATED_DIST)
-    if len(dyn_bwd) == 1:
-        dynamic_chamfer_dis += MyCUDAChamferDis(dyn_bwd[0], dyn_pch1[0], truncate_dist=TRUNCATED_DIST)
-    elif len(dyn_bwd) > 1:
-        dynamic_chamfer_dis += MyCUDAChamferDis.batched(dyn_bwd, dyn_pch1, truncate_dist=TRUNCATED_DIST)
+    if len(dyn_fwd) >= 1:
+        dynamic_chamfer_dis += MyCUDAChamferDis(dyn_fwd, dyn_pc1, truncate_dist=TRUNCATED_DIST)
+    if len(dyn_bwd) >= 1:
+        dynamic_chamfer_dis += MyCUDAChamferDis(dyn_bwd, dyn_pch1, truncate_dist=TRUNCATED_DIST)
 
     dist0_list, idx0_list = MyCUDAChamferDis.batched_disid_res(pc0_list, pc1_list)
     static_loss, moved_cluster_loss = _seflow_cluster_loop(
@@ -377,7 +369,7 @@ def seflowLoss(res_dict, timer=None):
 
     fwd_list = [p0 + fv for p0, fv in zip(pc0_list, flow_list)]
 
-    chamfer_dis = MyCUDAChamferDis.batched(fwd_list, pc1_list, truncate_dist=TRUNCATED_DIST)
+    chamfer_dis = MyCUDAChamferDis(fwd_list, pc1_list, truncate_dist=TRUNCATED_DIST)
 
     # Dynamic chamfer
     dyn_fwd, dyn_pc1 = [], []
@@ -388,10 +380,8 @@ def seflowLoss(res_dict, timer=None):
             dyn_pc1.append(dp1)
 
     dynamic_chamfer_dis = torch.tensor(0.0, device=dev)
-    if len(dyn_fwd) == 1:
-        dynamic_chamfer_dis = MyCUDAChamferDis(dyn_fwd[0], dyn_pc1[0], truncate_dist=TRUNCATED_DIST)
-    elif len(dyn_fwd) > 1:
-        dynamic_chamfer_dis = MyCUDAChamferDis.batched(dyn_fwd, dyn_pc1, truncate_dist=TRUNCATED_DIST)
+    if len(dyn_fwd) >= 1:
+        dynamic_chamfer_dis = MyCUDAChamferDis(dyn_fwd, dyn_pc1, truncate_dist=TRUNCATED_DIST)
 
     dist0_list, idx0_list = MyCUDAChamferDis.batched_disid_res(pc0_list, pc1_list)
     static_loss, moved_cluster_loss = _seflow_cluster_loop(
