@@ -14,7 +14,7 @@ It is also an official implementation of the following papers (sorted by the tim
 - **TeFlow: Enabling Multi-frame Supervision for Self-Supervised Feed-forward Scene Flow Estimation**   
 *Qingwen Zhang, Chenhan Jiang, Xiaomeng Zhu, Yunqi Miao, Yushan Zhang, Olov Andersson, Patric Jensfelt*  
 Conference on Computer Vision and Pattern Recognition (**CVPR**) 2026  
-[ Strategy ] [ Self-Supervised ] - [ [arXiv](https://arxiv.org/abs/2602.19053) ] [ [Project]() ]&rarr; [here](#teflow)
+[ Strategy ] [ Self-Supervised ] - [ [arXiv](https://arxiv.org/abs/2602.19053) ] [ [Project](https://github.com/Kin-Zhang/TeFlow) ]&rarr; [here](#teflow)
 
 - **DeltaFlow: An Efficient Multi-frame Scene Flow Estimation Method**   
 *Qingwen Zhang, Xiaomeng Zhu, Yushan Zhang, Yixi Cai, Olov Andersson, Patric Jensfelt*  
@@ -96,10 +96,10 @@ You always can choose [Docker](https://en.wikipedia.org/wiki/Docker_(software)) 
 
 ```bash
 # option 1: pull from docker hub
-docker pull zhangkin/opensf
+docker pull zhangkin/opensf:full
 
 # run container
-docker run -it --net=host --gpus all -v /dev/shm:/dev/shm -v /home/kin/data:/home/kin/data --name opensf zhangkin/opensf /bin/zsh
+docker run -it --net=host --gpus all -v /dev/shm:/dev/shm -v /home/kin/data:/home/kin/data --name opensf zhangkin/opensf:full /bin/zsh
 
 # and better to read your own gpu device info to compile the cuda extension again:
 cd /home/kin/workspace/OpenSceneFlow && git pull
@@ -232,6 +232,7 @@ wget https://huggingface.co/kin-zhang/OpenSceneFlow/resolve/main/seflow_best.ckp
 ```
 
 #### VoteFlow
+
 Extra pakcges needed for VoteFlow, [pytorch3d](https://pytorch3d.org/) (prefer 0.7.7) and [torch-scatter](https://github.com/rusty1s/pytorch_scatter?tab=readme-ov-file) (prefer 2.1.2):
 
 ```bash
@@ -295,6 +296,7 @@ python eval.py checkpoint=/home/kin/seflow_best.ckpt data_mode=test leaderboard_
 ```
 
 ### **📊 Range-Wise Metric (New!)**
+
 In [SSF paper](https://arxiv.org/abs/2501.17821), we introduce a new distance-based evaluation metric for scene flow estimation. Below is an example output for SSF with point_cloud_range to 204.8m and voxel_size=0.2m. Check more long-range result in [SSF paper](https://arxiv.org/abs/2501.17821).
 
 | Distance  | Static    | Dynamic  | NumPointsStatic | NumPointsDynamic |
@@ -308,6 +310,7 @@ In [SSF paper](https://arxiv.org/abs/2501.17821), we introduce a new distance-ba
 
 
 ### Submit result to public leaderboard
+
 To submit your result to the public Leaderboard, if you select `data_mode=test`, it should be a zip file for you to submit to the leaderboard.
 Note: The leaderboard result in DeFlow&SeFlow main paper is [version 1](https://eval.ai/web/challenges/challenge-page/2010/evaluation), as [version 2](https://eval.ai/web/challenges/challenge-page/2210/overview) is updated after DeFlow&SeFlow.
 
@@ -352,13 +355,13 @@ For exporting easy comparsion with ground truth and other methods, we also provi
 python tools/visualization.py vis --res_name "['flow', 'seflow_best']" --data_dir /home/kin/data/av2/preprocess_v2/sensor/vis
 ```
 
-**Tips**: To quickly create qualitative results for all methods, you can use multiple results comparison mode, select a good viewpoint and then save screenshots for all frames by pressing `P` key. You will found all methods' results are saved in the output folder (default is `logs/imgs`). Enjoy it!
+**Tips**: To quickly create qualitative results for all methods, you can use multiple results comparison mode, select a good viewpoint and then save screenshots for all frames by pressing the `P` key. You will find all methods' results saved in the output folder (default: `logs/imgs`). [IrfanView](https://www.irfanview.com/) can help you easily crop the images in batch. Enjoy!
 
 
-_Rerun_: Another way to interact with [rerun](https://github.com/rerun-io/rerun) but please only vis scene by scene, not all at once.
+_Rerun_: Another way to interact with [rerun](https://github.com/rerun-io/rerun), here we vis scene by scene, you can also specify the result name to compare with GT or other methods.
 
 ```bash
-python tools/visualization_rerun.py --data_dir /home/kin/data/av2/h5py/demo/train --res_name "['flow', 'deflow']"
+python tools/visualization_rerun.py --scene_file /home/kin/data/av2/h5py/demo/val/25e5c600-36fe-3245-9cc0-40ef91620c22.h5 --res_name "['flow', 'deflow']"
 ```
 
 https://github.com/user-attachments/assets/07e8d430-a867-42b7-900a-11755949de21
