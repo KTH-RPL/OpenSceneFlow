@@ -123,7 +123,8 @@ def batched_chamfer_related(res_dict, timer=None):
 
     return total_chamfer_dis, total_dynamic_chamfer_dis, frame_keys
 
-
+# ---- multi-frame cluster loss (teflow) -------------------
+# Based on TeFlow paper: https://arxiv.org/abs/2602.19053
 def multi_frames_clusterLoss(
     pc0_list, pc0_lab_list, flow_list,
     frame_keys, frames_dists, frames_indices, res_dict, args={}
@@ -269,7 +270,7 @@ def _seflow_cluster_loop(pc0_list, pc1_list, pc0_lab_list, pc1_lab_list,
 
     return static_loss, moved_loss
 
-
+# from paper: https://arxiv.org/abs/2602.19053
 def teflowLoss(res_dict, timer=None):
     """Temporal seflow: chamfer over all frames + static + RANSAC cluster loss."""
     pc0_list     = res_dict['pc0_list']
