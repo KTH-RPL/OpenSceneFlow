@@ -35,9 +35,13 @@ import tensorflow as tf
 import os, sys, json
 BASE_DIR = os.path.abspath(os.path.join( os.path.dirname( __file__ ), '..' ))
 sys.path.append(BASE_DIR)
-from dataprocess.misc_data import create_reading_index, SE2
+from dataprocess.misc_data import create_reading_index, SE2, check_h5py_file_exists
 GROUND_HEIGHT_THRESHOLD = 0.4  # 40 centimeters
-RANGE_MAX_VALID = 50
+RANGE_MAX_VALID = 75 # based on waymo dataset website, the max range of lidar is around 75m.
+
+from linefit import ground_seg
+GROUNDSEG_config = f"{BASE_DIR}/conf/others/waymo.toml"
+
 
 def is_ground_points(
     raster_heightmap,
@@ -346,6 +350,16 @@ def process_log(data_dir: Path, log, log_map_folder, output_dir: Path, n = None)
     first_frame = dataset_pb2.Frame.FromString(bytearray(all_data[0]))
     scene_id = first_frame.context.name
     total_lens = len(all_data)
+    mygroundseg = ground_seg(GROUNDSEG_config)
+    timestamps = []
+    for data_idx in range(1, total_lens):
+        if data_idx >= total_lens - 2:
+            # 0: no correct flow label, end(total_lens - 1) - 1: no correct pose flow
+            continue
+        timestamps.append(dataset_pb2.Frame.FromString(bytearray(all_data[data_idx])).timestamp_micros)
+    if check_h5py_file_exists(output_dir/f'{scene_id}.h5', timestamps):
+        return
+    
     for data_idx in range(1, total_lens):
         if data_idx >= total_lens - 2:
             # 0: no correct flow label, end(total_lens - 1) - 1: no correct pose flow
@@ -363,11 +377,14 @@ def process_log(data_dir: Path, log, log_map_folder, output_dir: Path, n = None)
         if car_frame_pc.shape[0] < 256:
             print(f'{scene_id}/{timestamp} has less than 256 points, skip this scenarios. Please check the data if needed.')
             break
+        
+        # involve linefit to further remove ground points, since the heightmap is not perfect, especially for some scenes....
+        is_ground_0 = mygroundseg.run(car_frame_pc[:, :3]) 
+        ground_mask = ground_mask | is_ground_0 | (car_frame_pc[:,2] < -1.8) # height threshold for nuscenes, also filter out points below the height threshold.
+
         with h5py.File(output_dir/f'{scene_id}.h5', 'a') as f:
             group = f.create_group(str(timestamp))
             create_group_data(group, car_frame_pc, pose, ego_motion=ego_motion, gm=np.array(ground_mask), flow_0to1=(flow/10.0+pose_flow), flow_category=label)
-        # if data_idx > 10:
-        #     break
 
 def proc(x, ignore_current_process=False):
     if not ignore_current_process:

@@ -356,9 +356,11 @@ class HDF5Dataset(Dataset):
 
             if self.eval_index:
                 # looks like v2 not follow the same rule as v1 with eval_mask provided
-                # data_dict['eval_mask'] = np.ones_like(data_dict['pc0'][:, 0], dtype=np.bool_) if 'eval_mask' not in f[key] else f[key]['eval_mask'][:]
                 if 'eval_mask' in f[key]:
-                    data_dict['eval_mask'] = f[key]['eval_mask'][:]
+                    raw_eval = f[key]['eval_mask'][:]
+                    raw_ground = f[key]['ground_mask'][:]
+                    # NOTE(Qingwen): performance might be changed for av2 since some eval_mask provided by av2 didn't remove ground points.
+                    data_dict['eval_mask'] = (raw_eval.reshape(-1).astype(bool) & (~raw_ground.reshape(-1).astype(bool)))
                 elif 'ground_mask' in f[key]:
                     data_dict['eval_mask'] = ~f[key]['ground_mask'][:]
                 else:

@@ -19,12 +19,13 @@ from pathlib import Path
 
 from lightning import LightningModule
 from hydra.utils import instantiate
-from omegaconf import OmegaConf,open_dict
+from omegaconf import OmegaConf, open_dict
 
-import os, sys, time, h5py, pickle
+import os, sys, time, h5py
 BASE_DIR = os.path.abspath(os.path.join( os.path.dirname( __file__ ), '..' ))
 sys.path.append(BASE_DIR)
 from src.utils import import_func
+from src.lossfuncs import SSL_LOSSES_FN
 from src.utils.mics import weights_init, zip_res
 from src.utils.av2_eval import write_output_file
 from src.models.basic import cal_pose0to1, WarmupCosLR
@@ -51,9 +52,12 @@ class ModelWrapper(LightningModule):
             "save_res": False,
             "res_name": "default",
             "num_frames": 2,
+
+            # lr scheduler, only active when warmup_epochs > 0
             "optimizer": None,
             "dataset_path": None,
             "data_mode": None,
+            "cluster_loss_args": {},
         }
         for key, default in default_self_values.items():
             setattr(self, key, cfg.get(key, default))
@@ -92,74 +96,124 @@ class ModelWrapper(LightningModule):
             self.save_res_path = Path(cfg.dataset_path).parent / "results" / cfg.output
             os.makedirs(self.save_res_path, exist_ok=True)
             print(f"We are in {cfg.data_mode}, results will be saved in: {self.save_res_path} with version: {self.leaderboard_version} format for online leaderboard.")
-
-        # self.test_total_num = 0
         if self.data_mode in ['val', 'valid', 'test']:
             print(cfg)
+        # self.test_total_num = 0
         self.save_hyperparameters()
-
-    # FIXME(Qingwen 2025-08-20): update the loss_calculation fn alone to make all things pretty here....
-    def training_step(self, batch, batch_idx):
-        self.model.timer[4].start("One Scan in model")
-        res_dict = self.model(batch)
-        self.model.timer[4].stop()
-
-        self.model.timer[5].start("Loss")
-        # compute loss
-        total_loss = 0.0
-
-        if self.cfg_loss_name in ['seflowLoss', 'seflowppLoss']:
-            loss_items, weights = zip(*[(key, weight) for key, weight in self.add_seloss.items()])
-            loss_logger = {'chamfer_dis': 0.0, 'dynamic_chamfer_dis': 0.0, 'static_flow_loss': 0.0, 'cluster_based_pc0pc1': 0.0}
-        else:
-            loss_items, weights = ['loss'], [1.0]
-            loss_logger = {'loss': 0.0}
-
-        pc0_valid_idx = res_dict['pc0_valid_point_idxes'] # since padding
-        pc1_valid_idx = res_dict['pc1_valid_point_idxes'] # since padding
-        if 'pc0_points_lst' in res_dict and 'pc1_points_lst' in res_dict:
-            pc0_points_lst = res_dict['pc0_points_lst']
-            pc1_points_lst = res_dict['pc1_points_lst']
         
-        batch_sizes = len(batch["pose0"])
-        pose_flows = res_dict['pose_flow']
-        est_flow = res_dict['flow']
+    def ssl_loss_calculator(self, batch, res_dict, if_log=True):
+        """Build dict2loss for ALL self-supervised losses (seflow, seflowpp, teflow*).
+
+        Each frame is represented only as a List[Tensor] and a List[labels].
+        No flat tensors, no offsets, no sizes — chamfer calls use list APIs only.
+        """
+        total_loss, bz_ = 0.0, len(batch["pose0"])
+
+        pc0_list = [res_dict['pc0_points_lst'][i] for i in range(bz_)]
+
+        dict2loss = {
+            'pc0_list':         pc0_list,
+            'est_flow_list':    [res_dict['flow'][i] for i in range(bz_)],
+            'pc0_labels_list':  [batch['pc0_dynamic'][i][res_dict['pc0_valid_point_idxes'][i]] for i in range(bz_)],
+            'batch_size':       bz_,
+        }
+
+        frame_keys = [key.replace('_points_lst', '') for key in res_dict.keys()
+                      if key.startswith('pc') and key.endswith('_points_lst')]
+        frame_keys.remove('pc0')
+
+        for frame_id in frame_keys:
+            points_list = [res_dict[f'{frame_id}_points_lst'][i] for i in range(bz_)]
+            labels_list = [batch[f'{frame_id}_dynamic'][i][res_dict[f'{frame_id}_valid_point_idxes'][i]] for i in range(bz_)]
+            dict2loss[f'{frame_id}_list']        = points_list
+            dict2loss[f'{frame_id}_labels_list'] = labels_list
+                    
+        loss_items, weights = zip(*[(key, weight) for key, weight in self.add_seloss.items()])
+        dict2loss['loss_weights_dict'] = self.add_seloss
         
+        dict2loss['cluster_loss_args'] = self.cluster_loss_args
+
+        res_loss = self.loss_fn(dict2loss)
+
+        for i, loss_name in enumerate(loss_items):
+            if not torch.isnan(res_loss[loss_name]):
+                total_loss += weights[i] * res_loss[loss_name]
+        
+        if if_log:
+            self.log("trainer/loss", total_loss, sync_dist=True, batch_size=bz_, prog_bar=True)
+        for key in res_loss:
+            self.log(f"trainer/{key}", res_loss[key], sync_dist=True, batch_size=bz_)
+            
+        return total_loss
+
+    def loss_calculator(self, batch, res_dict, if_log=True):
+        """ Calculate the loss based on the batch (gt/ssl-label) and res_dict (estimate flow)."""
+        def get_batch_data(batch, key, batch_id, batch_sizes, pc0_valid_from_pc2res, pose_flow_=None):
+            """NOTE(Qingwen): for gt need double check whether it exists in the batch and batch size is correct"""
+            if key not in batch or batch[key].shape[0] != batch_sizes:
+                return None
+            data = batch[key][batch_id][pc0_valid_from_pc2res]
+            if key == 'flow' and pose_flow_ is not None:
+                data = data - pose_flow_
+            return data
+        def get_frame_keys(data_dict, suffix):
+            return [key for key in data_dict.keys() if key.endswith(suffix)]
+        def extract_frame_id(key, suffix):
+            """Extract frame identifier from key (e.g., 'pc0_points_lst' -> 'pc0')"""
+            return key.replace(suffix, '')
+        
+        # Supervised-only path (deflowLoss, etc.)
+        # SSL losses are handled by ssl_loss_calculator.
+        total_loss, loss_logger = 0.0, {}
+        loss_items, weights = ['loss'], [1.0]
+        for key in loss_items:
+            loss_logger[key] = 0.0
+
+        batch_sizes, pose_flows, est_flow = len(batch["pose0"]), res_dict['pose_flow'], res_dict['flow']
         for batch_id in range(batch_sizes):
-            pc0_valid_from_pc2res = pc0_valid_idx[batch_id]
-            pc1_valid_from_pc2res = pc1_valid_idx[batch_id]
+            # Get pc0 valid indices (main reference frame)
+            pc0_valid_from_pc2res = res_dict['pc0_valid_point_idxes'][batch_id]
             pose_flow_ = pose_flows[batch_id][pc0_valid_from_pc2res]
 
             dict2loss = {'est_flow': est_flow[batch_id], 
-                        'gt_flow': None if 'flow' not in batch else batch['flow'][batch_id][pc0_valid_from_pc2res] - pose_flow_, 
-                        'gt_classes': None if 'flow_category_indices' not in batch else batch['flow_category_indices'][batch_id][pc0_valid_from_pc2res],
-                        'gt_instance': None if 'flow_instance_id' not in batch else batch['flow_instance_id'][batch_id][pc0_valid_from_pc2res],}
+                        'gt_flow': get_batch_data(batch, 'flow', batch_id, batch_sizes, pc0_valid_from_pc2res, pose_flow_),
+                        'gt_classes': get_batch_data(batch, 'flow_category_indices', batch_id, batch_sizes, pc0_valid_from_pc2res),
+                        'gt_instance': get_batch_data(batch, 'flow_instance_id', batch_id, batch_sizes, pc0_valid_from_pc2res)}
             
-            if 'pc0_dynamic' in batch:
-                dict2loss['pc0_labels'] = batch['pc0_dynamic'][batch_id][pc0_valid_from_pc2res]
-                dict2loss['pc1_labels'] = batch['pc1_dynamic'][batch_id][pc1_valid_from_pc2res]
-            if 'pch1_dynamic' in batch and 'pch1_valid_point_idxes' in res_dict:
-                dict2loss['pch1_labels'] = batch['pch1_dynamic'][batch_id][res_dict['pch1_valid_point_idxes'][batch_id]]
-
-            # different methods may don't have this in the res_dict
-            if 'pc0_points_lst' in res_dict and 'pc1_points_lst' in res_dict:
-                dict2loss['pc0'] = pc0_points_lst[batch_id]
-                dict2loss['pc1'] = pc1_points_lst[batch_id]
-            if 'pch1_points_lst' in res_dict:
-                dict2loss['pch1'] = res_dict['pch1_points_lst'][batch_id]
+            # Add all available point cloud frames
+            for points_key in get_frame_keys(res_dict, '_points_lst'):
+                frame_id = extract_frame_id(points_key, '_points_lst')
+                if points_key in res_dict:
+                    dict2loss[frame_id] = res_dict[points_key][batch_id]
 
             res_loss = self.loss_fn(dict2loss)
+ 
             for i, loss_name in enumerate(loss_items):
+                # if torch.isnan(res_loss[loss_name]):
+                #     print(f"==> Loss: {loss_name} is nan, skip this batch.")
+                #     continue
                 total_loss += weights[i] * res_loss[loss_name]
             for key in res_loss:
                 loss_logger[key] += res_loss[key]
+        if if_log:
+            self.log("trainer/loss", total_loss/batch_sizes, sync_dist=True, batch_size=self.batch_size, prog_bar=True)
+        return total_loss
+    
+    def training_step(self, batch, batch_idx):
+        total_loss = 0.0
+        self.model.timer[5].start("Training Step")
+        self.model.timer[5][0].start("Forward")
+        res_dict = self.model(batch)
+        self.model.timer[5][0].stop()
+        self.model.timer[5][1].start("Compute Loss")
 
-        self.log("trainer/loss", total_loss/batch_sizes, sync_dist=True, batch_size=self.batch_size, prog_bar=True)
-        if self.add_seloss is not None and self.cfg_loss_name in ['seflowLoss', 'seflowppLoss']:
-            for key in loss_logger:
-                self.log(f"trainer/{key}", loss_logger[key]/batch_sizes, sync_dist=True, batch_size=self.batch_size)
+        if self.cfg_loss_name in SSL_LOSSES_FN:
+            total_loss = self.ssl_loss_calculator(batch, res_dict)
+        else:
+            total_loss = self.loss_calculator(batch, res_dict)
+        self.model.timer[5][1].stop()
         self.model.timer[5].stop()
-
+        
         # NOTE (Qingwen): if you want to view the detail breakdown of time cost
         # self.model.timer.print(random_colors=False, bold=False)
         return total_loss
@@ -206,6 +260,8 @@ class ModelWrapper(LightningModule):
 
     def on_train_epoch_end(self):
         self.log("pre_epoch_cost (mins)", (time.time()-self.time_start_train_epoch)/60.0, on_step=False, on_epoch=True, sync_dist=True)
+        # # NOTE (Qingwen): if you want to view the detail breakdown of time cost
+        # self.model.timer.print(random_colors=False, bold=False)
     
     def on_validation_epoch_end(self):
         self.model.timer.print(random_colors=False, bold=False)
@@ -217,15 +273,17 @@ class ModelWrapper(LightningModule):
                 print(f"\nevalai challenge 2010 phase 4018 submit --file {self.save_res_path}.zip --large --private\n")
             elif self.leaderboard_version == 2:
                 print(f"\nevalai challenge 2210 phase 4396 submit --file {self.save_res_path}.zip --large --private\n")
+            elif self.leaderboard_version == 3:
+                print(f"\nevalai challenge .todo. phase .todo. submit --file {self.save_res_path}.zip --large --private\n")
             else:
                 print(f"Please check the leaderboard version in the config file. We only support version 1 and 2.")
             output_file = zip_res(self.save_res_path, leaderboard_version=self.leaderboard_version, is_supervised = self.supervised_flag, output_file=self.save_res_path.as_posix() + ".zip")
             # wandb.log_artifact(output_file)
             return
         
-        if self.data_mode == 'val':
+        if self.data_mode in ['val', 'valid']:
             print(f"\nModel: {self.model.__class__.__name__}, Checkpoint from: {self.checkpoint}")
-            print(f"More details parameters and training status are in the checkpoint file.")        
+            print(f"More details parameters and training status are in checkpoints file.")        
 
         self.metrics.normalize()
 
@@ -238,15 +296,12 @@ class ModelWrapper(LightningModule):
         
         self.metrics.print()
 
-        if self.save_res:
-            # Save the dictionaries to a pickle file
-            with open(str(self.save_res_path)+'.pkl', 'wb') as f:
-                pickle.dump((self.metrics.epe_3way, self.metrics.bucketed, self.metrics.epe_ssf), f)
-            print(f"We already write the {self.res_name} into the dataset, please run following commend to visualize the flow. Copy and paste it to your terminal:")
-            print(f"python tools/visualization.py vis --res_name '{self.res_name}' --data_dir {self.dataset_path}")
-            print(f"Enjoy! ^v^ ------ \n")
-
         self.metrics = OfficialMetrics()
+
+        if self.save_res:
+            print(f"We already write the flow_est into the dataset, please run following commend to visualize the flow. Copy and paste it to your terminal:")
+            print(f"python tools/visualization.py --res_name \"['{self.res_name}']\" --data_dir {self.dataset_path}")
+            print(f"Enjoy! ^v^ ------ \n")
         
     def eval_only_step_(self, batch, res_dict):
         eval_mask = batch['eval_mask'].squeeze()
@@ -261,29 +316,40 @@ class ModelWrapper(LightningModule):
 
             # flow in the original pc0 coordinate
             pred_flow = pose_flow[~batch['gm0']].clone()
+            # debug: for ego-motion flow only
+            # res_dict['flow'] = torch.zeros_like(res_dict['flow'])
             pred_flow[valid_from_pc2res] = res_dict['flow'] + pose_flow[~batch['gm0']][valid_from_pc2res]
             final_flow[~batch['gm0']] = pred_flow
         else:
             final_flow[~batch['gm0']] = res_dict['flow'] + pose_flow[~batch['gm0']]
 
-        if self.data_mode == 'val': # since only val we have ground truth flow to eval
+        if self.data_mode in ['val', 'valid']: # since only val we have ground truth flow to eval
             gt_flow = batch["flow"]
             v1_dict = evaluate_leaderboard(final_flow[eval_mask], pose_flow[eval_mask], pc0[eval_mask], \
                                        gt_flow[eval_mask], batch['flow_is_valid'][eval_mask], \
                                        batch['flow_category_indices'][eval_mask])
             v2_dict = evaluate_leaderboard_v2(final_flow[eval_mask], pose_flow[eval_mask], pc0[eval_mask], \
                                     gt_flow[eval_mask], batch['flow_is_valid'][eval_mask], batch['flow_category_indices'][eval_mask])
-            ssf_dict = evaluate_ssf(final_flow, pose_flow, pc0, \
-                                    gt_flow, batch['flow_is_valid'], batch['flow_category_indices'])
+            ssf_dict = evaluate_ssf(final_flow[eval_mask], pose_flow[eval_mask], pc0[eval_mask], \
+                                    gt_flow[eval_mask], batch['flow_is_valid'][eval_mask], batch['flow_category_indices'][eval_mask])
+            
             self.metrics.step(v1_dict, v2_dict, ssf_dict)
-        
+            if self.save_res:
+                # write final_flow into the dataset.
+                key = str(batch['timestamp'])
+                scene_id = batch['scene_id']
+                with h5py.File(os.path.join(self.dataset_path, f'{self.data_mode}/{scene_id}.h5'), 'r+') as f:
+                    if self.res_name in f[key]:
+                        del f[key][self.res_name]
+                    f[key].create_dataset(self.res_name, data=final_flow.cpu().detach().numpy().astype(np.float32))
+
         # NOTE (Qingwen): Since val and test, we will force set batch_size = 1 
-        if self.save_res or self.data_mode == 'test': # test must save data to submit in the online leaderboard.    
+        if self.save_res and self.data_mode == 'test': # test must save data to submit in the online leaderboard.    
             save_pred_flow = final_flow[eval_mask, :3].cpu().detach().numpy()
             rigid_flow = pose_flow[eval_mask, :3].cpu().detach().numpy()
             is_dynamic = np.linalg.norm(save_pred_flow - rigid_flow, axis=1, ord=2) >= 0.05
             sweep_uuid = (batch['scene_id'], batch['timestamp'])
-            if self.leaderboard_version == 2:
+            if self.leaderboard_version in [2, 3]:
                 save_pred_flow = (final_flow - pose_flow).cpu().detach().numpy() # all points here... since 2rd version we need to save the relative flow.
             write_output_file(save_pred_flow, is_dynamic, sweep_uuid, self.save_res_path, leaderboard_version=self.leaderboard_version)
 
@@ -302,19 +368,22 @@ class ModelWrapper(LightningModule):
 
         # NOTE (Qingwen): Since val and test, we will force set batch_size = 1 
         batch = {key: batch[key][0] for key in batch if len(batch[key])>0}
-        res_dict = {key: res_dict[key][0] for key in res_dict if res_dict[key]!=None and len(res_dict[key])>0}
+        res_dict = {key: res_dict[key][0] for key in res_dict if (res_dict[key]!=None and len(res_dict[key])>0) }
         return batch, res_dict
     
     def validation_step(self, batch, batch_idx):
-        if self.data_mode in ['val', 'test']:
-            batch, res_dict = self.run_model_wo_ground_data(batch)
-            self.model.timer[13].start("Eval")
-            self.eval_only_step_(batch, res_dict)
-            self.model.timer[13].stop()
-        else:
-            res_dict = self.model(batch)
-            self.train_validation_step_(batch, res_dict)
-
+        try:
+            if self.data_mode in ['val', 'valid'] or self.data_mode == 'test':
+                batch, res_dict = self.run_model_wo_ground_data(batch)
+                if batch['eval_flag']:
+                    self.eval_only_step_(batch, res_dict)
+            else:
+                res_dict = self.model(batch)
+                self.train_validation_step_(batch, res_dict)
+        except Exception as e:
+            print(f"==> Exception occur during training/validation step: {e}. Skip this batch.")
+            print(f"Batch info: scene_id: {batch['scene_id']}, timestamp: {batch['timestamp']}, pc0 size: {batch['pc0']}")
+    
     def test_step(self, batch, batch_idx):
         batch, res_dict = self.run_model_wo_ground_data(batch)
         pc0 = batch['origin_pc0']
@@ -346,5 +415,5 @@ class ModelWrapper(LightningModule):
         self.model.timer.print(random_colors=False, bold=False)
         print(f"\n\nModel: {self.model.__class__.__name__}, Checkpoint from: {self.checkpoint}")
         print(f"We already write the flow_est into the dataset, please run following commend to visualize the flow. Copy and paste it to your terminal:")
-        print(f"python tools/visualization.py --res_name '{self.res_name}' --data_dir {self.dataset_path}")
+        print(f"python tools/visualization.py --res_name \"['{self.res_name}']\" --data_dir {self.dataset_path}")
         print(f"Enjoy! ^v^ ------ \n")

@@ -21,7 +21,7 @@ import torch
 import numpy as np
 import time
 
-FAISS_TEST = True
+FAISS_TEST = False
 PYTORCH3D_TEST = True
 MMCV_TEST = False
 CUDA_TEST = True
@@ -72,6 +72,8 @@ if __name__ == "__main__":
 
     if PYTORCH3D_TEST:
         print("------ START Pytorch3d Chamfer Distance Cal ------")
+        # you can find the source code here: https://github.com/KTH-RPL/SeFlow/blob/source/src/models/basic/nsfp_module.py#L91-L295
+        # as I removed these dependence w. codes in the codebase....
         from src.models.basic.nsfp_module import my_chamfer_fn
         start_time = time.time()
         loss0, _ = my_chamfer_fn(pc0.unsqueeze(0), pc1.unsqueeze(0), truncate_dist=False)

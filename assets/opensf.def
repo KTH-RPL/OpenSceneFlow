@@ -1,0 +1,14 @@
+Bootstrap: docker
+From: zhangkin/opensf:full
+
+%files
+    assets/cuda /workspace/assets/cuda
+    src/models/basic/voteflow_plugin /workspace/src/models/basic/voteflow_plugin
+    environment.yaml /workspace/environment.yaml
+
+%runscript
+    echo "Running pip install for local CUDA modules..."
+    /opt/conda/envs/opensf/bin/pip install /workspace/assets/cuda/chamfer3D
+    /opt/conda/envs/opensf/bin/pip install /workspace/assets/cuda/mmcv
+    /opt/conda/envs/opensf/bin/pip install /workspace/src/models/basic/voteflow_plugin/hough_transformation/cpp_im2ht
+    exec /opt/conda/envs/opensf/bin/python "$@"
