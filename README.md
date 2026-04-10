@@ -8,12 +8,12 @@
 
 💞 If you find [*OpenSceneFlow*](https://github.com/KTH-RPL/OpenSceneFlow) useful to your research, please cite [**our works** 📖](#cite-us) and [give a star 🌟](https://github.com/KTH-RPL/OpenSceneFlow) as encouragement. (੭ˊ꒳​ˋ)੭✧
 
-OpenSceneFlow is a codebase for point cloud scene flow estimation. 
+[OpenSceneFlow](https://github.com/KTH-RPL/OpenSceneFlow) is a codebase for point cloud scene flow estimation with pre-trained models and datasets available on [HuggingFace](https://huggingface.co/kin-zhang/OpenSceneFlow). 
 It is also an official implementation of the following papers (sorted by the time of publication):
 
 - **TeFlow: Enabling Multi-frame Supervision for Self-Supervised Feed-forward Scene Flow Estimation**   
 *Qingwen Zhang, Chenhan Jiang, Xiaomeng Zhu, Yunqi Miao, Yushan Zhang, Olov Andersson, Patric Jensfelt*  
-Conference on Computer Vision and Pattern Recognition (**CVPR**) 2026  
+Conference on Computer Vision and Pattern Recognition (**CVPR**) 2026 - Highlight   
 [ Strategy ] [ Self-Supervised ] - [ [arXiv](https://arxiv.org/abs/2602.19053) ] [ [Project](https://github.com/Kin-Zhang/TeFlow) ]&rarr; [here](#teflow)
 
 - **DeltaFlow: An Efficient Multi-frame Scene Flow Estimation Method**   
@@ -289,10 +289,15 @@ python eval.py checkpoint=/home/kin/seflow_best.ckpt data_mode=val
 
 # (optimization-based): it might need take really long time, maybe tmux for run it.
 python eval.py model=nsfp +master_port=12344 # change diff port if you want to have multiple runners.
+```
 
-# it will output the av2_submit.zip or av2_submit_v2.zip for you to submit to leaderboard
-python eval.py checkpoint=/home/kin/seflow_best.ckpt data_mode=test leaderboard_version=1
-python eval.py checkpoint=/home/kin/seflow_best.ckpt data_mode=test leaderboard_version=2
+For online testing, first download multidata-sf-challenge dataset (~150Gb) from [HuggingFace](https://huggingface.co/datasets/kin-zhang/multidata-sf-challenge) and specify the `dataset_path` in the config. The evaluation result will be saved to a zip file for you to submit to the leaderboard. 
+```bash
+# download the dataset for online testing, around 150Gb:
+huggingface-cli download kin-zhang/multidata-sf-challenge --local-dir /home/kin/data/multidata-sf-challenge
+
+# eval with results saved to submit to leaderboard
+python eval.py checkpoint=/home/kin/seflow_best.ckpt data_mode=test leaderboard_version=3 dataset_path=/home/kin/data/multidata-sf-challenge/challenge_public save_res=True
 ```
 
 ### **📊 Range-Wise Metric (New!)**
@@ -312,20 +317,25 @@ In [SSF paper](https://arxiv.org/abs/2501.17821), we introduce a new distance-ba
 ### Submit result to public leaderboard
 
 To submit your result to the public Leaderboard, if you select `data_mode=test`, it should be a zip file for you to submit to the leaderboard.
-Note: The leaderboard result in DeFlow&SeFlow main paper is [version 1](https://eval.ai/web/challenges/challenge-page/2010/evaluation), as [version 2](https://eval.ai/web/challenges/challenge-page/2210/overview) is updated after DeFlow&SeFlow.
+- 2026-04-10: We've update the leaderboard to [version 3](https://sceneflow.argoverse.org/leaderboard) with more datasets and longer range. You can specify the `leaderboard_version` in the config to select which version you want to submit and report the item you want in the paper. 
+- 2024-09-11 Note: The leaderboard result in DeFlow&SeFlow main paper is [version 1](https://eval.ai/web/challenges/challenge-page/2010/evaluation), as [version 2](https://eval.ai/web/challenges/challenge-page/2210/overview) is updated after DeFlow&SeFlow.
 
+Register your account at [https://sceneflow.argoverse.org/leaderboard](https://sceneflow.argoverse.org/leaderboard) for leaderboard v3 and copy the token for submit:
 ```bash
-# since the env may conflict we set new on deflow, we directly create new one:
-conda create -n py37 python=3.7
-conda activate py37
-pip install "evalai"
+curl -X POST https://your-leaderboard.com/submissions/upload \
+  -H "X-API-Key: YOUR_API_KEY" \
+  -F "file=@submission.zip" \
+  -F "method_name=MyMethod" \
+  -F "project_url=https://github.com/user/repo" \
+  -F "is_private=false" \
+  -F "is_unsupervised=false" \
+  -F "notes=Optional notes about the submission, datasets used etc."
 
-# Step 2: login in eval and register your team
-evalai set-token <your token>
-
-# Step 3: Copy the command pop above and submit to leaderboard
-# evalai challenge 2010 phase 4018 submit --file av2_submit.zip --large --private
-evalai challenge 2210 phase 4396 submit --file av2_submit_v2.zip --large --private
+# a real example:
+curl -X POST https://sceneflow.argoverse.org/submissions/upload \
+  -H "X-API-Key: 500xxxxx" \
+  -F "file=@/home/kin/results/deltaflow-891323-e21-test-v3-SynFlow.zip" \
+  -F "method_name=SynFlow-4k"
 ```
 
 ## 4. Visualization
@@ -418,6 +428,12 @@ If you find it useful, please cite our works:
 And our excellent collaborators works contributed to this codebase also:
 
 ```bibtex
+@article{li2025uniflow,
+  title={{UniFlow}: Towards Zero-Shot LiDAR Scene Flow for Autonomous Vehicles via Cross-Domain Generalization},
+  author={Li, Siyi and Zhang, Qingwen and Khatri, Ishan and Vedder, Kyle and Ramanan, Deva and Peri, Neehar},
+  journal={arXiv preprint arXiv:2511.18254},
+  year={2025}
+}
 @article{khoche2026dogflow,
   author={Khoche, Ajinkya and Zhang, Qingwen and Cai, Yixi and Mansouri, Sina Sharif and Jensfelt, Patric},
   journal = {IEEE Robotics and Automation Letters},

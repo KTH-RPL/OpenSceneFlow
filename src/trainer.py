@@ -274,7 +274,12 @@ class ModelWrapper(LightningModule):
             elif self.leaderboard_version == 2:
                 print(f"\nevalai challenge 2210 phase 4396 submit --file {self.save_res_path}.zip --large --private\n")
             elif self.leaderboard_version == 3:
-                print(f"\nevalai challenge .todo. phase .todo. submit --file {self.save_res_path}.zip --large --private\n")
+                print(f"""
+curl -X POST https://sceneflow.argoverse.org/submissions/upload \\
+  -H \"X-API-Key: your_api_key\" \\
+  -F \"file=@{self.save_res_path}.zip\" \\
+  -F \"method_name={self.save_res_path.name}\"
+""")
             else:
                 print(f"Please check the leaderboard version in the config file. We only support version 1 and 2.")
             output_file = zip_res(self.save_res_path, leaderboard_version=self.leaderboard_version, is_supervised = self.supervised_flag, output_file=self.save_res_path.as_posix() + ".zip")
