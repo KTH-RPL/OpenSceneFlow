@@ -9,7 +9,8 @@
 💞 If you find [*OpenSceneFlow*](https://github.com/KTH-RPL/OpenSceneFlow) useful to your research, please cite [**our works** 📖](#cite-us) and [give a star 🌟](https://github.com/KTH-RPL/OpenSceneFlow) as encouragement. (੭ˊ꒳​ˋ)੭✧
 
 [OpenSceneFlow](https://github.com/KTH-RPL/OpenSceneFlow) is a codebase for point cloud scene flow estimation with pre-trained models and datasets available on [HuggingFace](https://huggingface.co/kin-zhang/OpenSceneFlow). 
-It is also an official implementation of the following papers (sorted by the time of publication):
+<!-- It is also an official implementation of the following papers (sorted by the time of publication): -->
+It is also an official implementation of the following papers:
 
 - **TeFlow: Enabling Multi-frame Supervision for Self-Supervised Feed-forward Scene Flow Estimation**   
 *Qingwen Zhang, Chenhan Jiang, Xiaomeng Zhu, Yunqi Miao, Yushan Zhang, Olov Andersson, Patric Jensfelt*  
@@ -25,6 +26,16 @@ Conference on Neural Information Processing Systems (**NeurIPS**) 2025 - Spotlig
 *Qingwen Zhang, Ajinkya Khoche, Yi Yang, Li Ling, Sina Sharif Mansouri, Olov Andersson, Patric Jensfelt*  
 IEEE Transactions on Robotics (**T-RO**) 2025   
 [ Strategy ] [ Self-Supervised ] - [ [arXiv](https://arxiv.org/abs/2503.00803) ] [ [Project](https://kin-zhang.github.io/HiMo/) ] &rarr; [here](#seflow-1)
+
+- **SynFlow: Scaling Up LiDAR Scene Flow Estimation with Synthetic Data**   
+*Qingwen Zhang, Xiaomeng Zhu, Chenhan Jiang, Patric Jensfelt*  
+Preprint arXiv 2026   
+[ Pretrain ] [ Synthesis ] - [ [arXiv](https://arxiv.org/abs/2604.09411) ] [ [Project](https://kin-zhang.github.io/SynFlow/) ]
+
+- **UniFlow: Zero-Shot LiDAR Scene Flow for Autonomous Vehicles**   
+*Siyi Li, Qingwen Zhang, Ishan Khatri, Kyle Vedder, Eric Eaton, Deva Ramanan, Neehar Peri*  
+Preprint arXiv 2026   
+[ Strategy ] [ Supervised ] - [ [arXiv](https://arxiv.org/abs/2511.18254) ] [ [Project](https://lisiyi777.github.io/UniFlow/) ]&rarr; [here](https://github.com/lisiyi777/UniFlow)
 
 - **DoGFlow: Self-Supervised LiDAR Scene Flow via Cross-Modal Doppler Guidance**   
 *Ajinkya Khoche, Qingwen Zhang, Yixi Cai, Sina Sharif Mansouri and Patric Jensfelt*    
@@ -422,6 +433,12 @@ If you find it useful, please cite our works:
   booktitle={The Thirty-ninth Annual Conference on Neural Information Processing Systems},
   year={2025},
   url={https://openreview.net/forum?id=T9qNDtvAJX}
+}
+@article{zhang2026synflow,
+  title={{SynFlow}: Scaling Up LiDAR Scene Flow Estimation with Synthetic Data},
+  author={Zhang, Qingwen and Zhu, Xiaomeng and Jiang, Chenhan and Jensfelt, Patric},
+  journal={arXiv preprint arXiv:2604.09411},
+  year={2026}
 }
 ```
 
