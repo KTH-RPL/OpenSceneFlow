@@ -9,8 +9,12 @@
 💞 If you find [*OpenSceneFlow*](https://github.com/KTH-RPL/OpenSceneFlow) useful to your research, please cite [**our works** 📖](#cite-us) and [give a star 🌟](https://github.com/KTH-RPL/OpenSceneFlow) as encouragement. (੭ˊ꒳​ˋ)੭✧
 
 [OpenSceneFlow](https://github.com/KTH-RPL/OpenSceneFlow) is a codebase for point cloud scene flow estimation with pre-trained models and datasets available on [HuggingFace](https://huggingface.co/kin-zhang/OpenSceneFlow). 
-<!-- It is also an official implementation of the following papers (sorted by the time of publication): -->
 It is also an official implementation of the following papers:
+
+- **SynFlow: Scaling Up LiDAR Scene Flow Estimation with Synthetic Data**   
+*Qingwen Zhang, Xiaomeng Zhu, Chenhan Jiang, Patric Jensfelt*  
+European Conference on Computer Vision (**ECCV**) 2026     
+[ Pretrain ] [ Synthesis ] - [ [arXiv](https://arxiv.org/abs/2604.09411) ] [ [Project](https://kin-zhang.github.io/SynFlow/) ]&rarr; [here](https://github.com/Kin-Zhang/SynFlow)
 
 - **TeFlow: Enabling Multi-frame Supervision for Self-Supervised Feed-forward Scene Flow Estimation**   
 *Qingwen Zhang, Chenhan Jiang, Xiaomeng Zhu, Yunqi Miao, Yushan Zhang, Olov Andersson, Patric Jensfelt*  
@@ -27,14 +31,14 @@ Conference on Neural Information Processing Systems (**NeurIPS**) 2025 - Spotlig
 IEEE Transactions on Robotics (**T-RO**) 2025   
 [ Strategy ] [ Self-Supervised ] - [ [arXiv](https://arxiv.org/abs/2503.00803) ] [ [Project](https://kin-zhang.github.io/HiMo/) ] &rarr; [here](#seflow-1)
 
-- **SynFlow: Scaling Up LiDAR Scene Flow Estimation with Synthetic Data**   
-*Qingwen Zhang, Xiaomeng Zhu, Chenhan Jiang, Patric Jensfelt*  
-Preprint arXiv 2026   
-[ Pretrain ] [ Synthesis ] - [ [arXiv](https://arxiv.org/abs/2604.09411) ] [ [Project](https://kin-zhang.github.io/SynFlow/) ]
+- **SeFlow: A Self-Supervised Scene Flow Method in Autonomous Driving**  
+*Qingwen Zhang, Yi Yang, Peizheng Li, Olov Andersson, Patric Jensfelt*  
+European Conference on Computer Vision (**ECCV**) 2024  
+[ Strategy ] [ Self-Supervised ] - [ [arXiv](https://arxiv.org/abs/2407.01702) ] [ [Project](https://github.com/KTH-RPL/SeFlow) ] &rarr; [here](#seflow)
 
 - **UniFlow: Zero-Shot LiDAR Scene Flow for Autonomous Vehicles**   
 *Siyi Li, Qingwen Zhang, Ishan Khatri, Kyle Vedder, Eric Eaton, Deva Ramanan, Neehar Peri*  
-Preprint arXiv 2026   
+European Conference on Computer Vision (**ECCV**) 2026   
 [ Strategy ] [ Supervised ] - [ [arXiv](https://arxiv.org/abs/2511.18254) ] [ [Project](https://lisiyi777.github.io/UniFlow/) ]&rarr; [here](https://github.com/lisiyi777/UniFlow)
 
 - **DoGFlow: Self-Supervised LiDAR Scene Flow via Cross-Modal Doppler Guidance**   
@@ -56,11 +60,6 @@ IEEE Robotics and Automation Letters (**RA-L**) 2025
 *Ajinkya Khoche, Qingwen Zhang, Laura Pereira Sánchez, Aron Asefaw, Sina Sharif Mansouri and Patric Jensfelt*  
 International Conference on Robotics and Automation (**ICRA**) 2025  
 [ Backbone ] [ Supervised ] - [ [arXiv](https://arxiv.org/abs/2501.17821) ] [ [Project](https://github.com/KTH-RPL/SSF) ] &rarr; [here](#ssf)
-
-- **SeFlow: A Self-Supervised Scene Flow Method in Autonomous Driving**  
-*Qingwen Zhang, Yi Yang, Peizheng Li, Olov Andersson, Patric Jensfelt*  
-European Conference on Computer Vision (**ECCV**) 2024  
-[ Strategy ] [ Self-Supervised ] - [ [arXiv](https://arxiv.org/abs/2407.01702) ] [ [Project](https://github.com/KTH-RPL/SeFlow) ] &rarr; [here](#seflow)
 
 - **DeFlow: Decoder of Scene Flow Network in Autonomous Driving**  
 *Qingwen Zhang, Yi Yang, Heng Fang, Ruoyu Geng, Patric Jensfelt*  
@@ -396,10 +395,32 @@ If you find it useful, please cite our works:
 ```bibtex
 @inproceedings{zhang2026teflow,
   title = {{TeFlow}: Enabling Multi-frame Supervision for Self-Supervised Feed-forward Scene Flow Estimation},
-  author={Zhang, Qingwen and Jiang, Chenhan and Zhu, Xiaomeng and Miao, Yunqi and Zhang, Yushan and Andersson, Olov and Jensfelt, Patric},
+  author = {Zhang, Qingwen and Jiang, Chenhan and Zhu, Xiaomeng and Miao, Yunqi and Zhang, Yushan and Andersson, Olov and Jensfelt, Patric},
   year = {2026},
   booktitle = {Proceedings of the IEEE/CVF conference on computer vision and pattern recognition},
-  pages = {},
+  pages = {3667-3676},
+}
+@article{zhang2026synflow,
+  title={{SynFlow}: Scaling Up LiDAR Scene Flow Estimation with Synthetic Data},
+  author={Zhang, Qingwen and Zhu, Xiaomeng and Jiang, Chenhan and Jensfelt, Patric},
+  journal={arXiv preprint arXiv:2604.09411},
+  year={2026}
+}
+@inproceedings{zhang2025deltaflow,
+  title={{DeltaFlow}: An Efficient Multi-frame Scene Flow Estimation Method},
+  author={Zhang, Qingwen and Zhu, Xiaomeng and Zhang, Yushan and Cai, Yixi and Andersson, Olov and Jensfelt, Patric},
+  booktitle={The Thirty-ninth Annual Conference on Neural Information Processing Systems},
+  year={2025},
+  url={https://openreview.net/forum?id=T9qNDtvAJX}
+}
+@article{zhang2025himo,
+  title={{HiMo}: High-Speed Objects Motion Compensation in Point Cloud},
+  author={Zhang, Qingwen and Khoche, Ajinkya and Yang, Yi and Ling, Li and Mansouri, Sina Sharif and Andersson, Olov and Jensfelt, Patric},
+  journal={IEEE Transactions on Robotics}, 
+  year={2025},
+  volume={41},
+  pages={5896-5911},
+  doi={10.1109/TRO.2025.3619042}
 }
 @inproceedings{zhang2024seflow,
   author={Zhang, Qingwen and Yang, Yi and Li, Peizheng and Andersson, Olov and Jensfelt, Patric},
@@ -417,28 +438,6 @@ If you find it useful, please cite our works:
   year={2024},
   pages={2105-2111},
   doi={10.1109/ICRA57147.2024.10610278}
-}
-@article{zhang2025himo,
-  title={{HiMo}: High-Speed Objects Motion Compensation in Point Cloud},
-  author={Zhang, Qingwen and Khoche, Ajinkya and Yang, Yi and Ling, Li and Mansouri, Sina Sharif and Andersson, Olov and Jensfelt, Patric},
-  journal={IEEE Transactions on Robotics}, 
-  year={2025},
-  volume={41},
-  pages={5896-5911},
-  doi={10.1109/TRO.2025.3619042}
-}
-@inproceedings{zhang2025deltaflow,
-  title={{DeltaFlow}: An Efficient Multi-frame Scene Flow Estimation Method},
-  author={Zhang, Qingwen and Zhu, Xiaomeng and Zhang, Yushan and Cai, Yixi and Andersson, Olov and Jensfelt, Patric},
-  booktitle={The Thirty-ninth Annual Conference on Neural Information Processing Systems},
-  year={2025},
-  url={https://openreview.net/forum?id=T9qNDtvAJX}
-}
-@article{zhang2026synflow,
-  title={{SynFlow}: Scaling Up LiDAR Scene Flow Estimation with Synthetic Data},
-  author={Zhang, Qingwen and Zhu, Xiaomeng and Jiang, Chenhan and Jensfelt, Patric},
-  journal={arXiv preprint arXiv:2604.09411},
-  year={2026}
 }
 ```
 
