@@ -135,7 +135,7 @@ def _resample_data(nusc, sample_data, sample_ann_dict, datafrequency=20, resampl
             cnt += 1
     return sweep_data_lst, timestamps_lst
 
-def process_log(nusc_mode, data_dir: Path, scene_num_id: int, output_dir: Path, resample2frequency=10, n: Optional[int] = None) :
+def process_log(nusc_mode, data_dir: Path, scene_name: str, output_dir: Path, resample2frequency=10, n: Optional[int] = None) :
 
     def create_group_data(group, pc, pose, gm = None, flow_0to1=None, flow_valid=None, flow_category=None, flow_instance=None, ego_motion=None):
         group.create_dataset('lidar', data=pc.astype(np.float32))
@@ -204,7 +204,15 @@ def process_log(nusc_mode, data_dir: Path, scene_num_id: int, output_dir: Path, 
                 'flow_instance_id': instances}
      
     nusc = NuScenes(dataroot=data_dir, version=nusc_mode, verbose=False)
-    scene = nusc.scene[scene_num_id]
+    # NOTE(fix): look up the scene by its official name instead of a positional
+    # index into nusc.scene, otherwise train/val (and mini_train/mini_val) end up
+    # pointing at whatever scenes happen to sit at those indices in the metadata,
+    # causing duplicated/incorrect scenes across splits.
+    scene_tokens = nusc.field2token('scene', 'name', scene_name)
+    if len(scene_tokens) == 0:
+        print(f'{scene_name} not found in {nusc_mode}, skip...')
+        return
+    scene = nusc.get('scene', scene_tokens[0])
     log_id = scene['name']
 
     # In nuscenes, samples are annotated at 2 Hz and sweeps at 20 Hz. 
@@ -292,7 +300,7 @@ def process_logs(data_mode, data_dir: Path, scene_list: list, output_dir: Path, 
         print(f'{data_dir} not found')
         return
 
-    args = sorted([(data_mode, data_dir, scene_num_id, output_dir) for scene_num_id in range(len(scene_list))])
+    args = sorted([(data_mode, data_dir, scene_name, output_dir) for scene_name in scene_list])
     print(f'Using {nproc} processes')
     
     # # for debug
