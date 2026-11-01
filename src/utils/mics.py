@@ -6,7 +6,7 @@ from typing import Optional
 import torch.nn.init as init
 import torch
 
-import pickle, h5py, os
+import pickle, h5py, os, dztimer
 
 # ref: https://github.com/Lightning-AI/lightning/issues/924#issuecomment-1670917204
 def weights_update(model, checkpoint):
@@ -104,6 +104,38 @@ def weights_init(m):
         init.constant_(m.weight.data, 1.0)
         init.constant_(m.bias.data, 0.0)
     
+class SyncTiming:
+    """
+    Wrap dztimer.Timing to call torch.cuda.synchronize() before every start/stop.
+    dztimer only reads the CPU clock but CUDA kernels run asynchronously, so without sync a stage stops timing
+    once its kernels are launched, and its GPU time is counted in whichever later stage syncs first.
+    """
+    def __init__(self, timing):
+        self.timing = timing
+
+    def __getitem__(self, idx):
+        return SyncTiming(self.timing[idx])
+
+    def start(self, *args):
+        torch.cuda.synchronize()
+        self.timing.start(*args)
+
+    def stop(self):
+        torch.cuda.synchronize()
+        self.timing.stop()
+
+    def __getattr__(self, name):
+        # print, lastSeconds etc. go to dztimer directly
+        if name == 'timing':
+            raise AttributeError(name)
+        return getattr(self.timing, name)
+
+def enable_timer_sync(model):
+    """Wrap every dztimer.Timing in the model, including sub-timers passed to submodules, e.g. DeltaFlow.pc2voxel.timer."""
+    for module in model.modules():
+        if isinstance(getattr(module, 'timer', None), dztimer.Timing):
+            module.timer = SyncTiming(module.timer)
+
 def ground_range_filter(av2_sweep, range_lim=50):
     pointcloud = av2_sweep.lidar.as_tensor().numpy()[:,:3]
     ground_mask = ~av2_sweep.is_ground.numpy()

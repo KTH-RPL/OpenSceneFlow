@@ -6,6 +6,7 @@ save_res: False # [True, False]
 
 leaderboard_version: 1 # [1, 2]
 supervised_flag: True # [True, False], whether you use any label from the dataset
+timer_sync: False # True: sync cuda in the timer to get the real runtime table (slower)
 
 # no need to change
 save_res_path: 

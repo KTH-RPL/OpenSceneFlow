@@ -17,6 +17,7 @@ output: ${model.name}-${slurm_id}
 checkpoint: 
 pretrained_weights: 
 eval_only: False
+timer_sync: False # True: sync cuda in the timer to get the real runtime table (slower), printed every epoch
 
 # trainer
 num_workers: 8
