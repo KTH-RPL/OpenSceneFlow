@@ -73,6 +73,30 @@ def wrap_batch_pcs(batch, num_frames=2):
     
     return pcs_dict
 
+def gather_sparse_feats(sparse_tensor, coords_lst):
+    """
+    Gather voxel features from a spconv SparseConvTensor at the given coords, one [N, C] tensor per batch.
+    Same result as indexing sparse_tensor.dense(), but without allocating the dense [B, C, *spatial_shape] grid
+    (e.g. 16x512x512x40 floats = 0.67GB per sample), which costs most of the decoder time.
+
+    coords_lst[i]: [N, 3] voxel coords of batch i, in the same order as sparse_tensor.indices[:, 1:].
+    Coords not in sparse_tensor get zero features, same as the dense grid.
+    """
+    shape = sparse_tensor.spatial_shape
+    def flat_key(batch_idx, coords):
+        coords = coords.long()
+        return ((batch_idx * shape[0] + coords[:, 0]) * shape[1] + coords[:, 1]) * shape[2] + coords[:, 2]
+
+    indices = sparse_tensor.indices.long()
+    sorted_keys, order = torch.sort(flat_key(indices[:, 0], indices[:, 1:]))
+    feats_lst = []
+    for batch_idx, coords in enumerate(coords_lst):
+        query_keys = flat_key(batch_idx, coords)
+        pos = torch.searchsorted(sorted_keys, query_keys).clamp(max=sorted_keys.shape[0] - 1)
+        found = sorted_keys[pos] == query_keys
+        feats_lst.append(sparse_tensor.features[order[pos]].masked_fill(~found.unsqueeze(1), 0))
+    return feats_lst
+
 class ConvWithNorms(nn.Module):
 
     def __init__(self, in_num_channels: int, out_num_channels: int,

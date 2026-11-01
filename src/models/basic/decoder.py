@@ -2,6 +2,8 @@ import torch
 import torch.nn as nn
 from typing import List, Dict
 
+from . import gather_sparse_feats
+
 SPLIT_BATCH_SIZE = 512
 
 class MMHeadDecoder(nn.Module):
@@ -289,9 +291,9 @@ class SparseGRUHead(ConvGRUDecoder):
             nn.GELU(),
             nn.Linear(32, 3))
         
-    def forward_single(self, voxel_feat, voxel_coords, point_offsets):
+    def forward_single(self, voxel_feat, point_offsets):
         # [N, voxel_feat_dim] -> [N, voxel_feat_dim, 1]
-        concatenated_vectors = (voxel_feat[:, voxel_coords[:,2], voxel_coords[:,1], voxel_coords[:,0]].T).unsqueeze(2)
+        concatenated_vectors = voxel_feat.unsqueeze(2)
         for itr in range(self.num_iters):
             concatenated_vectors = self.gru(concatenated_vectors, point_offsets.unsqueeze(2))
 
@@ -299,17 +301,12 @@ class SparseGRUHead(ConvGRUDecoder):
         return flow
     
     def forward(self, sparse_tensor, voxelizer_infos, pc0_point_feats_lst): 
-        
-        voxel_feats = sparse_tensor.dense()
+        # voxel feature of each point, sparse indices are (batch, voxel_coords[:, 2], voxel_coords[:, 1], voxel_coords[:, 0])
+        voxel_feats_lst = gather_sparse_feats(sparse_tensor, [e["voxel_coords"][:, [2, 1, 0]] for e in voxelizer_infos])
 
         flow_outputs = []
-        batch_idx = 0
-        for voxelizer_info in voxelizer_infos:
-            voxel_coords = voxelizer_info["voxel_coords"]
-            point_feat = pc0_point_feats_lst[batch_idx]
-            voxel_feat = voxel_feats[batch_idx, :]
-            flow = self.forward_single(voxel_feat, voxel_coords, point_feat)
-            batch_idx += 1 
+        for voxel_feat, point_feat in zip(voxel_feats_lst, pc0_point_feats_lst):
+            flow = self.forward_single(voxel_feat, point_feat)
             flow_outputs.append(flow)
 
         return flow_outputs
