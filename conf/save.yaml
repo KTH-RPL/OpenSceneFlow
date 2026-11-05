@@ -2,6 +2,7 @@ dataset_path: /home/kin/data/av2/h5py/demo/val
 checkpoint: /home/kin/model_zoo/seflow_best.ckpt
 res_name: # if None will directly be the `model_name.ckpt` in checkpoint path
 val_index_only: False # [True, False]
+timer_sync: False # True: sync cuda in the timer to get the real runtime table (slower)
 
 # no need to change
 num_frames: 2

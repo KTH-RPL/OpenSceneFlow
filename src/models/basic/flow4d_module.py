@@ -24,6 +24,7 @@ import torch, os
 import torch.nn as nn
 
 from .encoder import DynamicVoxelizer, DynamicPillarFeatureNet
+from . import gather_sparse_feats
 import spconv.pytorch as spconv
 import spconv as spconv_core
 spconv_core.constants.SPCONV_ALLOW_TF32 = True
@@ -323,9 +324,8 @@ class Point_head(nn.Module):
             nn.Linear(32, 3)
         )
 
-    def forward_single(self, voxel_feat, voxel_coords, point_feat):
+    def forward_single(self, voxel_to_point_feat, point_feat):
 
-        voxel_to_point_feat = voxel_feat[:, voxel_coords[:,2], voxel_coords[:,1], voxel_coords[:,0]].T 
         concated_point_feat = torch.cat([voxel_to_point_feat, point_feat],dim=-1)
 
         flow = self.PPmodel_flow(concated_point_feat)
@@ -333,17 +333,12 @@ class Point_head(nn.Module):
         return flow
 
     def forward(self, sparse_tensor, voxelizer_infos, pc0_point_feats_lst): 
-        
-        voxel_feats = sparse_tensor.dense()
+        # voxel feature of each point, sparse indices are (batch, voxel_coords[:, 2], voxel_coords[:, 1], voxel_coords[:, 0])
+        voxel_feats_lst = gather_sparse_feats(sparse_tensor, [e["voxel_coords"][:, [2, 1, 0]] for e in voxelizer_infos])
 
         flow_outputs = []
-        batch_idx = 0
-        for voxelizer_info in voxelizer_infos:
-            voxel_coords = voxelizer_info["voxel_coords"]
-            point_feat = pc0_point_feats_lst[batch_idx]
-            voxel_feat = voxel_feats[batch_idx, :]
-            flow = self.forward_single(voxel_feat, voxel_coords, point_feat)
-            batch_idx += 1 
+        for voxel_feat, point_feat in zip(voxel_feats_lst, pc0_point_feats_lst):
+            flow = self.forward_single(voxel_feat, point_feat)
             flow_outputs.append(flow)
 
         return flow_outputs

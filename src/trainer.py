@@ -26,7 +26,7 @@ BASE_DIR = os.path.abspath(os.path.join( os.path.dirname( __file__ ), '..' ))
 sys.path.append(BASE_DIR)
 from src.utils import import_func
 from src.lossfuncs import SSL_LOSSES_FN
-from src.utils.mics import weights_init, zip_res
+from src.utils.mics import weights_init, zip_res, enable_timer_sync
 from src.utils.av2_eval import write_output_file
 from src.models.basic import cal_pose0to1, WarmupCosLR
 from src.utils.eval_metric import OfficialMetrics, evaluate_leaderboard, evaluate_leaderboard_v2, evaluate_ssf
@@ -58,6 +58,7 @@ class ModelWrapper(LightningModule):
             "dataset_path": None,
             "data_mode": None,
             "cluster_loss_args": {},
+            "timer_sync": False,
         }
         for key, default in default_self_values.items():
             setattr(self, key, cfg.get(key, default))
@@ -83,6 +84,10 @@ class ModelWrapper(LightningModule):
         if 'pretrained_weights' in cfg and cfg.pretrained_weights is not None:
             missing_keys, unexpected_keys = self.model.load_from_checkpoint(cfg.pretrained_weights)
         # print(f"Model: {self.model.__class__.__name__}, Number of Frames: {self.num_frames}")
+        # NOTE(Qingwen): dztimer only reads the CPU clock, timer_sync=True syncs cuda at every start/stop to get the real runtime of each part.
+        # It's off by default since the sync slows down training.
+        if self.timer_sync:
+            enable_timer_sync(self.model)
 
         # ---> loss fn
         self.loss_fn = import_func("src.lossfuncs."+cfg.loss_fn) if 'loss_fn' in cfg else None
@@ -260,8 +265,9 @@ class ModelWrapper(LightningModule):
 
     def on_train_epoch_end(self):
         self.log("pre_epoch_cost (mins)", (time.time()-self.time_start_train_epoch)/60.0, on_step=False, on_epoch=True, sync_dist=True)
-        # # NOTE (Qingwen): if you want to view the detail breakdown of time cost
-        # self.model.timer.print(random_colors=False, bold=False)
+        # # NOTE (Qingwen): if you want to view the detail breakdown of time cost, set timer_sync=True
+        if self.timer_sync and self.trainer.is_global_zero:
+            self.model.timer.print(random_colors=False, bold=False)
     
     def on_validation_epoch_end(self):
         self.model.timer.print(random_colors=False, bold=False)
@@ -275,13 +281,12 @@ class ModelWrapper(LightningModule):
                 print(f"\nevalai challenge 2210 phase 4396 submit --file {self.save_res_path}.zip --large --private\n")
             elif self.leaderboard_version == 3:
                 print(f"""
-curl -X POST https://sceneflow.argoverse.org/submissions/upload \\
-  -H \"X-API-Key: your_api_key\" \\
-  -F \"file=@{self.save_res_path}.zip\" \\
-  -F \"method_name={self.save_res_path.name}\"
+curl -O https://sceneflow.kth-rpl.se/download/sceneflow_submit.sh
+export SCENEFLOW_API_KEY=your_api_key
+bash sceneflow_submit.sh {self.save_res_path}.zip --method-name {self.save_res_path.name} --wait
 """)
             else:
-                print(f"Please check the leaderboard version in the config file. We only support version 1 and 2.")
+                print(f"Please check the leaderboard version in the config file. We only support version 1, 2 and 3.")
             output_file = zip_res(self.save_res_path, leaderboard_version=self.leaderboard_version, is_supervised = self.supervised_flag, output_file=self.save_res_path.as_posix() + ".zip")
             # wandb.log_artifact(output_file)
             return

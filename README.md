@@ -83,6 +83,8 @@ Additionally, *OpenSceneFlow* integrates following excellent works: [ICLR'24 Zer
 
 💡: Want to learn how to add your own network in this structure? Check [Contribute section](CONTRIBUTING.md#adding-a-new-method) and know more about the code. Fee free to pull request and your bibtex [here](#cite-us).
 
+📝: Updates of the codebase and the leaderboard are recorded in [CHANGELOG.md](CHANGELOG.md).
+
 ## 0. Installation
 
 There are two ways to install the codebase: directly on your [local machine](#environment-setup) or in a [Docker container](#docker-recommended-for-isolation).
@@ -326,27 +328,21 @@ In [SSF paper](https://arxiv.org/abs/2501.17821), we introduce a new distance-ba
 
 ### Submit result to public leaderboard
 
-To submit your result to the public Leaderboard, if you select `data_mode=test`, it should be a zip file for you to submit to the leaderboard.
-- 2026-04-10: We've update the leaderboard to [version 3](https://sceneflow.argoverse.org/leaderboard) with more datasets and longer range. You can specify the `leaderboard_version` in the config to select which version you want to submit and report the item you want in the paper. 
-- 2024-09-11 Note: The leaderboard result in DeFlow&SeFlow main paper is [version 1](https://eval.ai/web/challenges/challenge-page/2010/evaluation), as [version 2](https://eval.ai/web/challenges/challenge-page/2210/overview) is updated after DeFlow&SeFlow.
+To submit your result to the public Leaderboard, if you select `data_mode=test`, it should be a zip file for you to submit to the leaderboard. Set `leaderboard_version` in the config to select the format: `3` for the current [multi-dataset leaderboard](https://sceneflow.kth-rpl.se/leaderboard), `1` or `2` for the previous AV2 leaderboards on EvalAI ([version 1](https://eval.ai/web/challenges/challenge-page/2010/evaluation), [version 2](https://eval.ai/web/challenges/challenge-page/2210/overview)), and the results in DeFlow & SeFlow papers are version 1. Leaderboard updates are recorded in [CHANGELOG.md](CHANGELOG.md).
 
-Register your account at [https://sceneflow.argoverse.org/leaderboard](https://sceneflow.argoverse.org/leaderboard) for leaderboard v3 and copy the token for submit:
+[Register](https://sceneflow.kth-rpl.se/auth/register) at [sceneflow.kth-rpl.se](https://sceneflow.kth-rpl.se/leaderboard), create an API key on your profile page, then submit:
 ```bash
-curl -X POST https://your-leaderboard.com/submissions/upload \
-  -H "X-API-Key: YOUR_API_KEY" \
-  -F "file=@submission.zip" \
-  -F "method_name=MyMethod" \
-  -F "project_url=https://github.com/user/repo" \
-  -F "is_private=false" \
-  -F "is_unsupervised=false" \
-  -F "notes=Optional notes about the submission, datasets used etc."
+curl -O https://sceneflow.kth-rpl.se/download/sceneflow_submit.sh
+export SCENEFLOW_API_KEY=sfk_xxxxx
+bash sceneflow_submit.sh --status   # check the key and today's quota
+
+bash sceneflow_submit.sh submission.zip --method-name "MyMethod" --training-data single|multi \
+  [--project-url URL] [--notes TEXT] [--unsupervised] [--long-range] [--private] [--wait]
 
 # a real example:
-curl -X POST https://sceneflow.argoverse.org/submissions/upload \
-  -H "X-API-Key: 500xxxxx" \
-  -F "file=@/home/kin/results/deltaflow-891323-e21-test-v3-SynFlow.zip" \
-  -F "method_name=SynFlow-4k"
+bash sceneflow_submit.sh /home/kin/results/deltaflow-891323-e21-test-v3-SynFlow.zip --method-name SynFlow-4k --wait
 ```
+Run `bash sceneflow_submit.sh --help` for details of each option, e.g. `--long-range` publishes the 35-70 m results (overall 0-70 m ranking), leave it off if your model crops the point cloud (e.g. at 51.2 m).
 
 ## 4. Visualization
 
