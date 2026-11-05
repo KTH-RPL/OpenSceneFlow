@@ -4,7 +4,7 @@ checkpoint: /home/kin/data/model_zoo/deltaflow_public/deltaflow-av2.ckpt
 data_mode: val # [val, test]
 save_res: False # [True, False]
 
-leaderboard_version: 1 # [1, 2]
+leaderboard_version: 1 # [1, 2, 3]
 supervised_flag: True # [True, False], whether you use any label from the dataset
 timer_sync: False # True: sync cuda in the timer to get the real runtime table (slower)
 

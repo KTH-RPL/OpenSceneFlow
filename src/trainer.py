@@ -281,13 +281,12 @@ class ModelWrapper(LightningModule):
                 print(f"\nevalai challenge 2210 phase 4396 submit --file {self.save_res_path}.zip --large --private\n")
             elif self.leaderboard_version == 3:
                 print(f"""
-curl -X POST https://sceneflow.argoverse.org/submissions/upload \\
-  -H \"X-API-Key: your_api_key\" \\
-  -F \"file=@{self.save_res_path}.zip\" \\
-  -F \"method_name={self.save_res_path.name}\"
+curl -O https://sceneflow.kth-rpl.se/download/sceneflow_submit.sh
+export SCENEFLOW_API_KEY=your_api_key
+bash sceneflow_submit.sh {self.save_res_path}.zip --method-name {self.save_res_path.name} --wait
 """)
             else:
-                print(f"Please check the leaderboard version in the config file. We only support version 1 and 2.")
+                print(f"Please check the leaderboard version in the config file. We only support version 1, 2 and 3.")
             output_file = zip_res(self.save_res_path, leaderboard_version=self.leaderboard_version, is_supervised = self.supervised_flag, output_file=self.save_res_path.as_posix() + ".zip")
             # wandb.log_artifact(output_file)
             return
