@@ -12,7 +12,7 @@
 #              Shared by src/trainer.py (feed-forward models) and src/runner.py (optimization-based models).
 """
 
-import h5py, torch
+import os, h5py, torch
 import numpy as np
 
 from .models.basic import cal_pose0to1
@@ -73,13 +73,20 @@ def eval_frame(batch, final_flow, pose_flow):
     return evaluate_leaderboard(*args), evaluate_leaderboard_v2(*args), evaluate_ssf(*args)
 
 
-def write_flow_to_h5(h5_path, timestamp, res_name, flow):
-    """Write the flow of one frame into the dataset h5 file as `res_name`, tools/visualization.py reads it."""
-    key = str(timestamp)
-    with h5py.File(h5_path, 'r+') as f:
-        if res_name in f[key]:
-            del f[key][res_name]
-        f[key].create_dataset(res_name, data=flow.cpu().detach().numpy().astype(np.float32))
+def write_flow_to_h5(data_dir, scene_id, timestamp, res_name, flow):
+    """Write the flow of one frame as `res_name`, tools/visualization.py reads it.
+
+    It goes into its own layer {data_dir}/layers/pred/{res_name}/{scene_id}.h5, the dataset files are not touched:
+    a saved flow is as big as the lidar points, and this way it can be removed or made again on its own.
+    Stored as float16 (about 1mm for a flow of 1m), as the leaderboard files.
+    """
+    path = os.path.join(data_dir, 'layers', 'pred', res_name, f'{scene_id}.h5')
+    os.makedirs(os.path.dirname(path), exist_ok=True)
+    with h5py.File(path, 'a') as f:
+        group = f.require_group(str(timestamp))
+        if res_name in group:
+            del group[res_name]
+        group.create_dataset(res_name, data=flow.cpu().detach().numpy().astype(np.float16))
 
 
 def write_leaderboard_file(batch, final_flow, pose_flow, save_res_path):

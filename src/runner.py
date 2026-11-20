@@ -166,16 +166,12 @@ class InferenceRunner:
         if self.mode in ['val', 'eval', 'valid']:
             self.metrics.step(*eval_frame(batch, final_flow, pose_flow))
             if self.cfg.get('save_res', False):
-                h5_path = os.path.join(self.cfg.dataset_path, f"{self.cfg.data_mode}/{batch['scene_id']}.h5")
-                write_flow_to_h5(h5_path, batch['timestamp'], self.res_name, final_flow)
+                data_dir = os.path.join(self.cfg.dataset_path, self.cfg.data_mode)
+                write_flow_to_h5(data_dir, batch['scene_id'], batch['timestamp'], self.res_name, final_flow)
         elif self.mode == 'test':
             write_leaderboard_file(batch, final_flow, pose_flow, self.save_res_path)
         elif self.mode == 'save':
-            h5_path = os.path.join(self.cfg.dataset_path, f"{batch['scene_id']}.h5")
-            try:
-                write_flow_to_h5(h5_path, batch['timestamp'], self.res_name, final_flow)
-            except Exception as e:
-                print(f"Rank {self.rank} failed to write to {h5_path}: {e}")
+            write_flow_to_h5(self.cfg.dataset_path, batch['scene_id'], batch['timestamp'], self.res_name, final_flow)
 
     def run(self):
         dataloader = self._setup_dataloader()
@@ -260,7 +256,7 @@ def _run_process(cfg, mode):
             final_metrics.print()
         if mode == 'save' or (cfg.get('save_res', False) and mode != 'test'):
             data_dir = cfg.dataset_path if mode == 'save' else f"{cfg.dataset_path}/{cfg.data_mode}"
-            print(f"\nWe already write the {runner.res_name} into the dataset, please run following commend to visualize the flow. Copy and paste it to your terminal:")
+            print(f"\nWe already write the {runner.res_name} into {data_dir}/layers/pred/{runner.res_name}, please run following commend to visualize the flow. Copy and paste it to your terminal:")
             print(f"python tools/visualization.py --res_name '{runner.res_name}' --data_dir {data_dir}")
             print(f"Enjoy! ^v^ ------ \n")
         runner.model.timer.print(random_colors=False, bold=False)

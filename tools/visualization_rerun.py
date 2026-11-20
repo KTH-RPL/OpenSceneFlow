@@ -23,7 +23,7 @@ from src.utils.o3d_view import color_map
 import rerun as rr
 import rerun.blueprint as rrb
 import argparse
-import h5py
+from src.dataset import LayeredScene
 
 def main(
     scene_file: str ="/home/kin/data/av2/h5py/demo/val/25e5c600-36fe-3245-9cc0-40ef91620c22.h5",
@@ -36,8 +36,11 @@ def main(
         print(f"File {scene_file} not found.")
         return
         
-    f = h5py.File(scene_file, 'r')
-    keys = sorted(list(f.keys()), key=lambda x: int(x))
+    # a saved flow may be in its own layer file (layers/pred/{name}/), the labels of process.py in layers/seflow_labels/
+    data_dir, scene_id = os.path.dirname(scene_file), os.path.basename(scene_file)[:-3]
+    layer_dirs = [os.path.join(data_dir, 'layers', name) for name in ['seflow_labels'] + [f'pred/{name}' for name in res_name]]
+    f = LayeredScene(data_dir, [layer_dir for layer_dir in layer_dirs if os.path.isdir(layer_dir)], scene_id)
+    keys = sorted(list(f.base.keys()), key=lambda x: int(x))
     data_len = len(keys) - 1
 
     if data_len <= 0:

@@ -365,13 +365,17 @@ python eval.py model=nsfp dataset_path=/home/kin/data/av2/h5py/demo/val
 
 # The output of above command will be like:
 Model: DeFlow, Checkpoint from: /home/kin/model_zoo/v2/seflow_best.ckpt
-We already write the flow_est into the dataset, please run following commend to visualize the flow. Copy and paste it to your terminal:
+We already write the seflow_best into /home/kin/data/av2/preprocess_v2/sensor/vis/layers/pred/seflow_best, please run following commend to visualize the flow. Copy and paste it to your terminal:
 python tools/visualization.py vis --res_name 'seflow_best' --data_dir /home/kin/data/av2/preprocess_v2/sensor/vis
 Enjoy! ^v^ ------ 
 
 # Then run the command in the terminal:
 python tools/visualization.py vis --res_name 'seflow_best' --data_dir /home/kin/data/av2/preprocess_v2/sensor/vis
 ```
+
+The saved flow is not written into the dataset files: it goes to `{dataset_path}/layers/pred/{res_name}/{scene_id}.h5` (float16), so you can remove it with `rm -r` when you no longer need it.
+If your dataset files still have flows saved by an older version inside (each one is as big as the lidar points), `python tools/h5_split_layers.py --data_dir /path/to/val` shows how much space they take and can move them out, check the header of that file.
+
 
 https://github.com/user-attachments/assets/f031d1a2-2d2f-4947-a01f-834ed1c146e6
 
