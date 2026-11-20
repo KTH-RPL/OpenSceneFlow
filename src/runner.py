@@ -24,17 +24,14 @@ from torch.utils.data import Sampler
 from collections import defaultdict
 from tqdm import tqdm
 from pathlib import Path
-import h5py
-import numpy as np
 from hydra.utils import instantiate
 import shutil
 
 from .dataset import HDF5Dataset
-from .models.basic import cal_pose0to1
-from .utils.eval_metric import OfficialMetrics, evaluate_leaderboard, evaluate_leaderboard_v2, evaluate_ssf
-from .utils.av2_eval import write_output_file
+from .utils.eval_metric import OfficialMetrics
 from .utils.mics import zip_res
 from .utils import InlineTee
+from .postprocess import run_model_wo_ground, flow_on_all_points, eval_frame, write_flow_to_h5, write_leaderboard_file
 class SceneDistributedSampler(Sampler):
     """
     A DistributedSampler that distributes data based on scene IDs, not individual indices.
@@ -135,59 +132,17 @@ class InferenceRunner:
             elif isinstance(val, list) and len(val) > 0 and isinstance(val[0], torch.Tensor):
                 batch[key] = [item.to(self.device) for item in val]
 
-        batch['origin_pc0'] = batch['pc0'].clone()
-        batch['pc0'] = batch['pc0'][~batch['gm0']].unsqueeze(0)
-        batch['pc1'] = batch['pc1'][~batch['gm1']].unsqueeze(0)
-        self.model.timer[12].start("One Scan")
-        res_dict = self.model(batch)
-        self.model.timer[12].stop()
-
-        # NOTE (Qingwen): Since val and test, we will force set batch_size = 1 
-        batch = {key: batch[key][0] for key in batch if len(batch[key])>0}
-        res_dict = {key: res_dict[key][0] for key in res_dict if (res_dict[key]!=None and len(res_dict[key])>0) }
-
-        pc0 = batch['origin_pc0']
-        pose_0to1 = cal_pose0to1(batch["pose0"], batch["pose1"])
-        transform_pc0 = pc0 @ pose_0to1[:3, :3].T + pose_0to1[:3, 3]
-        pose_flow = transform_pc0 - pc0
-        
-        final_flow = pose_flow.clone()
-        final_flow[~batch['gm0']] = res_dict['flow'] + pose_flow[~batch['gm0']]
+        batch, res_dict = run_model_wo_ground(self.model, batch)
+        final_flow, pose_flow = flow_on_all_points(batch, res_dict)
 
         if self.mode in ['val', 'eval', 'valid']:
-            eval_mask = batch['eval_mask'].squeeze()
-            gt_flow = batch["flow"]
-            v1_dict = evaluate_leaderboard(final_flow[eval_mask], pose_flow[eval_mask], pc0[eval_mask], \
-                                       gt_flow[eval_mask], batch['flow_is_valid'][eval_mask], \
-                                       batch['flow_category_indices'][eval_mask])
-            v2_dict = evaluate_leaderboard_v2(final_flow[eval_mask], pose_flow[eval_mask], pc0[eval_mask],
-                                                gt_flow[eval_mask], batch['flow_is_valid'][eval_mask], 
-                                                batch['flow_category_indices'][eval_mask])
-            ssf_dict = evaluate_ssf(final_flow[eval_mask], pose_flow[eval_mask], pc0[eval_mask], \
-                                    gt_flow[eval_mask], batch['flow_is_valid'][eval_mask], batch['flow_category_indices'][eval_mask])
-            self.metrics.step(v1_dict, v2_dict, ssf_dict)
-
+            self.metrics.step(*eval_frame(batch, final_flow, pose_flow))
         elif self.mode == 'test':
-            eval_mask = batch['eval_mask'].squeeze()
-            save_pred_flow = final_flow[eval_mask, :3].cpu().detach().numpy()
-            rigid_flow = pose_flow[eval_mask, :3].cpu().detach().numpy()
-            is_dynamic = np.linalg.norm(save_pred_flow - rigid_flow, axis=1, ord=2) >= 0.05
-            sweep_uuid = (batch['scene_id'], batch['timestamp'])
-
-            if self.cfg.leaderboard_version == 2:
-                save_pred_flow = (final_flow - pose_flow).cpu().detach().numpy()
-
-            write_output_file(save_pred_flow, is_dynamic, sweep_uuid, self.save_res_path, self.cfg.leaderboard_version)
-            
+            write_leaderboard_file(batch, final_flow, pose_flow, self.save_res_path, self.cfg.leaderboard_version)
         elif self.mode == 'save':
-            key = str(batch['timestamp'])
-            scene_id = batch['scene_id']
-            h5_path = os.path.join(self.cfg.dataset_path, f'{scene_id}.h5')
+            h5_path = os.path.join(self.cfg.dataset_path, f"{batch['scene_id']}.h5")
             try:
-                with h5py.File(h5_path, 'r+') as f:
-                    if self.cfg.res_name in f[key]:
-                        del f[key][self.cfg.res_name]
-                    f[key].create_dataset(self.cfg.res_name, data=final_flow.cpu().detach().numpy().astype(np.float32))
+                write_flow_to_h5(h5_path, batch['timestamp'], self.cfg.res_name, final_flow)
             except Exception as e:
                 print(f"Rank {self.rank} failed to write to {h5_path}: {e}")
 
@@ -288,8 +243,8 @@ def _run_process(cfg, mode):
                                 class_name, range_bucket, avg_epe, avg_range, count
                             )
 
-            final_metrics.print() 
-        else:
+            final_metrics.print()
+        elif mode == 'save':
             print(f"\nWe already write the {cfg.res_name} into the dataset, please run following commend to visualize the flow. Copy and paste it to your terminal:")
             print(f"python tools/visualization.py --res_name '{cfg.res_name}' --data_dir {cfg.dataset_path}")
             print(f"Enjoy! ^v^ ------ \n")
@@ -305,7 +260,8 @@ def _spawn_wrapper(rank, world_size, cfg, mode, output_dir):
     if log_filepath and rank==0:
         sys.stdout = InlineTee(log_filepath, append=True)
     if rank == 0:
-        print(f"---LOG[eval]: Run optimization-based method: {cfg.model.name} on {cfg.dataset_path}/{cfg.data_mode} set.\n")
+        data_path = cfg.dataset_path if mode == 'save' else f"{cfg.dataset_path}/{cfg.data_mode}" # save.py has no data_mode
+        print(f"---LOG[eval]: Run optimization-based method: {cfg.model.name} on {data_path} set.\n")
     torch.cuda.set_device(rank)
     os.environ['RANK'] = str(rank)
     os.environ['WORLD_SIZE'] = str(world_size)

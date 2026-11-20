@@ -31,7 +31,7 @@ def main(cfg):
         from src.runner import launch_runner
         print(f"---LOG[eval]: Run optmization-based method: {cfg.model.name}")
         cfg.res_name = cfg.model.name if (cfg.res_name is None) else cfg.res_name
-        launch_runner(cfg, 'save')
+        launch_runner(cfg, 'save', output_dir)
         return
     
     if not os.path.exists(cfg.checkpoint):

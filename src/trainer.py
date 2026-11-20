@@ -12,7 +12,6 @@
 
 """
 
-import numpy as np
 import torch
 import torch.optim as optim
 from pathlib import Path
@@ -21,15 +20,15 @@ from lightning import LightningModule
 from hydra.utils import instantiate
 from omegaconf import OmegaConf, open_dict
 
-import os, sys, time, h5py
+import os, sys, time
 BASE_DIR = os.path.abspath(os.path.join( os.path.dirname( __file__ ), '..' ))
 sys.path.append(BASE_DIR)
 from src.utils import import_func
 from src.lossfuncs import SSL_LOSSES_FN
 from src.utils.mics import weights_init, zip_res, enable_timer_sync
-from src.utils.av2_eval import write_output_file
-from src.models.basic import cal_pose0to1, WarmupCosLR
+from src.models.basic import WarmupCosLR
 from src.utils.eval_metric import OfficialMetrics, evaluate_leaderboard, evaluate_leaderboard_v2, evaluate_ssf
+from src.postprocess import run_model_wo_ground, flow_on_all_points, eval_frame, write_flow_to_h5, write_leaderboard_file
 
 # debugging tools
 # import faulthandler
@@ -314,77 +313,22 @@ bash sceneflow_submit.sh {self.save_res_path}.zip --method-name {self.save_res_p
             print(f"Enjoy! ^v^ ------ \n")
         
     def eval_only_step_(self, batch, res_dict):
-        eval_mask = batch['eval_mask'].squeeze()
-        pc0 = batch['origin_pc0']
-        pose_0to1 = cal_pose0to1(batch["pose0"], batch["pose1"])
-        transform_pc0 = pc0 @ pose_0to1[:3, :3].T + pose_0to1[:3, 3]
-        pose_flow = transform_pc0 - pc0
-
-        final_flow = pose_flow.clone()
-        if 'pc0_valid_point_idxes' in res_dict:
-            valid_from_pc2res = res_dict['pc0_valid_point_idxes']
-
-            # flow in the original pc0 coordinate
-            pred_flow = pose_flow[~batch['gm0']].clone()
-            # debug: for ego-motion flow only
-            # res_dict['flow'] = torch.zeros_like(res_dict['flow'])
-            pred_flow[valid_from_pc2res] = res_dict['flow'] + pose_flow[~batch['gm0']][valid_from_pc2res]
-            final_flow[~batch['gm0']] = pred_flow
-        else:
-            final_flow[~batch['gm0']] = res_dict['flow'] + pose_flow[~batch['gm0']]
+        final_flow, pose_flow = flow_on_all_points(batch, res_dict)
 
         if self.data_mode in ['val', 'valid']: # since only val we have ground truth flow to eval
-            gt_flow = batch["flow"]
-            v1_dict = evaluate_leaderboard(final_flow[eval_mask], pose_flow[eval_mask], pc0[eval_mask], \
-                                       gt_flow[eval_mask], batch['flow_is_valid'][eval_mask], \
-                                       batch['flow_category_indices'][eval_mask])
-            v2_dict = evaluate_leaderboard_v2(final_flow[eval_mask], pose_flow[eval_mask], pc0[eval_mask], \
-                                    gt_flow[eval_mask], batch['flow_is_valid'][eval_mask], batch['flow_category_indices'][eval_mask])
-            ssf_dict = evaluate_ssf(final_flow[eval_mask], pose_flow[eval_mask], pc0[eval_mask], \
-                                    gt_flow[eval_mask], batch['flow_is_valid'][eval_mask], batch['flow_category_indices'][eval_mask])
-            
-            self.metrics.step(v1_dict, v2_dict, ssf_dict)
+            self.metrics.step(*eval_frame(batch, final_flow, pose_flow))
             if self.save_res:
-                # write final_flow into the dataset.
-                key = str(batch['timestamp'])
-                scene_id = batch['scene_id']
-                with h5py.File(os.path.join(self.dataset_path, f'{self.data_mode}/{scene_id}.h5'), 'r+') as f:
-                    if self.res_name in f[key]:
-                        del f[key][self.res_name]
-                    f[key].create_dataset(self.res_name, data=final_flow.cpu().detach().numpy().astype(np.float32))
+                h5_path = os.path.join(self.dataset_path, f"{self.data_mode}/{batch['scene_id']}.h5")
+                write_flow_to_h5(h5_path, batch['timestamp'], self.res_name, final_flow)
 
-        # NOTE (Qingwen): Since val and test, we will force set batch_size = 1 
-        if self.save_res and self.data_mode == 'test': # test must save data to submit in the online leaderboard.    
-            save_pred_flow = final_flow[eval_mask, :3].cpu().detach().numpy()
-            rigid_flow = pose_flow[eval_mask, :3].cpu().detach().numpy()
-            is_dynamic = np.linalg.norm(save_pred_flow - rigid_flow, axis=1, ord=2) >= 0.05
-            sweep_uuid = (batch['scene_id'], batch['timestamp'])
-            if self.leaderboard_version in [2, 3]:
-                save_pred_flow = (final_flow - pose_flow).cpu().detach().numpy() # all points here... since 2rd version we need to save the relative flow.
-            write_output_file(save_pred_flow, is_dynamic, sweep_uuid, self.save_res_path, leaderboard_version=self.leaderboard_version)
+        if self.save_res and self.data_mode == 'test': # test must save data to submit in the online leaderboard.
+            write_leaderboard_file(batch, final_flow, pose_flow, self.save_res_path, self.leaderboard_version)
 
-    def run_model_wo_ground_data(self, batch):
-        # NOTE (Qingwen): only needed when val or test mode, since train we will go through collate_fn to remove.
-        batch['origin_pc0'] = batch['pc0'].clone()
-        batch['pc0'] = batch['pc0'][~batch['gm0']].unsqueeze(0)
-        batch['pc1'] = batch['pc1'][~batch['gm1']].unsqueeze(0)
-        
-        for i in range(1, self.num_frames-1):
-            batch[f'pch{i}'] = batch[f'pch{i}'][~batch[f'gmh{i}']].unsqueeze(0)
-
-        self.model.timer[12].start("One Scan")
-        res_dict = self.model(batch)
-        self.model.timer[12].stop()
-
-        # NOTE (Qingwen): Since val and test, we will force set batch_size = 1 
-        batch = {key: batch[key][0] for key in batch if len(batch[key])>0}
-        res_dict = {key: res_dict[key][0] for key in res_dict if (res_dict[key]!=None and len(res_dict[key])>0) }
-        return batch, res_dict
-    
     def validation_step(self, batch, batch_idx):
         try:
             if self.data_mode in ['val', 'valid'] or self.data_mode == 'test':
-                batch, res_dict = self.run_model_wo_ground_data(batch)
+                # NOTE (Qingwen): only needed when val or test mode, since train we will go through collate_fn to remove.
+                batch, res_dict = run_model_wo_ground(self.model, batch)
                 if batch['eval_flag']:
                     self.eval_only_step_(batch, res_dict)
             else:
@@ -395,31 +339,10 @@ bash sceneflow_submit.sh {self.save_res_path}.zip --method-name {self.save_res_p
             print(f"Batch info: scene_id: {batch['scene_id']}, timestamp: {batch['timestamp']}, pc0 size: {batch['pc0']}")
     
     def test_step(self, batch, batch_idx):
-        batch, res_dict = self.run_model_wo_ground_data(batch)
-        pc0 = batch['origin_pc0']
-        pose_0to1 = cal_pose0to1(batch["pose0"], batch["pose1"])
-        transform_pc0 = pc0 @ pose_0to1[:3, :3].T + pose_0to1[:3, 3]
-        pose_flow = transform_pc0 - pc0
-
-        final_flow = pose_flow.clone()
-        if 'pc0_valid_point_idxes' in res_dict:
-            valid_from_pc2res = res_dict['pc0_valid_point_idxes']
-
-            # flow in the original pc0 coordinate
-            pred_flow = pose_flow[~batch['gm0']].clone()
-            pred_flow[valid_from_pc2res] = pose_flow[~batch['gm0']][valid_from_pc2res] + res_dict['flow']
-
-            final_flow[~batch['gm0']] = pred_flow
-        else:
-            final_flow[~batch['gm0']] = res_dict['flow'] + pose_flow[~batch['gm0']]
-
+        batch, res_dict = run_model_wo_ground(self.model, batch)
+        final_flow, _ = flow_on_all_points(batch, res_dict)
         # write final_flow into the dataset.
-        key = str(batch['timestamp'])
-        scene_id = batch['scene_id']
-        with h5py.File(os.path.join(self.dataset_path, f'{scene_id}.h5'), 'r+') as f:
-            if self.res_name in f[key]:
-                del f[key][self.res_name]
-            f[key].create_dataset(self.res_name, data=final_flow.cpu().detach().numpy().astype(np.float32))
+        write_flow_to_h5(os.path.join(self.dataset_path, f"{batch['scene_id']}.h5"), batch['timestamp'], self.res_name, final_flow)
 
     def on_test_epoch_end(self):
         self.model.timer.print(random_colors=False, bold=False)
