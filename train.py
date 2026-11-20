@@ -65,6 +65,7 @@ def main(cfg):
                     n_frames=cfg.num_frames,
                     ssl_label=cfg.get('ssl_label', None),
                     loss_frames=cfg.get('loss_frames', None),
+                    layers=cfg.get('layers', None),
                     transform=train_aug)
     train_loader = DataLoader(train_dataset,
                               batch_size=cfg.batch_size,

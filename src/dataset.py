@@ -176,11 +176,51 @@ class ToTensor(object):
                 print(f"Warning: {key} is not a numpy array. Type: {type(data_dict[key])}")
         return data_dict
 
+class LayeredFrame:
+    """One frame of a scene: its group in the base h5 file, and its groups in the layer h5 files.
+
+    frame['dufo'] reads the key from the layer that has it, otherwise from the base file.
+    So a dataset that still has everything inside the base file reads the same as before.
+    """
+    def __init__(self, base, layers):
+        self.base, self.layers = base, layers
+
+    def __contains__(self, name):
+        return name in self.base or any(name in layer for layer in self.layers)
+
+    def __getitem__(self, name):
+        found = [layer for layer in self.layers if name in layer]
+        if len(found) > 1:
+            raise KeyError(f"'{name}' is in more than one layer: {[layer.file.filename for layer in found]}")
+        if not found and name not in self.base:
+            raise KeyError(f"'{name}' is not in {self.base.file.filename}, nor in its layers: {[layer.file.filename for layer in self.layers]}")
+        return found[0][name] if found else self.base[name]
+
+class LayeredScene:
+    """The h5 files of one scene, opened read-only: {directory}/{scene_id}.h5 and the same file name in every layer folder.
+
+    scene[timestamp] is the LayeredFrame of that frame. A layer may only have some of the scenes or frames.
+    """
+    def __init__(self, directory, layer_dirs, scene_id):
+        self.base = h5py.File(os.path.join(directory, f'{scene_id}.h5'), 'r')
+        layer_files = [os.path.join(layer_dir, f'{scene_id}.h5') for layer_dir in layer_dirs]
+        self.layers = [h5py.File(path, 'r') for path in layer_files if os.path.exists(path)]
+
+    def __getitem__(self, timestamp):
+        return LayeredFrame(self.base[timestamp], [layer[timestamp] for layer in self.layers if timestamp in layer])
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *args):
+        for file in [self.base] + self.layers:
+            file.close()
+
 class HDF5Dataset(Dataset):
     def __init__(self, directory, \
                 transform=None, n_frames=2, ssl_label=None, loss_frames=None, \
                 eval = False, \
-                vis_name='', index_flow=False):
+                vis_name='', index_flow=False, layers=None):
         '''
         Args:
             directory: the directory of the dataset, the folder should contain some .h5 file and index_total.pkl.
@@ -194,9 +234,16 @@ class HDF5Dataset(Dataset):
             * eval: if True, use the eval index (only used it for leaderboard evaluation)
             * vis_name: the data of the visualization, default is ''.
             * index_flow: if True, use the flow index for training or visualization.
+            * layers: names of the layers to read on top of the base .h5 files, e.g. ['seflow_labels'].
+                      A layer is the folder {directory}/layers/{name}/ with one {scene_id}.h5 per scene: data that is not
+                      part of the dataset itself (labels, predictions, ...), so it can be made again or removed without touching the base files.
         '''
         super(HDF5Dataset, self).__init__()
         self.directory = directory
+        self.layer_dirs = [os.path.join(directory, 'layers', name) for name in (layers or [])]
+        for layer_dir in self.layer_dirs:
+            if not os.path.isdir(layer_dir):
+                raise FileNotFoundError(f"Layer folder {layer_dir} does not exist.")
         if (torch.distributed.is_initialized() and torch.distributed.get_rank() == 0) or not torch.distributed.is_initialized():
             print(f"----[Debug] Loading data with num_frames={n_frames}, ssl_label={ssl_label}, eval={eval}")
         with open(os.path.join(self.directory, 'index_total.pkl'), 'rb') as f:
@@ -307,7 +354,7 @@ class HDF5Dataset(Dataset):
             'timestamp': timestamp,
             'eval_flag': eval_flag
         }
-        with h5py.File(os.path.join(self.directory, f'{scene_id}.h5'), 'r') as f:
+        with LayeredScene(self.directory, self.layer_dirs, scene_id) as f:
             # original data
             data_dict['pc0'] = f[key]['lidar'][:][:,:3]
             data_dict['gm0'] = f[key]['ground_mask'][:]
