@@ -262,6 +262,9 @@ class HDF5Dataset(Dataset):
                 raise ValueError("loss_frames is only for self-supervised training: it needs ssl_label and eval=False.")
             self.loss_past, self.loss_future = int(loss_frames['past']), int(loss_frames['future'])
         self.vis_name = vis_name if isinstance(vis_name, list) else [vis_name]
+        # a saved flow may be in its own layer: {directory}/layers/pred/{vis_name}/
+        pred_dirs = [os.path.join(directory, 'layers', 'pred', name) for name in self.vis_name if name]
+        self.layer_dirs += [pred_dir for pred_dir in pred_dirs if os.path.isdir(pred_dir)]
         self.transform = transform
 
         if eval:
