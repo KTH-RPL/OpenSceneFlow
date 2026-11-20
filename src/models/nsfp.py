@@ -21,7 +21,7 @@ import dztimer, torch, copy
 import torch.nn as nn
 
 from .basic import cal_pose0to1
-from .basic.nsfp_module import Neural_Prior, EarlyStopping
+from .basic.opt_module import Neural_Prior, EarlyStopping
 from assets.cuda.chamfer3D import nnChamferDis
 MyCUDAChamferDis = nnChamferDis()
                 

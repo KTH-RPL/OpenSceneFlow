@@ -19,65 +19,11 @@ with slightly modification to have unified format with all benchmark.
 
 import dztimer, torch
 import torch.nn as nn
-import torch.nn.functional as F
 
-import FastGeodis # extra package
+import FastGeodis # extra package, the distance transform (DT) needs it
 
-from .basic.nsfp_module import Neural_Prior, EarlyStopping
+from .basic.opt_module import Neural_Prior, EarlyStopping, DT
 from .basic import cal_pose0to1
-
-class DT:
-    def __init__(self, pts, pmin, pmax, grid_factor, device='cuda:0'):
-        self.device = device
-        self.grid_factor = grid_factor
-        
-        sample_x = ((pmax[0] - pmin[0]) * grid_factor).ceil().int() + 2
-        sample_y = ((pmax[1] - pmin[1]) * grid_factor).ceil().int() + 2
-        sample_z = ((pmax[2] - pmin[2]) * grid_factor).ceil().int() + 2
-        
-        self.Vx = torch.linspace(0, sample_x, sample_x+1, device=self.device)[:-1] / grid_factor + pmin[0]
-        self.Vy = torch.linspace(0, sample_y, sample_y+1, device=self.device)[:-1] / grid_factor + pmin[1]
-        self.Vz = torch.linspace(0, sample_z, sample_z+1, device=self.device)[:-1] / grid_factor + pmin[2]
-        
-        # NOTE: build a binary image first, with 0-value occuppied points
-        grid_x, grid_y, grid_z = torch.meshgrid(self.Vx, self.Vy, self.Vz, indexing="ij")
-        self.grid = torch.stack([grid_x.unsqueeze(-1), grid_y.unsqueeze(-1), grid_z.unsqueeze(-1)], -1).float().squeeze()
-        H, W, D, _ = self.grid.size()
-        pts_mask = torch.ones(H, W, D, device=device)
-        self.pts_sample_idx_x = ((pts[:,0:1] - self.Vx[0]) * self.grid_factor).round()
-        self.pts_sample_idx_y = ((pts[:,1:2] - self.Vy[0]) * self.grid_factor).round()
-        self.pts_sample_idx_z = ((pts[:,2:3] - self.Vz[0]) * self.grid_factor).round()
-        pts_mask[self.pts_sample_idx_x.long(), self.pts_sample_idx_y.long(), self.pts_sample_idx_z.long()] = 0.
-        
-        iterations = 1
-        image_pts = torch.zeros(H, W, D, device=device).unsqueeze(0).unsqueeze(0)
-        pts_mask = pts_mask.unsqueeze(0).unsqueeze(0)
-        self.D = FastGeodis.generalised_geodesic3d(
-            image_pts, pts_mask, [1./self.grid_factor, 1./self.grid_factor, 1./self.grid_factor], 1e10, 0.0, iterations
-        ).squeeze()
-            
-    def torch_bilinear_distance(self, Y):
-        H, W, D = self.D.size()
-        target = self.D[None, None, ...]
-        
-        sample_x = ((Y[:,0:1] - self.Vx[0]) * self.grid_factor).clip(0, H-1)
-        sample_y = ((Y[:,1:2] - self.Vy[0]) * self.grid_factor).clip(0, W-1)
-        sample_z = ((Y[:,2:3] - self.Vz[0]) * self.grid_factor).clip(0, D-1)
-        
-        sample = torch.cat([sample_x, sample_y, sample_z], -1)
-        
-        # NOTE: normalize samples to [-1, 1]
-        sample = 2 * sample
-        sample[...,0] = sample[...,0] / (H-1)
-        sample[...,1] = sample[...,1] / (W-1)
-        sample[...,2] = sample[...,2] / (D-1)
-        sample = sample -1
-        
-        sample_ = torch.cat([sample[...,2:3], sample[...,1:2], sample[...,0:1]], -1)
-        
-        # NOTE: reshape to match 5D volumetric input
-        dist = F.grid_sample(target, sample_.view(1,-1,1,1,3), mode="bilinear", align_corners=True).view(-1)
-        return dist
 
 class FastNSF(nn.Module):
     def __init__(self, filter_size=128, act_fn='relu', layer_size=8, grid_factor=10.,\
