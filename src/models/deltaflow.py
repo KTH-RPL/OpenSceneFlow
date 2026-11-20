@@ -80,7 +80,6 @@ class DeltaFlow(nn.Module):
         self.timer[3].start("3D Network")
         backbone_res = self.backbone(sparse_dict['delta_sparse'])
         pc0_3dvoxel_infos_lst = sparse_dict['pc0_3dvoxel_infos_lst']
-        pc1_3dvoxel_infos_lst = sparse_dict['pc1_3dvoxel_infos_lst']
         self.timer[3].stop()
 
         self.timer[4].start("Flow Decoder")
@@ -90,18 +89,13 @@ class DeltaFlow(nn.Module):
         model_res = {
             "d_num_voxels": [sparse_dict['d_num_voxels']],
             "flow": flows, # relative flow w.o pose flow (ego motion)
-            'pose_flow': pcs_dict['pose_flows'], 
-
-            "pc0_valid_point_idxes": [e["point_idxes"] for e in pc0_3dvoxel_infos_lst], 
-            "pc0_points_lst": [e["points"] for e in pc0_3dvoxel_infos_lst] , 
-            
-            "pc1_valid_point_idxes": [e["point_idxes"] for e in pc1_3dvoxel_infos_lst],
-            "pc1_points_lst": [e["points"] for e in pc1_3dvoxel_infos_lst],
+            'pose_flow': pcs_dict['pose_flows'],
         }
-        if 'pch1_3dvoxel_infos_lst' in sparse_dict and sparse_dict['pch1_3dvoxel_infos_lst'] is not None:
-            model_res["pch1_valid_point_idxes"] = [e["point_idxes"] for e in sparse_dict['pch1_3dvoxel_infos_lst']]
-            model_res["pch1_points_lst"] = [e["points"] for e in sparse_dict['pch1_3dvoxel_infos_lst']]
-        else:
-            model_res["pch1_valid_point_idxes"] = None
-            
+        # every input frame, e.g. pc0_valid_point_idxes, pc0_points_lst; the same for pc1, pch1, pch2, ...
+        for key in sparse_dict:
+            if key.startswith("pc") and key.endswith("3dvoxel_infos_lst"):
+                frame_id = key.split('_')[0]
+                model_res[f"{frame_id}_valid_point_idxes"] = [e["point_idxes"] for e in sparse_dict[key]]
+                model_res[f"{frame_id}_points_lst"] = [e["points"] for e in sparse_dict[key]]
+
         return model_res

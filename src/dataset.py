@@ -21,6 +21,7 @@
 import torch, re
 from torch.utils.data import Dataset, DataLoader
 import h5py, pickle, argparse
+from collections import defaultdict
 from tqdm import tqdm
 import numpy as np
 from torchvision import transforms
@@ -31,71 +32,63 @@ sys.path.append(BASE_DIR)
 from src.utils import import_func
 
 def extract_flow_number(key):
+    """Get the number at the end of a string, return '0' if none found"""
     digits = re.findall(r'\d+$', key)
-    if digits:
-        return digits[0]
-    return '0'
+    return digits[0] if digits else '0'
 
-# FIXME(Qingwen 2025-08-20): update more pretty here afterward!
+def pad_tensors(data_dict, padding_value):
+    return {
+        key: torch.nn.utils.rnn.pad_sequence(
+            tensor_list, batch_first=True, padding_value=padding_value
+        )
+        for key, tensor_list in data_dict.items()
+    }
+
 def collate_fn_pad(batch):
-    batch_size_ = len(batch)
-    pcs_after_mask_ground, poses_dict, flows_after_mask_ground = {}, {}, {}
-    
-    for i in range(batch_size_):
-        single_data = batch[i]
-        for key in single_data.keys():
-            if key.startswith('pc') and f'gm{key[2:]}' in single_data and not key.endswith("dynamic"):
-                gm_key = f'gm{key[2:]}'
-                if key not in pcs_after_mask_ground:
-                    pcs_after_mask_ground[key] = []
-                pcs_after_mask_ground[key].append(single_data[key][~single_data[gm_key]])
+    """Group and pad batch data by key type"""
+    batch_size = len(batch)
+
+    point_clouds, labels, poses, flows = defaultdict(list), defaultdict(list), defaultdict(list), defaultdict(list)
+    all_ego_motion_flag = True
+    # will process the point clouds, labels, poses, and flows
+    for item in batch:
+        for key, value in item.items():
+            frame_id = key.split('_')[0]  # Extract frame identifier
+            ground_mask_key = f"gm{frame_id[2:]}"  # Create ground mask key
+            if key.startswith('pc') and ground_mask_key in item:
+                masked_value = value[~item[ground_mask_key]]
+                if key.endswith("dynamic"):
+                    labels[key].append(masked_value)
+                else:
+                    point_clouds[key].append(masked_value)
             elif key.startswith('flow'):
-                id_flow = extract_flow_number(key)
-                gm_key = f'gm{id_flow}'
-                if key not in flows_after_mask_ground:
-                    flows_after_mask_ground[key] = []
-                flows_after_mask_ground[key].append(single_data[key][~single_data[gm_key]])
+                flow_id = extract_flow_number(key)
+                ground_mask_key = f'gm{flow_id}'
+                masked_value = value[~item[ground_mask_key]]
+                flows[key].append(masked_value)
             elif key.startswith('pose'):
-                if key not in poses_dict:
-                    poses_dict[key] = []
-                poses_dict[key].append(single_data[key])
+                poses[key].append(value)
+        if 'ego_motion' not in item:
+            all_ego_motion_flag = False
 
-    for key in pcs_after_mask_ground:
-        pcs_after_mask_ground[key] = torch.nn.utils.rnn.pad_sequence(pcs_after_mask_ground[key], batch_first=True, padding_value=torch.nan)
-    for key in flows_after_mask_ground:
-        flows_after_mask_ground[key] = torch.nn.utils.rnn.pad_sequence(flows_after_mask_ground[key], batch_first=True)
+    padded_point_clouds = pad_tensors(point_clouds, torch.nan)
+    padded_flows = pad_tensors(flows, 0)
+    padded_labels = pad_tensors(labels, 0)
 
-    # Prepare the result dictionary
-    res_dict = {key: pcs_after_mask_ground[key] for key in pcs_after_mask_ground}
-    # ground truth information:
-    res_dict.update({key: flows_after_mask_ground[key] for key in flows_after_mask_ground})
-    res_dict.update({key: [poses_dict[key][i] for i in range(batch_size_)] for key in poses_dict})
+    result = {**padded_point_clouds, **padded_labels, **padded_flows}
 
-    for flow_key in flows_after_mask_ground:
-        flows_after_mask_ground[flow_key] = torch.nn.utils.rnn.pad_sequence(flows_after_mask_ground[flow_key], batch_first=True, padding_value=0)
-        res_dict[flow_key] = flows_after_mask_ground[flow_key]
+    # Add poses as lists (no padding needed)
+    for key, pose_list in poses.items():
+        result[key] = [pose_list[i] for i in range(batch_size)]
 
-    if 'ego_motion' in batch[0]:
-        res_dict['ego_motion'] = [batch[i]['ego_motion'] for i in range(batch_size_)]
-        
-    if 'pc0_dynamic' in batch[0]:
-        pc0_dynamic_after_mask_ground, pc1_dynamic_after_mask_ground= [], []
-        for i in range(batch_size_):
-            pc0_dynamic_after_mask_ground.append(batch[i]['pc0_dynamic'][~batch[i]['gm0']])
-            pc1_dynamic_after_mask_ground.append(batch[i]['pc1_dynamic'][~batch[i]['gm1']])
-        pc0_dynamic_after_mask_ground = torch.nn.utils.rnn.pad_sequence(pc0_dynamic_after_mask_ground, batch_first=True, padding_value=0)
-        pc1_dynamic_after_mask_ground = torch.nn.utils.rnn.pad_sequence(pc1_dynamic_after_mask_ground, batch_first=True, padding_value=0)
-        res_dict['pc0_dynamic'] = pc0_dynamic_after_mask_ground
-        res_dict['pc1_dynamic'] = pc1_dynamic_after_mask_ground
-    if 'pch1_dynamic' in batch[0]:
-        pch_dynamic_after_mask_ground = [batch[i]['pch1_dynamic'][~batch[i]['gmh1']] for i in range(batch_size_)]
-        pch_dynamic_after_mask_ground = torch.nn.utils.rnn.pad_sequence(pch_dynamic_after_mask_ground, batch_first=True, padding_value=0)
-        res_dict['pch1_dynamic'] = pch_dynamic_after_mask_ground
-    
-    # save the scene_id also...
-    res_dict['scene_id'] = [batch[i]['scene_id'] for i in range(batch_size_)]
+    # Add additional fields if present
+    if all_ego_motion_flag:
+        result['ego_motion'] = [item['ego_motion'] for item in batch]
 
-    return res_dict
+    # Always include scene_id
+    result['scene_id'] = [item['scene_id'] for item in batch]
+
+    return result
 
 # transform, augment
 class RandomJitter(object):
@@ -339,9 +332,8 @@ class HDF5Dataset(Dataset):
                     past_pose = f[past_timestamp]['pose'][:]
 
                     past_frames.append((past_pc, past_gm, past_pose))
-                    if i == 1 and self.ssl_label is not None: # only for history 1: t-1
-                        # data_dict['pch1_dynamic'] = f[past_timestamp]['label'][:].astype('int16')
-                        data_dict['pch1_dynamic'] = self.ssl_label(f[past_timestamp])
+                    if self.ssl_label is not None: # every history frame is supervised in the multi-frame loss
+                        data_dict[f'pch{i}_dynamic'] = self.ssl_label(f[past_timestamp])
 
                 for i, (past_pc, past_gm, past_pose) in enumerate(past_frames):
                     data_dict[f'pch{i+1}'] = past_pc

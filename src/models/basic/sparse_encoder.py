@@ -75,7 +75,7 @@ class SparseVoxelNet(nn.Module):
         sparse_max_size = [bz_, *self.voxel_spatial_shape, self.num_feature]
         sparse_pc1 = torch.sparse_coo_tensor(pc1_coors_batch_sp.t(), pc1_voxel_feats_sp, size=sparse_max_size)
         sparse_diff = torch.sparse_coo_tensor(pc1_coors_batch_sp.t(), pc1_voxel_feats_sp * 0.0, size=sparse_max_size)
-        pch1s_3dvoxel_infos_lst = None
+        frames_3dvoxel_infos_lst = {} # 'pc0' / 'pch1' / 'pch2' ... -> voxel info list of this frame
         pc0_point_feats_lst = []
 
         # (0, 'pch2s'), (1, 'pch1s'), (2, 'pc0s')
@@ -94,11 +94,9 @@ class SparseVoxelNet(nn.Module):
             sparse_diff = sparse_diff + (sparse_pc1 - sparse_pcx) * pow(self.decay_factor, time_index)
             self.timer[0].stop()
 
+            frames_3dvoxel_infos_lst[frame_key[:-1]] = voxel_info_list # 'pch1s' -> 'pch1'
             if frame_key == 'pc0s':
-                pc0s_3dvoxel_infos_lst = voxel_info_list
                 pc0s_num_voxels = voxel_feats_sp.shape[0]
-            elif frame_key == 'pch1s':
-                pch1s_3dvoxel_infos_lst = voxel_info_list
 
         self.timer[2].start("D_Delta_Sparse")
         features = sparse_diff.coalesce().values() / (time_index + 1)
@@ -108,14 +106,15 @@ class SparseVoxelNet(nn.Module):
 
         output = {
             'delta_sparse': all_pcdiff_sparse,
-            'pch1_3dvoxel_infos_lst': pch1s_3dvoxel_infos_lst,
-            'pc0_3dvoxel_infos_lst': pc0s_3dvoxel_infos_lst,
             'pc0_point_feats_lst': pc0_point_feats_lst,
             'pc0_num_voxels': pc0s_num_voxels,
             'pc1_3dvoxel_infos_lst': pc1_voxel_info_list,
             'pc1_num_voxels': pc1s_num_voxels,
             'd_num_voxels': indices.shape[0]
         }
+        # every input frame: pc0_3dvoxel_infos_lst, pch1_3dvoxel_infos_lst, pch2_3dvoxel_infos_lst, ...
+        for frame_id, voxel_info_list in frames_3dvoxel_infos_lst.items():
+            output[f'{frame_id}_3dvoxel_infos_lst'] = voxel_info_list
         return output
 
 class BasicConvolutionBlock(nn.Module):
