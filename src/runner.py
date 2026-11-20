@@ -15,7 +15,8 @@
 # 
 """
 
-import os, sys
+import os, sys, random
+import numpy as np
 import torch
 import torch.distributed as dist
 import torch.multiprocessing as mp
@@ -33,6 +34,11 @@ from .utils.eval_metric import OfficialMetrics
 from .utils.mics import zip_res, enable_timer_sync
 from .utils import InlineTee
 from .postprocess import run_model_wo_ground, flow_on_all_points, eval_frame, write_flow_to_h5, write_leaderboard_file
+
+def seed_everything(seed):
+    random.seed(seed)
+    np.random.seed(seed)
+    torch.manual_seed(seed) # cpu and all gpus
 
 def load_model(cfg):
     """Optimization-based methods (iter_only) have no weights, feed-forward ones load them from cfg.checkpoint."""
@@ -184,6 +190,8 @@ class InferenceRunner:
             current_scene_id = batch['scene_id'][0] 
             
             iter_bar.set_description(f"[GPU {self.rank}] Processing {current_scene_id}")
+            # same random state for every frame: the result of a frame doesn't depend on the frames before it or on how many GPUs we use.
+            seed_everything(self.cfg.seed)
 
             with torch.no_grad():
                 self._process_step(batch)
