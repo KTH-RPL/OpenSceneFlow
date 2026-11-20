@@ -16,18 +16,11 @@ import hydra, os, sys
 from hydra.core.hydra_config import HydraConfig
 from src.runner import launch_runner
 
-def precheck_cfg_valid(cfg):
-    if os.path.exists(cfg.dataset_path + f"/{cfg.data_mode}") is False:
-        raise ValueError(f"Dataset {cfg.dataset_path}/{cfg.data_mode} does not exist. Please check the path.")
-    if cfg.supervised_flag not in [True, False]:
-        raise ValueError(f"Supervised flag {cfg.supervised_flag} is not valid. Please set it to True or False.")
-    if cfg.leaderboard_version not in [1, 2]:
-        raise ValueError(f"Leaderboard version {cfg.leaderboard_version} is not valid. Please set it to 1 or 2.")
-    return cfg
-
 @hydra.main(version_base=None, config_path="conf", config_name="eval")
 def main(cfg):
     output_dir = HydraConfig.get().runtime.output_dir
+    if cfg.data_mode == 'test' and cfg.leaderboard_version != 3:
+        raise ValueError("The v1 and v2 leaderboards are closed, only leaderboard_version=3 (https://sceneflow.kth-rpl.se/leaderboard) can be submitted.")
 
     # feed-forward model: its model config is inside the checkpoint. Optimization-based one (iter_only) has no checkpoint.
     if not cfg.model.get('iter_only', False):

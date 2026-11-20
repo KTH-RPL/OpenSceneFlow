@@ -82,13 +82,7 @@ def write_flow_to_h5(h5_path, timestamp, res_name, flow):
         f[key].create_dataset(res_name, data=flow.cpu().detach().numpy().astype(np.float32))
 
 
-def write_leaderboard_file(batch, final_flow, pose_flow, save_res_path, leaderboard_version):
-    """Write the result file of one test frame, to submit to the online leaderboard."""
-    eval_mask = batch['eval_mask'].squeeze()
-    save_pred_flow = final_flow[eval_mask, :3].cpu().detach().numpy()
-    rigid_flow = pose_flow[eval_mask, :3].cpu().detach().numpy()
-    is_dynamic = np.linalg.norm(save_pred_flow - rigid_flow, axis=1, ord=2) >= 0.05
-    if leaderboard_version in [2, 3]:
-        save_pred_flow = (final_flow - pose_flow).cpu().detach().numpy() # all points here... since 2rd version we need to save the relative flow.
-    sweep_uuid = (batch['scene_id'], batch['timestamp'])
-    write_output_file(save_pred_flow, is_dynamic, sweep_uuid, save_res_path, leaderboard_version=leaderboard_version)
+def write_leaderboard_file(batch, final_flow, pose_flow, save_res_path):
+    """Write the result file of one test frame, to submit to the online leaderboard: flow without ego motion on all points."""
+    flow = (final_flow - pose_flow).cpu().detach().numpy()
+    write_output_file(flow, (batch['scene_id'], batch['timestamp']), save_res_path)

@@ -132,8 +132,7 @@ class InferenceRunner:
 
         dataset = HDF5Dataset(dataset_path,
                               n_frames=self.cfg.num_frames,
-                              eval=is_eval_mode,
-                              leaderboard_version=self.cfg.leaderboard_version if 'leaderboard_version' in self.cfg else 1)
+                              eval=is_eval_mode)
 
         sampler = SceneDistributedSampler(dataset, num_replicas=self.world_size, rank=self.rank)
         
@@ -161,7 +160,7 @@ class InferenceRunner:
                 h5_path = os.path.join(self.cfg.dataset_path, f"{self.cfg.data_mode}/{batch['scene_id']}.h5")
                 write_flow_to_h5(h5_path, batch['timestamp'], self.res_name, final_flow)
         elif self.mode == 'test':
-            write_leaderboard_file(batch, final_flow, pose_flow, self.save_res_path, self.cfg.leaderboard_version)
+            write_leaderboard_file(batch, final_flow, pose_flow, self.save_res_path)
         elif self.mode == 'save':
             h5_path = os.path.join(self.cfg.dataset_path, f"{batch['scene_id']}.h5")
             try:
@@ -314,25 +313,13 @@ def launch_runner(cfg, mode, output_dir):
         
         if mode == 'test':
             print("\nAll workers finished. Aggregating results into submission file...")
-            final_zip_file = zip_res(
-                cfg.save_res_path,
-                leaderboard_version=cfg.leaderboard_version,
-                is_supervised=cfg.supervised_flag and not cfg.model.get('iter_only', False),  # all optimization-based now is ssl.
-                output_file=str(cfg.save_res_path) + ".zip"
-            )
+            final_zip_file = zip_res(cfg.save_res_path, output_file=str(cfg.save_res_path) + ".zip")
             print(f"--- [LOG] Submission file successfully created at: {final_zip_file}")
-            if cfg.leaderboard_version == 1:
-                print(f"\nevalai challenge 2010 phase 4018 submit --file {cfg.save_res_path}.zip --large --private\n")
-            elif cfg.leaderboard_version == 2:
-                print(f"\nevalai challenge 2210 phase 4396 submit --file {cfg.save_res_path}.zip --large --private\n")
-            elif cfg.leaderboard_version == 3:
-                print(f"""
+            print(f"""
 curl -O https://sceneflow.kth-rpl.se/download/sceneflow_submit.sh
 export SCENEFLOW_API_KEY=your_api_key
 bash sceneflow_submit.sh {cfg.save_res_path}.zip --method-name {cfg.save_res_path.name} --wait
 """)
-            else:
-                print(f"Please check the leaderboard version in the config file. We only support version 1, 2 and 3.")
         return
     else:
         _run_process(cfg, mode)

@@ -179,7 +179,7 @@ class ToTensor(object):
 class HDF5Dataset(Dataset):
     def __init__(self, directory, \
                 transform=None, n_frames=2, ssl_label=None, \
-                eval = False, leaderboard_version=1, \
+                eval = False, \
                 vis_name='', index_flow=False):
         '''
         Args:
@@ -190,14 +190,13 @@ class HDF5Dataset(Dataset):
             * n_frames: the number of frames we use, default is 2: current (pc0), next (pc1); if it's more than 2, then it read the history from current.
             * ssl_label: if attr, it will read the dynamic cluster label. Otherwise, no dynamic cluster label in data dict.
             * eval: if True, use the eval index (only used it for leaderboard evaluation)
-            * leaderboard_version: 1st or 2nd, default is 1. If '2', we will use the index_eval_v2.pkl from assets/docs.
             * vis_name: the data of the visualization, default is ''.
             * index_flow: if True, use the flow index for training or visualization.
         '''
         super(HDF5Dataset, self).__init__()
         self.directory = directory
         if (torch.distributed.is_initialized() and torch.distributed.get_rank() == 0) or not torch.distributed.is_initialized():
-            print(f"----[Debug] Loading data with num_frames={n_frames}, ssl_label={ssl_label}, eval={eval}, leaderboard_version={leaderboard_version}")
+            print(f"----[Debug] Loading data with num_frames={n_frames}, ssl_label={ssl_label}, eval={eval}")
         with open(os.path.join(self.directory, 'index_total.pkl'), 'rb') as f:
             self.data_index = pickle.load(f)
 
@@ -209,10 +208,6 @@ class HDF5Dataset(Dataset):
 
         if eval:
             eval_index_file = os.path.join(self.directory, 'index_eval.pkl')
-            if leaderboard_version == 2:
-                print("Using index to leaderboard version 2!!")
-                eval_index_file = os.path.join(BASE_DIR, 'assets/docs/index_eval_v2.pkl')
-
             if not os.path.exists(eval_index_file):
                 print(f"Warning: No {eval_index_file} file found! We will try {'index_flow.pkl'}")
                 eval_index_file = os.path.join(self.directory, 'index_flow.pkl')

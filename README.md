@@ -309,7 +309,7 @@ For online testing, first download multidata-sf-challenge dataset (~150Gb) from 
 huggingface-cli download kin-zhang/multidata-sf-challenge --local-dir /home/kin/data/multidata-sf-challenge
 
 # eval with results saved to submit to leaderboard
-python eval.py checkpoint=/home/kin/seflow_best.ckpt data_mode=test leaderboard_version=3 dataset_path=/home/kin/data/multidata-sf-challenge/challenge_public save_res=True
+python eval.py checkpoint=/home/kin/seflow_best.ckpt data_mode=test dataset_path=/home/kin/data/multidata-sf-challenge/challenge_public save_res=True
 ```
 
 ### **📊 Range-Wise Metric (New!)**
@@ -328,7 +328,7 @@ In [SSF paper](https://arxiv.org/abs/2501.17821), we introduce a new distance-ba
 
 ### Submit result to public leaderboard
 
-To submit your result to the public Leaderboard, if you select `data_mode=test`, it should be a zip file for you to submit to the leaderboard. Set `leaderboard_version` in the config to select the format: `3` for the current [multi-dataset leaderboard](https://sceneflow.kth-rpl.se/leaderboard), `1` or `2` for the previous AV2 leaderboards on EvalAI ([version 1](https://eval.ai/web/challenges/challenge-page/2010/evaluation), [version 2](https://eval.ai/web/challenges/challenge-page/2210/overview)), and the results in DeFlow & SeFlow papers are version 1. Leaderboard updates are recorded in [CHANGELOG.md](CHANGELOG.md).
+To submit your result to the public Leaderboard, select `data_mode=test` and you will get a zip file to submit to the [multi-dataset leaderboard](https://sceneflow.kth-rpl.se/leaderboard). The previous AV2 leaderboards on EvalAI (version 1 and 2) are closed, the results in DeFlow & SeFlow papers are version 1. Leaderboard updates are recorded in [CHANGELOG.md](CHANGELOG.md).
 
 [Register](https://sceneflow.kth-rpl.se/auth/register) at [sceneflow.kth-rpl.se](https://sceneflow.kth-rpl.se/leaderboard), create an API key on your profile page, then submit:
 ```bash

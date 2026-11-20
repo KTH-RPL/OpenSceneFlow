@@ -757,58 +757,27 @@ def evaluate(annotations_dir: str, predictions_dir: str) -> Dict[str, float]:
 
 def write_output_file(
     flow: NDArrayFloat,
-    is_dynamic: NDArrayBool,
     sweep_uuid: Tuple[str, int],
     output_dir: Path,
-    leaderboard_version: int = 1,
 ) -> None:
-    """Write an output predictions file in the correct format for submission.
+    """Write an output predictions file in the format of the leaderboard: https://sceneflow.kth-rpl.se/leaderboard
 
     Args:
-        flow: (N,3) Flow predictions.
-        is_dynamic: (N,) Dynamic segmentation prediction.
+        flow: (N,3) Flow predictions without ego motion, on all points of the sweep.
         sweep_uuid: Identifier of the sweep being predicted (log_id, timestamp_ns).
         output_dir: Top level directory containing all predictions.
-        leaderboard_version: Version of the leaderboard format to use.
-            version 1 for: https://eval.ai/web/challenges/challenge-page/2010/evaluation
-            version 2 for: https://eval.ai/web/challenges/challenge-page/2210/evaluation
     """
     output_log_dir = output_dir / sweep_uuid[0]
     output_log_dir.mkdir(exist_ok=True, parents=True)
-    fx_m = flow[:, 0].astype(np.float16)
-    fy_m = flow[:, 1].astype(np.float16)
-    fz_m = flow[:, 2].astype(np.float16)
-    if leaderboard_version == 1:
+    output = pd.DataFrame(
+        {
+            "flow_tx_m": flow[:, 0].astype(np.float16),
+            "flow_ty_m": flow[:, 1].astype(np.float16),
+            "flow_tz_m": flow[:, 2].astype(np.float16),
+        }
+    )
+    output.to_feather(output_log_dir / f"{sweep_uuid[1]}.feather")
 
-        output = pd.DataFrame(
-            {
-                "flow_tx_m": fx_m,
-                "flow_ty_m": fy_m,
-                "flow_tz_m": fz_m,
-                "is_dynamic": is_dynamic.astype(bool),
-            }
-        )
-        output.to_feather(output_log_dir / f"{sweep_uuid[1]}.feather")
-    elif leaderboard_version == 2:
-        output = pd.DataFrame(
-            {
-                "is_valid": np.ones_like(fx_m, dtype=bool),
-                "flow_tx_m": fx_m,
-                "flow_ty_m": fy_m,
-                "flow_tz_m": fz_m,
-            }
-        )
-        output.to_feather(output_log_dir / f"{sweep_uuid[1]}.feather")
-    elif leaderboard_version == 3:
-        output = pd.DataFrame(
-            {
-                "flow_tx_m": fx_m,
-                "flow_ty_m": fy_m,
-                "flow_tz_m": fz_m,
-            }
-        )
-        output.to_feather(output_log_dir / f"{sweep_uuid[1]}.feather")
-        
 from zipfile import ZipFile
 from torch import BoolTensor
 import torch
