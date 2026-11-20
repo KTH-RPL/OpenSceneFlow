@@ -25,13 +25,31 @@ from collections import defaultdict
 from tqdm import tqdm
 from pathlib import Path
 from hydra.utils import instantiate
+from omegaconf import open_dict
 import shutil
 
 from .dataset import HDF5Dataset
 from .utils.eval_metric import OfficialMetrics
-from .utils.mics import zip_res
+from .utils.mics import zip_res, enable_timer_sync
 from .utils import InlineTee
 from .postprocess import run_model_wo_ground, flow_on_all_points, eval_frame, write_flow_to_h5, write_leaderboard_file
+
+def load_model(cfg):
+    """Optimization-based methods (iter_only) have no weights, feed-forward ones load them from cfg.checkpoint."""
+    if cfg.model.get('iter_only', False):
+        return instantiate(cfg.model.target)
+
+    # NOTE: same setting as src/trainer.py, to have the same scores as before on the released checkpoints.
+    torch.set_float32_matmul_precision('medium')
+    target = cfg.model.target
+    with open_dict(target):
+        target['grid_feature_size'] = [abs(int((target.point_cloud_range[i] - target.point_cloud_range[i+3]) / target.voxel_size[i])) for i in range(3)]
+    model = instantiate(target)
+    # the checkpoint is saved by lightning in train.py, the model weights are under 'model.'
+    state_dict = torch.load(cfg.checkpoint, map_location="cpu")["state_dict"]
+    model.load_state_dict({k[len("model."):]: v for k, v in state_dict.items() if k.startswith("model.")})
+    return model.eval()
+
 class SceneDistributedSampler(Sampler):
     """
     A DistributedSampler that distributes data based on scene IDs, not individual indices.
@@ -87,9 +105,11 @@ class SceneDistributedSampler(Sampler):
 class InferenceRunner:
     def __init__(self, cfg, rank, world_size, mode):
         try:
-            self.model = instantiate(cfg.model.target)
+            self.model = load_model(cfg)
         except Exception as e:
             raise RuntimeError(f"Failed to instantiate model with target '{cfg.model.target}'. Error: {e}") from e
+        if cfg.get('timer_sync', False):
+            enable_timer_sync(self.model)
         self.cfg = cfg
         self.rank = rank
         self.world_size = world_size
@@ -108,7 +128,7 @@ class InferenceRunner:
             is_eval_mode = True
         else: # 'save'
             dataset_path = self.cfg.dataset_path
-            is_eval_mode = False
+            is_eval_mode = self.cfg.get('val_index_only', False)
 
         dataset = HDF5Dataset(dataset_path,
                               n_frames=self.cfg.num_frames,
@@ -137,12 +157,15 @@ class InferenceRunner:
 
         if self.mode in ['val', 'eval', 'valid']:
             self.metrics.step(*eval_frame(batch, final_flow, pose_flow))
+            if self.cfg.get('save_res', False):
+                h5_path = os.path.join(self.cfg.dataset_path, f"{self.cfg.data_mode}/{batch['scene_id']}.h5")
+                write_flow_to_h5(h5_path, batch['timestamp'], self.res_name, final_flow)
         elif self.mode == 'test':
             write_leaderboard_file(batch, final_flow, pose_flow, self.save_res_path, self.cfg.leaderboard_version)
         elif self.mode == 'save':
             h5_path = os.path.join(self.cfg.dataset_path, f"{batch['scene_id']}.h5")
             try:
-                write_flow_to_h5(h5_path, batch['timestamp'], self.cfg.res_name, final_flow)
+                write_flow_to_h5(h5_path, batch['timestamp'], self.res_name, final_flow)
             except Exception as e:
                 print(f"Rank {self.rank} failed to write to {h5_path}: {e}")
 
@@ -244,9 +267,10 @@ def _run_process(cfg, mode):
                             )
 
             final_metrics.print()
-        elif mode == 'save':
-            print(f"\nWe already write the {cfg.res_name} into the dataset, please run following commend to visualize the flow. Copy and paste it to your terminal:")
-            print(f"python tools/visualization.py --res_name '{cfg.res_name}' --data_dir {cfg.dataset_path}")
+        if mode == 'save' or (cfg.get('save_res', False) and mode != 'test'):
+            data_dir = cfg.dataset_path if mode == 'save' else f"{cfg.dataset_path}/{cfg.data_mode}"
+            print(f"\nWe already write the {runner.res_name} into the dataset, please run following commend to visualize the flow. Copy and paste it to your terminal:")
+            print(f"python tools/visualization.py --res_name '{runner.res_name}' --data_dir {data_dir}")
             print(f"Enjoy! ^v^ ------ \n")
         runner.model.timer.print(random_colors=False, bold=False)
 
@@ -261,7 +285,10 @@ def _spawn_wrapper(rank, world_size, cfg, mode, output_dir):
         sys.stdout = InlineTee(log_filepath, append=True)
     if rank == 0:
         data_path = cfg.dataset_path if mode == 'save' else f"{cfg.dataset_path}/{cfg.data_mode}" # save.py has no data_mode
-        print(f"---LOG[eval]: Run optimization-based method: {cfg.model.name} on {data_path} set.\n")
+        if cfg.model.get('iter_only', False):
+            print(f"---LOG[eval]: Run optimization-based method: {cfg.model.name} on {data_path} set.\n")
+        else:
+            print(f"---LOG[eval]: Run {cfg.model.name} with checkpoint {cfg.checkpoint} on {data_path} set.\n")
     torch.cuda.set_device(rank)
     os.environ['RANK'] = str(rank)
     os.environ['WORLD_SIZE'] = str(world_size)
@@ -288,12 +315,24 @@ def launch_runner(cfg, mode, output_dir):
         if mode == 'test':
             print("\nAll workers finished. Aggregating results into submission file...")
             final_zip_file = zip_res(
-                cfg.save_res_path, 
-                leaderboard_version=cfg.leaderboard_version, 
-                is_supervised=False,  # all optimization-based now is ssl.
+                cfg.save_res_path,
+                leaderboard_version=cfg.leaderboard_version,
+                is_supervised=cfg.supervised_flag and not cfg.model.get('iter_only', False),  # all optimization-based now is ssl.
                 output_file=str(cfg.save_res_path) + ".zip"
             )
             print(f"--- [LOG] Submission file successfully created at: {final_zip_file}")
+            if cfg.leaderboard_version == 1:
+                print(f"\nevalai challenge 2010 phase 4018 submit --file {cfg.save_res_path}.zip --large --private\n")
+            elif cfg.leaderboard_version == 2:
+                print(f"\nevalai challenge 2210 phase 4396 submit --file {cfg.save_res_path}.zip --large --private\n")
+            elif cfg.leaderboard_version == 3:
+                print(f"""
+curl -O https://sceneflow.kth-rpl.se/download/sceneflow_submit.sh
+export SCENEFLOW_API_KEY=your_api_key
+bash sceneflow_submit.sh {cfg.save_res_path}.zip --method-name {cfg.save_res_path.name} --wait
+""")
+            else:
+                print(f"Please check the leaderboard version in the config file. We only support version 1, 2 and 3.")
         return
     else:
         _run_process(cfg, mode)
