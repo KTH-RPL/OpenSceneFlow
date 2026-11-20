@@ -14,7 +14,6 @@
 
 import torch
 import torch.optim as optim
-from pathlib import Path
 
 from lightning import LightningModule
 from hydra.utils import instantiate
@@ -25,10 +24,9 @@ BASE_DIR = os.path.abspath(os.path.join( os.path.dirname( __file__ ), '..' ))
 sys.path.append(BASE_DIR)
 from src.utils import import_func
 from src.lossfuncs import SSL_LOSSES_FN
-from src.utils.mics import weights_init, zip_res, enable_timer_sync
+from src.utils.mics import weights_init, enable_timer_sync
 from src.models.basic import WarmupCosLR
 from src.utils.eval_metric import OfficialMetrics, evaluate_leaderboard, evaluate_leaderboard_v2, evaluate_ssf
-from src.postprocess import run_model_wo_ground, flow_on_all_points, eval_frame, write_flow_to_h5, write_leaderboard_file
 
 # debugging tools
 # import faulthandler
@@ -36,7 +34,7 @@ from src.postprocess import run_model_wo_ground, flow_on_all_points, eval_frame,
 
 torch.set_float32_matmul_precision('medium')
 class ModelWrapper(LightningModule):
-    def __init__(self, cfg, eval=False):
+    def __init__(self, cfg):
         super().__init__()
 
         default_self_values = {
@@ -45,24 +43,16 @@ class ModelWrapper(LightningModule):
             "epochs": 3,
             "loss_fn": 'deflowLoss',
             "add_seloss": None,
-            "checkpoint": None,
-            "leaderboard_version": 2,
-            "supervised_flag": True,
-            "save_res": False,
-            "res_name": "default",
-            "num_frames": 2,
 
             # lr scheduler, only active when warmup_epochs > 0
             "optimizer": None,
-            "dataset_path": None,
-            "data_mode": None,
             "cluster_loss_args": {},
             "timer_sync": False,
         }
         for key, default in default_self_values.items():
             setattr(self, key, cfg.get(key, default))
 
-        if ('voxel_size' in cfg.model.target) and ('point_cloud_range' in cfg.model.target) and not eval and 'point_cloud_range' in cfg:
+        if ('voxel_size' in cfg.model.target) and ('point_cloud_range' in cfg.model.target) and 'point_cloud_range' in cfg:
             OmegaConf.set_struct(cfg.model.target, True)
             with open_dict(cfg.model.target):
                 cfg.model.target['grid_feature_size'] = \
@@ -95,14 +85,6 @@ class ModelWrapper(LightningModule):
         # ---> evaluation metric
         self.metrics = OfficialMetrics()
 
-        # ---> inference mode
-        if self.save_res and self.data_mode in ['val', 'valid', 'test']:
-            self.save_res_path = Path(cfg.dataset_path).parent / "results" / cfg.output
-            os.makedirs(self.save_res_path, exist_ok=True)
-            print(f"We are in {cfg.data_mode}, results will be saved in: {self.save_res_path} with version: {self.leaderboard_version} format for online leaderboard.")
-        if self.data_mode in ['val', 'valid', 'test']:
-            print(cfg)
-        # self.test_total_num = 0
         self.save_hyperparameters()
         
     def ssl_loss_calculator(self, batch, res_dict, if_log=True):
@@ -271,29 +253,6 @@ class ModelWrapper(LightningModule):
     def on_validation_epoch_end(self):
         self.model.timer.print(random_colors=False, bold=False)
 
-        if self.data_mode == 'test':
-            print(f"\nModel: {self.model.__class__.__name__}, Checkpoint from: {self.checkpoint}")
-            print(f"Test results saved in: {self.save_res_path}, Please run submit command and upload to online leaderboard for results.")
-            if self.leaderboard_version == 1:
-                print(f"\nevalai challenge 2010 phase 4018 submit --file {self.save_res_path}.zip --large --private\n")
-            elif self.leaderboard_version == 2:
-                print(f"\nevalai challenge 2210 phase 4396 submit --file {self.save_res_path}.zip --large --private\n")
-            elif self.leaderboard_version == 3:
-                print(f"""
-curl -O https://sceneflow.kth-rpl.se/download/sceneflow_submit.sh
-export SCENEFLOW_API_KEY=your_api_key
-bash sceneflow_submit.sh {self.save_res_path}.zip --method-name {self.save_res_path.name} --wait
-""")
-            else:
-                print(f"Please check the leaderboard version in the config file. We only support version 1, 2 and 3.")
-            output_file = zip_res(self.save_res_path, leaderboard_version=self.leaderboard_version, is_supervised = self.supervised_flag, output_file=self.save_res_path.as_posix() + ".zip")
-            # wandb.log_artifact(output_file)
-            return
-        
-        if self.data_mode in ['val', 'valid']:
-            print(f"\nModel: {self.model.__class__.__name__}, Checkpoint from: {self.checkpoint}")
-            print(f"More details parameters and training status are in checkpoints file.")        
-
         self.metrics.normalize()
 
         # wandb log things:
@@ -307,46 +266,10 @@ bash sceneflow_submit.sh {self.save_res_path}.zip --method-name {self.save_res_p
 
         self.metrics = OfficialMetrics()
 
-        if self.save_res:
-            print(f"We already write the flow_est into the dataset, please run following commend to visualize the flow. Copy and paste it to your terminal:")
-            print(f"python tools/visualization.py --res_name \"['{self.res_name}']\" --data_dir {self.dataset_path}")
-            print(f"Enjoy! ^v^ ------ \n")
-        
-    def eval_only_step_(self, batch, res_dict):
-        final_flow, pose_flow = flow_on_all_points(batch, res_dict)
-
-        if self.data_mode in ['val', 'valid']: # since only val we have ground truth flow to eval
-            self.metrics.step(*eval_frame(batch, final_flow, pose_flow))
-            if self.save_res:
-                h5_path = os.path.join(self.dataset_path, f"{self.data_mode}/{batch['scene_id']}.h5")
-                write_flow_to_h5(h5_path, batch['timestamp'], self.res_name, final_flow)
-
-        if self.save_res and self.data_mode == 'test': # test must save data to submit in the online leaderboard.
-            write_leaderboard_file(batch, final_flow, pose_flow, self.save_res_path, self.leaderboard_version)
-
     def validation_step(self, batch, batch_idx):
         try:
-            if self.data_mode in ['val', 'valid'] or self.data_mode == 'test':
-                # NOTE (Qingwen): only needed when val or test mode, since train we will go through collate_fn to remove.
-                batch, res_dict = run_model_wo_ground(self.model, batch)
-                if batch['eval_flag']:
-                    self.eval_only_step_(batch, res_dict)
-            else:
-                res_dict = self.model(batch)
-                self.train_validation_step_(batch, res_dict)
+            res_dict = self.model(batch)
+            self.train_validation_step_(batch, res_dict)
         except Exception as e:
             print(f"==> Exception occur during training/validation step: {e}. Skip this batch.")
             print(f"Batch info: scene_id: {batch['scene_id']}, timestamp: {batch['timestamp']}, pc0 size: {batch['pc0']}")
-    
-    def test_step(self, batch, batch_idx):
-        batch, res_dict = run_model_wo_ground(self.model, batch)
-        final_flow, _ = flow_on_all_points(batch, res_dict)
-        # write final_flow into the dataset.
-        write_flow_to_h5(os.path.join(self.dataset_path, f"{batch['scene_id']}.h5"), batch['timestamp'], self.res_name, final_flow)
-
-    def on_test_epoch_end(self):
-        self.model.timer.print(random_colors=False, bold=False)
-        print(f"\n\nModel: {self.model.__class__.__name__}, Checkpoint from: {self.checkpoint}")
-        print(f"We already write the flow_est into the dataset, please run following commend to visualize the flow. Copy and paste it to your terminal:")
-        print(f"python tools/visualization.py --res_name \"['{self.res_name}']\" --data_dir {self.dataset_path}")
-        print(f"Enjoy! ^v^ ------ \n")
