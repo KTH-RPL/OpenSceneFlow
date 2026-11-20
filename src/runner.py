@@ -247,31 +247,8 @@ def _run_process(cfg, mode):
             final_metrics = OfficialMetrics()
             print(f"\n--- [LOG] Finished processing. Aggregating results from {world_size} GPUs with {len(gathered_metrics_objects)} metrics objects...")
             for metrics_obj in gathered_metrics_objects:
-                if metrics_obj is None: continue
-
-                for key, val_list in metrics_obj.epe_3way.items():
-                    final_metrics.epe_3way[key].extend(val_list)
-
-                for class_idx, class_name in enumerate(metrics_obj.bucketedMatrix.class_names):
-                    # NOTE(Qingwen): for bucketedMatrix range_buckets = speed_buckets
-                    for speed_idx, speed_bucket in enumerate(metrics_obj.bucketedMatrix.range_buckets):
-                        count = metrics_obj.bucketedMatrix.count_storage_matrix[class_idx, speed_idx]
-                        if count > 0:
-                            avg_epe = metrics_obj.bucketedMatrix.epe_storage_matrix[class_idx, speed_idx]
-                            avg_speed = metrics_obj.bucketedMatrix.range_storage_matrix[class_idx, speed_idx]
-                            final_metrics.bucketedMatrix.accumulate_value(
-                                class_name, speed_bucket, avg_epe, avg_speed, count
-                            )
-                for class_idx, class_name in enumerate(metrics_obj.distanceMatrix.class_names):
-                    # NOTE(Qingwen): for distanceMatrix range_buckets = distance_buckets
-                    for range_idx, range_bucket in enumerate(metrics_obj.distanceMatrix.range_buckets):
-                        count = metrics_obj.distanceMatrix.count_storage_matrix[class_idx, range_idx]
-                        if count > 0:
-                            avg_epe = metrics_obj.distanceMatrix.epe_storage_matrix[class_idx, range_idx]
-                            avg_range = metrics_obj.distanceMatrix.range_storage_matrix[class_idx, range_idx]
-                            final_metrics.distanceMatrix.accumulate_value(
-                                class_name, range_bucket, avg_epe, avg_range, count
-                            )
+                if metrics_obj is not None:
+                    final_metrics.merge(metrics_obj)
 
             final_metrics.print()
         if mode == 'save' or (cfg.get('save_res', False) and mode != 'test'):

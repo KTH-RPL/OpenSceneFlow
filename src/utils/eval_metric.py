@@ -304,6 +304,22 @@ class OfficialMetrics:
                     item_.avg_range,
                     item_.count,
                 )
+    def merge(self, other):
+        """
+        Add the frames of another OfficialMetrics (before normalize), e.g. the one from another GPU.
+        """
+        for key in self.epe_3way:
+            self.epe_3way[key].extend(other.epe_3way[key])
+
+        # NOTE(Qingwen): for bucketedMatrix range_buckets = speed_buckets, for distanceMatrix range_buckets = distance_buckets
+        for mine, theirs in [(self.bucketedMatrix, other.bucketedMatrix), (self.distanceMatrix, other.distanceMatrix)]:
+            for class_idx, class_name in enumerate(theirs.class_names):
+                for bucket_idx, bucket in enumerate(theirs.range_buckets):
+                    count = theirs.count_storage_matrix[class_idx, bucket_idx]
+                    if count > 0:
+                        mine.accumulate_value(class_name, bucket, theirs.epe_storage_matrix[class_idx, bucket_idx],
+                                              theirs.range_storage_matrix[class_idx, bucket_idx], count)
+
     def normalize(self):
         """
         This normalize mean average results between **frame and frame**.
