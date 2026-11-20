@@ -178,7 +178,7 @@ class ToTensor(object):
 
 class HDF5Dataset(Dataset):
     def __init__(self, directory, \
-                transform=None, n_frames=2, ssl_label=None, \
+                transform=None, n_frames=2, ssl_label=None, loss_frames=None, \
                 eval = False, \
                 vis_name='', index_flow=False):
         '''
@@ -189,6 +189,8 @@ class HDF5Dataset(Dataset):
             * transform: for data augmentation, default is None.
             * n_frames: the number of frames we use, default is 2: current (pc0), next (pc1); if it's more than 2, then it read the history from current.
             * ssl_label: if attr, it will read the dynamic cluster label. Otherwise, no dynamic cluster label in data dict.
+            * loss_frames: {past: P, future: F}, frames around pc0 that the self-supervised loss uses: pch1..pchP and pc1..pcF with their labels.
+                           The model input still follows n_frames. Default None: only the frames from n_frames.
             * eval: if True, use the eval index (only used it for leaderboard evaluation)
             * vis_name: the data of the visualization, default is ''.
             * index_flow: if True, use the flow index for training or visualization.
@@ -203,6 +205,11 @@ class HDF5Dataset(Dataset):
         self.eval_index = False
         self.ssl_label = import_func(f"src.autolabel.{ssl_label}") if ssl_label is not None else None
         self.history_frames = n_frames - 2
+        self.loss_past, self.loss_future = 0, 1
+        if loss_frames is not None:
+            if ssl_label is None or eval:
+                raise ValueError("loss_frames is only for self-supervised training: it needs ssl_label and eval=False.")
+            self.loss_past, self.loss_future = int(loss_frames['past']), int(loss_frames['future'])
         self.vis_name = vis_name if isinstance(vis_name, list) else [vis_name]
         self.transform = transform
 
@@ -284,8 +291,9 @@ class HDF5Dataset(Dataset):
             max_idx = self.scene_id_bounds[scene_id]["max_index"]
             min_idx = self.scene_id_bounds[scene_id]["min_index"]
 
-            max_valid_index_for_flow = max_idx - 1
-            min_valid_index_for_flow = min_idx + self.history_frames
+            # keep every frame we read (model input and loss frames) inside the scene
+            max_valid_index_for_flow = max_idx - max(1, self.loss_future)
+            min_valid_index_for_flow = min_idx + max(self.history_frames, self.loss_past)
             index_ = max(min_valid_index_for_flow, min(max_valid_index_for_flow, index_))
         return eval_flag, index_
     
@@ -316,7 +324,7 @@ class HDF5Dataset(Dataset):
                     data_dict['pc1_dynamic'] = self.ssl_label(f[next_timestamp])
                 
                 past_frames = []
-                for i in range(1, self.history_frames + 1):
+                for i in range(1, max(self.history_frames, self.loss_past) + 1):
                     frame_index = index_ - i
                     if frame_index < self.scene_id_bounds[scene_id]["min_index"]: 
                         frame_index = self.scene_id_bounds[scene_id]["min_index"] 
@@ -334,6 +342,14 @@ class HDF5Dataset(Dataset):
                     data_dict[f'pch{i+1}'] = past_pc
                     data_dict[f'gmh{i+1}'] = past_gm
                     data_dict[f'poseh{i+1}'] = past_pose
+
+                # future frames after pc1 that only the loss uses: pc2, pc3, ...
+                for i in range(2, self.loss_future + 1):
+                    future_timestamp = str(self.data_index[index_ + i][1])
+                    data_dict[f'pose{i}'] = f[future_timestamp]['pose'][:]
+                    data_dict[f'pc{i}'] = f[future_timestamp]['lidar'][:][:,:3]
+                    data_dict[f'gm{i}'] = f[future_timestamp]['ground_mask'][:]
+                    data_dict[f'pc{i}_dynamic'] = self.ssl_label(f[future_timestamp])
 
             for data_key in self.vis_name + ['ego_motion', 'lidar_dt', 'lidar_center',
                              # ground truth information:

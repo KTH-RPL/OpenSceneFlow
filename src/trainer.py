@@ -25,7 +25,7 @@ sys.path.append(BASE_DIR)
 from src.utils import import_func
 from src.lossfuncs import SSL_LOSSES_FN
 from src.utils.mics import weights_init, enable_timer_sync
-from src.models.basic import WarmupCosLR
+from src.models.basic import cal_pose0to1, WarmupCosLR
 from src.utils.eval_metric import OfficialMetrics, evaluate_leaderboard, evaluate_leaderboard_v2, evaluate_ssf
 
 # debugging tools
@@ -47,6 +47,7 @@ class ModelWrapper(LightningModule):
             # lr scheduler, only active when warmup_epochs > 0
             "optimizer": None,
             "cluster_loss_args": {},
+            "loss_frames": None,
             "timer_sync": False,
         }
         for key, default in default_self_values.items():
@@ -107,10 +108,17 @@ class ModelWrapper(LightningModule):
         frame_keys = [key.replace('_points_lst', '') for key in res_dict.keys()
                       if key.startswith('pc') and key.endswith('_points_lst')]
         frame_keys.remove('pc0')
+        if self.loss_frames is not None:
+            # the loss supervises with exactly these frames, e.g. {past: 2, future: 2} -> pch1, pch2, pc1, pc2
+            frame_keys = [f'pch{i}' for i in range(1, self.loss_frames['past'] + 1)] \
+                       + [f'pc{i}' for i in range(1, self.loss_frames['future'] + 1)]
 
         for frame_id in frame_keys:
-            points_list = [res_dict[f'{frame_id}_points_lst'][i] for i in range(bz_)]
-            labels_list = [batch[f'{frame_id}_dynamic'][i][res_dict[f'{frame_id}_valid_point_idxes'][i]] for i in range(bz_)]
+            if f'{frame_id}_points_lst' in res_dict: # the model took this frame as input
+                points_list = [res_dict[f'{frame_id}_points_lst'][i] for i in range(bz_)]
+                labels_list = [batch[f'{frame_id}_dynamic'][i][res_dict[f'{frame_id}_valid_point_idxes'][i]] for i in range(bz_)]
+            else:
+                points_list, labels_list = map(list, zip(*[self.loss_only_frame(batch, frame_id, i) for i in range(bz_)]))
             dict2loss[f'{frame_id}_list']        = points_list
             dict2loss[f'{frame_id}_labels_list'] = labels_list
                     
@@ -131,6 +139,18 @@ class ModelWrapper(LightningModule):
             self.log(f"trainer/{key}", res_loss[key], sync_dist=True, batch_size=bz_)
             
         return total_loss
+
+    def loss_only_frame(self, batch, frame_id, batch_id):
+        """Points and auto-labels of a frame that only the loss uses (see loss_frames), e.g. 'pc2' or 'pch2'.
+
+        Same as what the model does to its input frames: move the points to pc1 coordinate and keep the ones inside point_cloud_range.
+        """
+        pose_to_pc1 = cal_pose0to1(batch[frame_id.replace('pc', 'pose')][batch_id], batch['pose1'][batch_id])
+        points = batch[frame_id][batch_id] @ pose_to_pc1[:3, :3].T + pose_to_pc1[:3, 3]
+        # NOTE: the padding points in a batch are nan, so they are also removed here.
+        pc_range = points.new_tensor(list(self.point_cloud_range))
+        in_range = ((points >= pc_range[:3]) & (points < pc_range[3:])).all(dim=1)
+        return points[in_range], batch[f'{frame_id}_dynamic'][batch_id][in_range]
 
     def loss_calculator(self, batch, res_dict, if_log=True):
         """ Calculate the loss based on the batch (gt/ssl-label) and res_dict (estimate flow)."""

@@ -32,6 +32,8 @@ from src.lossfuncs import SSL_LOSSES_FN
 def precheck_cfg_valid(cfg):
     if cfg.loss_fn in SSL_LOSSES_FN and (cfg.add_seloss is None or cfg.ssl_label is None):
         raise ValueError("Please specify the self-supervised loss items and auto-label source for seflow-series loss.")
+    if cfg.get('loss_frames', None) is not None and (cfg.loss_fn != 'teflowLoss' or cfg.loss_frames.future < 1):
+        raise ValueError("loss_frames is only supported by teflowLoss (other losses use fixed frames), and needs future >= 1 since pc1 is always supervised.")
     
     grid_size = [(cfg.point_cloud_range[3] - cfg.point_cloud_range[0]) * (1/cfg.voxel_size[0]),
                  (cfg.point_cloud_range[4] - cfg.point_cloud_range[1]) * (1/cfg.voxel_size[1]),
@@ -62,6 +64,7 @@ def main(cfg):
     train_dataset = HDF5Dataset(cfg.train_data, 
                     n_frames=cfg.num_frames,
                     ssl_label=cfg.get('ssl_label', None),
+                    loss_frames=cfg.get('loss_frames', None),
                     transform=train_aug)
     train_loader = DataLoader(train_dataset,
                               batch_size=cfg.batch_size,
