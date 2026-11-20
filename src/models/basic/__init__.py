@@ -8,7 +8,7 @@ class BaseModel(nn.Module):
         super(BaseModel, self).__init__()
         
     def load_from_checkpoint(self, ckpt_path):
-        ckpt = torch.load(ckpt_path, map_location="cpu")["state_dict"]
+        ckpt = torch.load(ckpt_path, map_location="cpu", weights_only=False)["state_dict"]
         state_dict = {
             k[len("model.") :]: v for k, v in ckpt.items() if k.startswith("model.")
         }

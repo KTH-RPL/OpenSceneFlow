@@ -35,7 +35,7 @@ def main(cfg):
             cfg.res_name = cfg.checkpoint.split("/")[-1].split(".")[0]
             print(f"{bc.BOLD}NOTE{bc.ENDC}: res_name is not specified, use {bc.OKBLUE}{cfg.res_name}{bc.ENDC} as default.")
 
-        checkpoint_params = DictConfig(torch.load(cfg.checkpoint, map_location="cpu")["hyper_parameters"])
+        checkpoint_params = DictConfig(torch.load(cfg.checkpoint, map_location="cpu", weights_only=False)["hyper_parameters"])
         cfg.output = checkpoint_params.cfg.output
         cfg.model.update(checkpoint_params.cfg.model)
         cfg.num_frames = cfg.model.target.get('num_frames', checkpoint_params.cfg.get('num_frames', cfg.get('num_frames', 2)))

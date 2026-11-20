@@ -40,7 +40,7 @@ ht_cuda_forward(
     //                       b, l, m, n, h, w, d);
     auto vol_ht = at::zeros({b, l, c, h, w}, feats_src_dst.options());
 
-    AT_DISPATCH_FLOATING_TYPES(vol_ht.type(), "im2ht_cuda_forward", ([&] {
+    AT_DISPATCH_FLOATING_TYPES(vol_ht.scalar_type(), "im2ht_cuda_forward", ([&] {
         im2ht_cuda_forward(at::cuda::getCurrentCUDAStream(),
                     feats_src_dst.data<scalar_t>() ,
                     vol_ht.data<scalar_t>(),
@@ -97,7 +97,7 @@ ht_cuda_backward(
 
     auto grad_feats_src_dst = at::zeros({b, l, n, c}, grad_vol.options());
     
-    AT_DISPATCH_FLOATING_TYPES(grad_vol.type(), "im2ht_cuda_backward", ([&] {
+    AT_DISPATCH_FLOATING_TYPES(grad_vol.scalar_type(), "im2ht_cuda_backward", ([&] {
         im2ht_cuda_backward(at::cuda::getCurrentCUDAStream(),
                     grad_feats_src_dst.data<scalar_t>(),
                     grad_vol.data<scalar_t>(),

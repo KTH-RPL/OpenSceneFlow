@@ -10,7 +10,7 @@ def main(
     # new output weight file
     output_path: str = "/home/kin/model_zoo/seflowpp.ckpt",
 ):
-    model = torch.load(model_path)
+    model = torch.load(model_path, weights_only=False)
     model_name = model['hyper_parameters']['cfg']['model']['name']
     old_path = model['hyper_parameters']['cfg']['model']['target']['_target_']
     new_path = old_path.replace(f"scripts.network.models.{model_name}", "src.models")
@@ -21,7 +21,7 @@ def main(
 def readmodel(
     model_path: str = "/home/kin/model_zoo/seflowpp.ckpt"
 ):
-    model = torch.load(model_path)
+    model = torch.load(model_path, weights_only=False)
     print(model['hyper_parameters']['cfg'], model['epoch'])
 
 if __name__ == '__main__':

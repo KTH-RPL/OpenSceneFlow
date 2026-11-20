@@ -28,7 +28,7 @@ def main(cfg):
             print(f"Checkpoint {cfg.checkpoint} does not exist. Need checkpoints for evaluation.")
             sys.exit(1)
 
-        torch_load_ckpt = torch.load(cfg.checkpoint, map_location="cpu")
+        torch_load_ckpt = torch.load(cfg.checkpoint, map_location="cpu", weights_only=False)
         checkpoint_params = DictConfig(torch_load_ckpt["hyper_parameters"])
         cfg.output = checkpoint_params.cfg.output + f"-e{torch_load_ckpt['epoch']}-{cfg.data_mode}-v{cfg.leaderboard_version}"
         # replace output_dir ${old_output_dir} with ${output_dir}

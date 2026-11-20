@@ -52,7 +52,8 @@ def load_model(cfg):
         target['grid_feature_size'] = [abs(int((target.point_cloud_range[i] - target.point_cloud_range[i+3]) / target.voxel_size[i])) for i in range(3)]
     model = instantiate(target)
     # the checkpoint is saved by lightning in train.py, the model weights are under 'model.'
-    state_dict = torch.load(cfg.checkpoint, map_location="cpu")["state_dict"]
+    # weights_only=False: it also has the training config (omegaconf objects), which torch>=2.6 refuses to load by default.
+    state_dict = torch.load(cfg.checkpoint, map_location="cpu", weights_only=False)["state_dict"]
     model.load_state_dict({k[len("model."):]: v for k, v in state_dict.items() if k.startswith("model.")})
     return model.eval()
 
@@ -200,6 +201,10 @@ class InferenceRunner:
 
     def cleanup(self):
         dist.destroy_process_group()
+        # worker processes that a library left behind (joblib inside hdbscan, for ICP-Flow) keep this process alive
+        # until they time out (300s with joblib>=1.3), so stop them here.
+        for child in mp.active_children():
+            child.terminate()
 
 
 def _setup_distributed_environment():

@@ -150,6 +150,8 @@ def main(cfg):
         print("-"*40+"\n")
 
     # NOTE(Qingwen): search & check: def training_step(self, batch, batch_idx)
+    # to resume: the checkpoint has the training config (omegaconf objects) inside, which torch>=2.6 refuses to load by default.
+    os.environ.setdefault("TORCH_FORCE_NO_WEIGHTS_ONLY_LOAD", "1")
     trainer.fit(model, train_dataloaders = train_loader, val_dataloaders = val_loader, ckpt_path = cfg.checkpoint)
     if cfg.wandb_mode != "disabled":
         wandb.finish()
