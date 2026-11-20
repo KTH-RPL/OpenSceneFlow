@@ -42,8 +42,9 @@ except ImportError as e:
 # * pip install FastGeodis --no-build-isolation --no-cache-dir
 try:
     from .fastnsf import FastNSF
+    from .floxels import Floxels
 except ImportError:
-    print("--- WARNING [model]: FastNSF is not imported, as it requires FastGeodis lib which is not installed.")
+    print("--- WARNING [model]: FastNSF and Floxels are not imported, as they require FastGeodis lib which is not installed.")
 
 # following need install extra package:
 # * pip install pytorch3d assets/cuda/histlib

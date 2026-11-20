@@ -6,6 +6,7 @@ timer_sync: False # True: sync cuda in the timer to get the real runtime table (
 
 # no need to change
 num_frames: 2
+future_frames: 1 # frames after pc0 the model takes, see conf/eval.yaml
 defaults:
   - hydra: default
   - model: deflow

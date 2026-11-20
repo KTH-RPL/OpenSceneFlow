@@ -139,6 +139,8 @@ class InferenceRunner:
 
         dataset = HDF5Dataset(dataset_path,
                               n_frames=self.cfg.num_frames,
+                              future_frames=self.cfg.get('future_frames', 1),
+                              pad_frames=self.cfg.model.get('pad_frames', True),
                               eval=is_eval_mode)
 
         sampler = SceneDistributedSampler(dataset, num_replicas=self.world_size, rank=self.rank)

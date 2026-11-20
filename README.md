@@ -287,6 +287,15 @@ python eval.py model=fastnsf
 python save.py model=fastnsf
 ```
 
+Floxels (our re-implementation, the numbers are not checked against the paper yet) also uses the frames before and after:
+`num_frames` counts pc0, pc1 and the frames before pc0, `future_frames` counts the frames after pc0.
+
+```bash
+python eval.py model=floxels num_frames=3                  # 3 frames: t-1, t, t+1
+python eval.py model=floxels num_frames=4 future_frames=2  # 5 frames: t-2 ... t+2, the default of the paper
+python eval.py model=floxels num_frames=8 future_frames=6  # 13 frames: t-6 ... t+6
+```
+
 
 ## 3. Evaluation
 

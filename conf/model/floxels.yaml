@@ -1,0 +1,15 @@
+name: floxels
+
+target:
+  _target_: src.models.Floxels
+  itr_num: 500
+  lr: 0.05
+  min_delta: 1e-4
+  grid_factor: 6
+  early_patience: 20
+  point_cloud_range: [-80, -80, -3, 80, 80, 3]
+  voxel_size: 0.5
+  cluster_weight: 0.6
+
+iter_only: True
+pad_frames: False # a history frame before the start of the scene is left out, instead of repeating the first frame.

@@ -219,7 +219,7 @@ class LayeredScene:
 class HDF5Dataset(Dataset):
     def __init__(self, directory, \
                 transform=None, n_frames=2, ssl_label=None, loss_frames=None, \
-                eval = False, \
+                eval = False, future_frames=1, pad_frames=True, \
                 vis_name='', index_flow=False, layers=None):
         '''
         Args:
@@ -232,6 +232,9 @@ class HDF5Dataset(Dataset):
             * loss_frames: {past: P, future: F}, frames around pc0 that the self-supervised loss uses: pch1..pchP and pc1..pcF with their labels.
                            The model input still follows n_frames. Default None: only the frames from n_frames.
             * eval: if True, use the eval index (only used it for leaderboard evaluation)
+            * future_frames: the number of frames after pc0 to read, default is 1: pc1. 3 means pc1, pc2, pc3.
+            * pad_frames: what to do with a history frame before the start of the scene. True: repeat the first frame of the scene,
+                          so the number of frames is always the same. False: leave it out. A frame after the end of the scene is always left out.
             * vis_name: the data of the visualization, default is ''.
             * index_flow: if True, use the flow index for training or visualization.
             * layers: names of the layers to read on top of the base .h5 files, e.g. ['seflow_labels'].
@@ -252,6 +255,7 @@ class HDF5Dataset(Dataset):
         self.eval_index = False
         self.ssl_label = import_func(f"src.autolabel.{ssl_label}") if ssl_label is not None else None
         self.history_frames = n_frames - 2
+        self.future_frames, self.pad_frames = future_frames, pad_frames
         self.loss_past, self.loss_future = 0, 1
         if loss_frames is not None:
             if ssl_label is None or eval:
@@ -339,8 +343,10 @@ class HDF5Dataset(Dataset):
             min_idx = self.scene_id_bounds[scene_id]["min_index"]
 
             # keep every frame we read (model input and loss frames) inside the scene
-            max_valid_index_for_flow = max_idx - max(1, self.loss_future)
+            max_valid_index_for_flow = max_idx - max(self.future_frames, self.loss_future)
             min_valid_index_for_flow = min_idx + max(self.history_frames, self.loss_past)
+            if not self.pad_frames: # the frames outside the scene are left out in __getitem__, only pc1 has to be there
+                max_valid_index_for_flow, min_valid_index_for_flow = max_idx - 1, min_idx
             index_ = max(min_valid_index_for_flow, min(max_valid_index_for_flow, index_))
         return eval_flag, index_
     
@@ -374,6 +380,8 @@ class HDF5Dataset(Dataset):
                 for i in range(1, max(self.history_frames, self.loss_past) + 1):
                     frame_index = index_ - i
                     if frame_index < self.scene_id_bounds[scene_id]["min_index"]: 
+                        if not self.pad_frames:
+                            break
                         frame_index = self.scene_id_bounds[scene_id]["min_index"] 
 
                     past_timestamp = str(self.data_index[frame_index][1])
@@ -390,13 +398,16 @@ class HDF5Dataset(Dataset):
                     data_dict[f'gmh{i+1}'] = past_gm
                     data_dict[f'poseh{i+1}'] = past_pose
 
-                # future frames after pc1 that only the loss uses: pc2, pc3, ...
-                for i in range(2, self.loss_future + 1):
+                # frames after pc1: pc2, pc3, ... as model input (future_frames) or only for the loss (loss_frames)
+                for i in range(2, max(self.future_frames, self.loss_future) + 1):
+                    if index_ + i > self.scene_id_bounds[scene_id]["max_index"]:
+                        break # end of the scene, only happens in eval: the training index is kept inside in valid_index()
                     future_timestamp = str(self.data_index[index_ + i][1])
                     data_dict[f'pose{i}'] = f[future_timestamp]['pose'][:]
                     data_dict[f'pc{i}'] = f[future_timestamp]['lidar'][:][:,:3]
                     data_dict[f'gm{i}'] = f[future_timestamp]['ground_mask'][:]
-                    data_dict[f'pc{i}_dynamic'] = self.ssl_label(f[future_timestamp])
+                    if self.ssl_label is not None:
+                        data_dict[f'pc{i}_dynamic'] = self.ssl_label(f[future_timestamp])
 
             for data_key in self.vis_name + ['ego_motion', 'lidar_dt', 'lidar_center',
                              # ground truth information:

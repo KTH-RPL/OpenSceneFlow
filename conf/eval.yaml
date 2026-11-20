@@ -10,6 +10,7 @@ timer_sync: False # True: sync cuda in the timer to get the real runtime table (
 # no need to change
 save_res_path: 
 num_frames: 2
+future_frames: 1 # frames after pc0 the model takes. 1: pc1 only. Floxels can use more, e.g. num_frames=4 future_frames=2: pch2, pch1, pc0, pc1, pc2.
 slurm_id: 00000
 output: ${model.name}-${slurm_id}
 seed: 42069
