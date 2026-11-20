@@ -10,6 +10,5 @@ defaults:
   - hydra: default
   - model: deflow
 seed: 42069
-gpus: 1
 slurm_id: 00000
 output: ${model.name}-${slurm_id}

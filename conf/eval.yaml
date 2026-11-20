@@ -12,10 +12,7 @@ save_res_path:
 num_frames: 2
 slurm_id: 00000
 output: ${model.name}-${slurm_id}
-gpus: 1
 seed: 42069
-eval_only: True
-wandb_mode: disabled # [offline, disabled, online]
 defaults:
   - hydra: default
   - model: deflow

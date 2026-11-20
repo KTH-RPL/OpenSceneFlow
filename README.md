@@ -290,7 +290,7 @@ python save.py model=fastnsf
 
 ## 3. Evaluation
 
-You can view Wandb dashboard for the training and evaluation results or upload result to online leaderboard. 
+The evaluation prints all metrics in the terminal, or you can upload the result to the online leaderboard. 
 <!-- Three-way EPE and Dynamic Bucket-normalized are evaluated within a 70x70m range (followed Argoverse 2 online leaderboard). No ground points are considered in the evaluation. -->
 
 Since in training, we save all hyper-parameters and model checkpoints, the only thing you need to do is to specify the checkpoint path. Remember to set the data path correctly also.
