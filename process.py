@@ -11,6 +11,9 @@
 # Description: follow seflow & seflow++ idea but more to run: 
 # (a) dufomap; (b) linefit; (c) hdbscan; (d) nnd.
 # 
+# The labels (dufo, cluster, dufocluster, nnd) are written to {data_dir}/layers/seflow_labels/{scene_id}.h5,
+# the dataset files are not changed. To make the labels again: remove that folder and run this file again.
+# Only the ground mask (run_gm) is written into the dataset files, since it is part of the dataset itself.
 """
 
 from pathlib import Path
@@ -20,6 +23,7 @@ import fire, time, h5py, os, sys
 from hdbscan import HDBSCAN
 
 from src.utils import npcal_pose0to1
+from src.dataset import LayeredScene
 from src.utils.mics import HDF5Data, transform_to_array
 from dufomap import dufomap
 from linefit import ground_seg
@@ -27,6 +31,22 @@ from linefit import ground_seg
 MIN_AXIS_RANGE = 2 # HARD CODED: remove ego vehicle points
 MAX_AXIS_RANGE = 50 # HARD CODED: remove far away points
 BASE_DIR = os.path.abspath(os.path.join( os.path.dirname( __file__ )))
+
+LABEL_LAYER = 'seflow_labels'
+
+def open_scene(data_path, scene_id):
+    """The scene with its labels, read-only. A label is read from the label layer, or from the dataset file if an older version wrote it there."""
+    return LayeredScene(data_path, [os.path.join(data_path, 'layers', LABEL_LAYER)], scene_id)
+
+def write_label(data_path, scene_id, timestamp, name, label):
+    """Write one label of one frame into the label layer, an old one with the same name is replaced."""
+    path = os.path.join(data_path, 'layers', LABEL_LAYER, f'{scene_id}.h5')
+    os.makedirs(os.path.dirname(path), exist_ok=True)
+    with h5py.File(path, 'a') as f:
+        group = f.require_group(str(timestamp))
+        if name in group:
+            del group[name]
+        group.create_dataset(name, data=label)
 
 def check_data_key(filekey, keyname, scene_id, ts):
     """
@@ -65,7 +85,7 @@ def run_dufocluster(
             continue
         bounds = dataset.scene_id_bounds[scene_id]
         flag_exist_label = True
-        with h5py.File(os.path.join(data_path, f'{scene_id}.h5'), 'r+') as f:
+        with open_scene(data_path, scene_id) as f:
             for ii in range(bounds["min_index"], bounds["max_index"]+1):
                 key = str(dataset[ii]['timestamp'])
                 if 'dufocluster' not in f[key]:
@@ -80,25 +100,21 @@ def run_dufocluster(
             data = dataset[i]
             pc0 = data['pc0'][:,:3]
             cluster_label = np.zeros(pc0.shape[0], dtype= np.int16)
+            with open_scene(data_path, scene_id) as f:
+                frame = f[str(data['timestamp'])]
+                dufo = frame['dufo'][:] if 'dufo' in frame else None
 
-            if "dufo" not in data:
+            if dufo is None:
                 print(f"Warning: {scene_id} {data['timestamp']} has no dufo, will be skipped. Better to rerun dufomap again in this scene.")
                 continue
-            elif data["dufo"].sum() < 20:
+            elif dufo.sum() < 20:
                 print(f"Warning: {scene_id} {data['timestamp']} has no dynamic points, will be skipped. Better to check this scene.")
             else:
-                hdb.fit(pc0[data["dufo"]==1])
+                hdb.fit(pc0[dufo==1])
                 # NOTE(Qingwen): since -1 will be assigned if no cluster. We set it to 0.
-                cluster_label[data["dufo"]==1] = hdb.labels_ + 1 
+                cluster_label[dufo==1] = hdb.labels_ + 1 
 
-            # save labels
-            timestamp = data['timestamp']
-            key = str(timestamp)
-            with h5py.File(os.path.join(data_path, f'{scene_id}.h5'), 'r+') as f:
-                if 'dufocluster' in f[key]:
-                    # print(f"Warning: {scene_id} {timestamp} has label, will be overwritten.")
-                    del f[key]['dufocluster']
-                f[key].create_dataset('dufocluster', data=np.array(cluster_label).astype(np.int16))
+            write_label(data_path, scene_id, data['timestamp'], 'dufocluster', np.array(cluster_label).astype(np.int16))
         print(f"==> Scene {scene_id} finished, used: {(time.time() - start_time)/60:.2f} mins")
     print(f"Data inside {str(data_path)} finished. Check the result with tools/visulization.py if you want to visualize them.\n")
 
@@ -139,7 +155,7 @@ def run_nnd(
             continue
         bounds = dataset.scene_id_bounds[scene_id]
         exist_dict = {"nnd": True}
-        with h5py.File(os.path.join(data_path, f'{scene_id}.h5'), 'r') as f:
+        with open_scene(data_path, scene_id) as f:
             for ii in range(bounds["min_index"], bounds["max_index"]+1):
                 key = str(dataset[ii]['timestamp'])
                 for datakey in exist_dict.keys():
@@ -158,17 +174,13 @@ def run_nnd(
             pc0 = data['pc0'][:,:3]
             pose0 = npcal_pose0to1(data['pose0'], ego_pose_norm)
             timestamp = data['timestamp']
-            key = str(timestamp)
 
-            with h5py.File(os.path.join(data_path, f'{scene_id}.h5'), 'r+') as f:
-                if not exist_dict["nnd"]:
-                    nnd_labels = np.zeros(pc0.shape[0], dtype= np.uint8)
-                    data_t1 = dataset[data_id-1] if data_id == bounds["max_index"] else dataset[data_id+1]
-                    ego_motion = npcal_pose0to1(pose0, npcal_pose0to1(data_t1['pose0'], ego_pose_norm))
-                    transform_pc0 = pc0 @ ego_motion[:3,:3].T + ego_motion[:3,3]
-                    nnd_labels = cuda_nnd(torch.tensor(transform_pc0).cuda(), torch.tensor(data_t1['pc0'][:,:3]).cuda(), moving_threshold=min_nnd)
-                    check_data_key(f[key], "nnd", scene_id, timestamp)
-                    f[key].create_dataset("nnd", data=np.array(nnd_labels).astype(np.uint8))
+            if not exist_dict["nnd"]:
+                data_t1 = dataset[data_id-1] if data_id == bounds["max_index"] else dataset[data_id+1]
+                ego_motion = npcal_pose0to1(pose0, npcal_pose0to1(data_t1['pose0'], ego_pose_norm))
+                transform_pc0 = pc0 @ ego_motion[:3,:3].T + ego_motion[:3,3]
+                nnd_labels = cuda_nnd(torch.tensor(transform_pc0).cuda(), torch.tensor(data_t1['pc0'][:,:3]).cuda(), moving_threshold=min_nnd)
+                write_label(data_path, scene_id, timestamp, "nnd", np.array(nnd_labels).astype(np.uint8))
 
 # No Need GPU, CPU-only for following process.
 def main(
@@ -197,7 +209,7 @@ def main(
         bounds = dataset.scene_id_bounds[scene_id]
         # If you don't want to seflowpp label, then remove cluster: True here. It won't process then.
         exist_dict = {"dufo": True, "ground_mask": True, "cluster": True}
-        with h5py.File(os.path.join(data_path, f'{scene_id}.h5'), 'r') as f:
+        with open_scene(data_path, scene_id) as f:
             for ii in range(bounds["min_index"], bounds["max_index"]+1):
                 key = str(dataset[ii]['timestamp'])
                 for datakey in exist_dict.keys():
@@ -290,18 +302,16 @@ def main(
                 pose_array = transform_to_array(pose0)
                 dufo_label = mydufo.segment(pc0, pose_array, cloud_transform = True)
 
-            with h5py.File(os.path.join(data_path, f'{scene_id}.h5'), 'r+') as f:
-                if not exist_dict["ground_mask"]:
+            if not exist_dict["ground_mask"]: # the only thing written into the dataset file
+                with h5py.File(os.path.join(data_path, f'{scene_id}.h5'), 'r+') as f:
                     check_data_key(f[key], "ground_mask", scene_id, timestamp)
                     f[key].create_dataset("ground_mask", data=np.array(gm0).astype(np.uint8))
-                if 'cluster' in exist_dict and not exist_dict["cluster"]:
-                    check_data_key(f[key], "cluster", scene_id, timestamp)
-                    f[key].create_dataset("cluster", data=np.array(cluster_labels).astype(np.int16))
-                if not exist_dict["dufo"]:
-                    dufo_labels = np.zeros(pc0.shape[0], dtype= np.uint8)
-                    dufo_labels[~gm0] = dufo_label[~gm0]
-                    check_data_key(f[key], "dufo", scene_id, timestamp)
-                    f[key].create_dataset("dufo", data=np.array(dufo_labels).astype(np.uint8))
+            if 'cluster' in exist_dict and not exist_dict["cluster"]:
+                write_label(data_path, scene_id, timestamp, "cluster", np.array(cluster_labels).astype(np.int16))
+            if not exist_dict["dufo"]:
+                dufo_labels = np.zeros(pc0.shape[0], dtype= np.uint8)
+                dufo_labels[~gm0] = dufo_label[~gm0]
+                write_label(data_path, scene_id, timestamp, "dufo", dufo_labels)
         print(f"==> Scene {scene_id} finished, used: {(time.time() - start_time)/60:.2f} mins")
         
 if __name__ == '__main__':

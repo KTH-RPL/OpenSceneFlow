@@ -248,5 +248,8 @@ Process train data for self-supervised learning. Only training data needs this s
 python process.py --data_dir /home/kin/data/av2/h5py/sensor/train --scene_range 0,701
 ```
 
+The labels are written to `{data_dir}/layers/seflow_labels/{scene_id}.h5`, the dataset `.h5` files are not changed, and the dataloader reads that folder when it is there.
+To make the labels again (e.g. with other parameters), remove or rename the folder and run the command again.
+
 As some users must have multi-nodes for running, here I provide an example SLURM script to run the data process in parallel. 
 Check [assets/slurm/ssl-process.sh](../assets/slurm/ssl-process.sh) for more details.

@@ -237,13 +237,16 @@ class HDF5Dataset(Dataset):
                           so the number of frames is always the same. False: leave it out. A frame after the end of the scene is always left out.
             * vis_name: the data of the visualization, default is ''.
             * index_flow: if True, use the flow index for training or visualization.
-            * layers: names of the layers to read on top of the base .h5 files, e.g. ['seflow_labels'].
+            * layers: names of the layers to read on top of the base .h5 files.
                       A layer is the folder {directory}/layers/{name}/ with one {scene_id}.h5 per scene: data that is not
                       part of the dataset itself (labels, predictions, ...), so it can be made again or removed without touching the base files.
+                      Default None: 'seflow_labels' (where process.py writes the labels) if that folder exists.
         '''
         super(HDF5Dataset, self).__init__()
         self.directory = directory
-        self.layer_dirs = [os.path.join(directory, 'layers', name) for name in (layers or [])]
+        if layers is None:
+            layers = ['seflow_labels'] if os.path.isdir(os.path.join(directory, 'layers', 'seflow_labels')) else []
+        self.layer_dirs = [os.path.join(directory, 'layers', name) for name in layers]
         for layer_dir in self.layer_dirs:
             if not os.path.isdir(layer_dir):
                 raise FileNotFoundError(f"Layer folder {layer_dir} does not exist.")
