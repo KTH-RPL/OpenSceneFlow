@@ -4,9 +4,11 @@ target:
   _target_: src.models.Floxels
   itr_num: 500
   lr: 0.05
-  min_delta: 1e-4
+  # early stopping as in the paper: stop when the loss did not get 0.01 lower in the last 250 iterations.
+  # NOTE: with early_patience 20 many frames stop at iteration 20 and the result is the zero flow (the lowest loss so far).
+  early_patience: 250
+  min_delta: 0.01
   grid_factor: 6
-  early_patience: 20
   point_cloud_range: [-80, -80, -3, 80, 80, 3]
   voxel_size: 0.5
   cluster_weight: 0.6
