@@ -10,7 +10,7 @@
 # Description: Split dataset .h5 files that have the labels and the saved flows inside, into base files + layers:
 #
 #   {data_dir}/{scene}.h5                         what dataprocess/ wrote: lidar, pose, ground_mask, flow, ...
-#   {data_dir}/layers/seflow_labels/{scene}.h5    dufo, cluster, dufocluster, nnd (process.py)
+#   {data_dir}/layers/ssl_labels/{scene}.h5    dufo, cluster, dufocluster, nnd (process.py)
 #   {data_dir}/layers/pred/{name}/{scene}.h5      every other key: a flow written by save.py / eval.py save_res
 #
 # A saved flow is as big as the lidar points of the frame, so a few of them make the dataset several times bigger.
@@ -43,7 +43,7 @@ def layer_of(key):
     if key in BASE_KEYS:
         return None
     if key in LABEL_KEYS:
-        return 'seflow_labels'
+        return 'ssl_labels'
     return f'pred/{key}' # anything else was saved by save.py / eval.py save_res under its res_name
 
 def frames_of(f):

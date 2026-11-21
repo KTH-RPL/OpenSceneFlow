@@ -11,7 +11,7 @@
 # Description: follow seflow & seflow++ idea but more to run: 
 # (a) dufomap; (b) linefit; (c) hdbscan; (d) nnd.
 # 
-# The labels (dufo, cluster, dufocluster, nnd) are written to {data_dir}/layers/seflow_labels/{scene_id}.h5,
+# The labels (dufo, cluster, dufocluster, nnd) are written to {data_dir}/layers/ssl_labels/{scene_id}.h5,
 # the dataset files are not changed. To make the labels again: remove that folder and run this file again.
 # Only the ground mask (run_gm) is written into the dataset files, since it is part of the dataset itself.
 """
@@ -32,7 +32,7 @@ MIN_AXIS_RANGE = 2 # HARD CODED: remove ego vehicle points
 MAX_AXIS_RANGE = 50 # HARD CODED: remove far away points
 BASE_DIR = os.path.abspath(os.path.join( os.path.dirname( __file__ )))
 
-LABEL_LAYER = 'seflow_labels'
+LABEL_LAYER = 'ssl_labels'
 
 def open_scene(data_path, scene_id):
     """The scene with its labels, read-only. A label is read from the label layer, or from the dataset file if an older version wrote it there."""

@@ -34,7 +34,7 @@ optimizer:
 loss_fn: deflowLoss # choices: [ff3dLoss, zeroflowLoss, deflowLoss, seflowLoss]
 # add_seloss: {chamfer_dis: 1.0, static_flow_loss: 1.0, dynamic_chamfer_dis: 1.0, cluster_based_pc0pc1: 1.0}
 # ssl_label:
-# layers: [my_labels] # read the labels from ${train_data}/layers/my_labels/{scene_id}.h5. Default: layers/seflow_labels (written by process.py) if it exists.
+# layers: [my_labels] # read the labels from ${train_data}/layers/my_labels/{scene_id}.h5. Default: layers/ssl_labels (written by process.py) if it exists.
 # loss_frames: {past: 2, future: 2} # teflowLoss only: supervise with pch1, pch2 and pc1, pc2 around pc0. The model input still follows num_frames.
 
 # log settings

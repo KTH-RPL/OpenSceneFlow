@@ -240,12 +240,12 @@ class HDF5Dataset(Dataset):
             * layers: names of the layers to read on top of the base .h5 files.
                       A layer is the folder {directory}/layers/{name}/ with one {scene_id}.h5 per scene: data that is not
                       part of the dataset itself (labels, predictions, ...), so it can be made again or removed without touching the base files.
-                      Default None: 'seflow_labels' (where process.py writes the labels) if that folder exists.
+                      Default None: 'ssl_labels' (where process.py writes the labels) if that folder exists.
         '''
         super(HDF5Dataset, self).__init__()
         self.directory = directory
         if layers is None:
-            layers = ['seflow_labels'] if os.path.isdir(os.path.join(directory, 'layers', 'seflow_labels')) else []
+            layers = ['ssl_labels'] if os.path.isdir(os.path.join(directory, 'layers', 'ssl_labels')) else []
         self.layer_dirs = [os.path.join(directory, 'layers', name) for name in layers]
         for layer_dir in self.layer_dirs:
             if not os.path.isdir(layer_dir):

@@ -36,9 +36,9 @@ def main(
         print(f"File {scene_file} not found.")
         return
         
-    # a saved flow may be in its own layer file (layers/pred/{name}/), the labels of process.py in layers/seflow_labels/
+    # a saved flow may be in its own layer file (layers/pred/{name}/), the labels of process.py in layers/ssl_labels/
     data_dir, scene_id = os.path.dirname(scene_file), os.path.basename(scene_file)[:-3]
-    layer_dirs = [os.path.join(data_dir, 'layers', name) for name in ['seflow_labels'] + [f'pred/{name}' for name in res_name]]
+    layer_dirs = [os.path.join(data_dir, 'layers', name) for name in ['ssl_labels'] + [f'pred/{name}' for name in res_name]]
     f = LayeredScene(data_dir, [layer_dir for layer_dir in layer_dirs if os.path.isdir(layer_dir)], scene_id)
     keys = sorted(list(f.base.keys()), key=lambda x: int(x))
     data_len = len(keys) - 1
