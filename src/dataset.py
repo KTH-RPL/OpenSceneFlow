@@ -356,6 +356,15 @@ class HDF5Dataset(Dataset):
             index_ = max(min_valid_index_for_flow, min(max_valid_index_for_flow, index_))
         return eval_flag, index_
     
+    def scene_frames(self, scene_id):
+        """Every frame of one scene in time order: [{'timestamp', 'pc', 'gm', 'pose'}, ...].
+        For the methods that optimize on the whole scene (EulerFlow), see fit_scene in src/runner.py."""
+        bounds = self.scene_id_bounds[scene_id]
+        with LayeredScene(self.directory, self.layer_dirs, scene_id) as f:
+            return [{'timestamp': timestamp, 'pc': f[str(timestamp)]['lidar'][:][:, :3],
+                     'gm': f[str(timestamp)]['ground_mask'][:], 'pose': f[str(timestamp)]['pose'][:]}
+                    for _, timestamp in self.data_index[bounds['min_index']:bounds['max_index'] + 1]]
+
     def __getitem__(self, index_):
         eval_flag, index_ = self.valid_index(index_)
         scene_id, timestamp = self.data_index[index_]

@@ -185,12 +185,18 @@ class InferenceRunner:
             dynamic_ncols=True
         )
 
+        fitted_scene_id = None
         for batch in iter_bar:
             current_scene_id = batch['scene_id'][0] 
             
             iter_bar.set_description(f"[GPU {self.rank}] Processing {current_scene_id}")
             # same random state for every frame: the result of a frame doesn't depend on the frames before it or on how many GPUs we use.
             seed_everything(self.cfg.seed)
+
+            # a method that optimizes on the whole scene (EulerFlow) gets all its frames once, before the first frame of the scene
+            if hasattr(self.model, 'fit_scene') and current_scene_id != fitted_scene_id:
+                self.model.fit_scene(current_scene_id, dataloader.dataset.scene_frames(current_scene_id))
+                fitted_scene_id = current_scene_id
 
             with torch.no_grad():
                 self._process_step(batch)

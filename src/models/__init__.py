@@ -13,6 +13,7 @@ warnings.simplefilter(action="ignore", category=FutureWarning)
 from .deflow import DeFlow, DeFlowPP
 from .fastflow3d import FastFlow3D
 from .nsfp import NSFP
+from .eulerflow import EulerFlow
 
 # check README for package:
 try:

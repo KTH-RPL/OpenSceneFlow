@@ -1,0 +1,22 @@
+name: eulerflow
+
+target:
+  _target_: src.models.EulerFlow
+  num_layers: 8 # depth of the MLP. 8 as NSFP; the paper has its best result with 18.
+  width: 128
+  window: 5 # frames in one optimization step
+  k_step: 3 # multi-step loss: the points are moved up to k frames along the flow. 1: off.
+  cycle_weight: 1.0 # 0: off. NOTE: the SceneFlowZoo code has 0.01 written but it is not applied there, see src/models/eulerflow.py.
+  speed_threshold: 6.0 # meter per frame (60 m/s at 10Hz)
+  epochs: 1000
+  lr: 8e-5
+  lr_gamma: 1.0 # the learning rate of epoch e is lr * lr_gamma^e. 1.0: constant.
+  points_per_frame: 0 # 0: all points. N: every optimization step uses N random points of every frame, faster and less memory.
+  # stop when the loss of an epoch did not get 0.001 lower in the last 150 epochs
+  early_patience: 150
+  min_delta: 0.001
+  point_cloud_range: [-48, -48, -2.5, 48, 48, 2.5]
+  # one file per scene with the fitted network, saved every save_every epochs. A stopped run goes on from it.
+  ckpt_dir: logs/eulerflow
+  save_every: 10
+iter_only: True
