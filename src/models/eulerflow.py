@@ -14,7 +14,10 @@
 #              written here in one file, and with our CUDA chamfer for the nearest neighbors.
 #
 # Different from the other methods: the runner calls fit_scene() once with all frames of a scene, then forward() for every frame.
-# The fit of one scene takes hours, so it is saved in ckpt_dir and a run that was stopped goes on from there.
+# The fit of one scene is saved in ckpt_dir and a run that was stopped goes on from there.
+#
+# The fit of SceneFlowZoo (1000 epochs on all points, learning rate 8e-5) takes hours per scene. `schedule` makes it shorter:
+# first a high learning rate on random points of every frame, then a low learning rate. See conf/model/eulerflow.yaml.
 #
 # NOTE: SceneFlowZoo only optimizes (and evaluates) the first 150 frames of a scene, here it is every frame of the scene.
 """
@@ -54,21 +57,22 @@ def query_flow(net, pc, time, direction):
 
 class EulerFlow(nn.Module):
     def __init__(self, num_layers=8, width=128, window=5, k_step=3, cycle_weight=1.0, speed_threshold=6.0,
-                 epochs=1000, lr=8e-5, lr_gamma=1.0, points_per_frame=0, early_patience=150, min_delta=0.001,
+                 epochs=1000, schedule=[[0, 8e-5, 0]], early_patience=150, min_delta=0.001,
                  point_cloud_range=[-48, -48, -2.5, 48, 48, 2.5], ckpt_dir='logs/eulerflow', save_every=10):
         super().__init__()
         # what the fit of a scene depends on. A saved fit with other values is not used.
         self.hparams = dict(num_layers=num_layers, width=width, window=window, k_step=k_step, cycle_weight=cycle_weight,
-                            speed_threshold=speed_threshold, lr=lr, lr_gamma=lr_gamma, points_per_frame=points_per_frame,
+                            speed_threshold=speed_threshold, schedule=[[int(start), float(lr), int(points)] for start, lr, points in schedule],
                             point_cloud_range=[float(v) for v in point_cloud_range])
         self.num_layers, self.width = num_layers, width
         self.window = window # number of frames in one optimization step
         self.k_step = k_step # the points are also moved k frames along the flow (Euler integration) and compared with that frame. 1: off.
         self.cycle_weight = cycle_weight
         self.speed_threshold = speed_threshold # meter per frame, a flow longer than this is penalized
-        self.epochs, self.lr = epochs, lr
-        self.lr_gamma = lr_gamma # the learning rate of epoch e is lr * lr_gamma^e. 1.0: constant, as SceneFlowZoo.
-        self.points_per_frame = points_per_frame # 0: all points. N: every step uses N random points of every frame, faster and less memory.
+        self.epochs = epochs
+        # stages of the fit, [[from epoch, learning rate, points per frame], ...], the first one from epoch 0.
+        # points per frame: 0: every step moves all points of a frame. N: N random points of it, faster and less memory.
+        self.schedule = self.hparams['schedule']
         self.early_patience, self.min_delta = early_patience, min_delta
         self.save_every = save_every # epochs between two saves of a running fit
         self.ckpt_dir = ckpt_dir if os.path.isabs(ckpt_dir) else os.path.join(BASE_DIR, ckpt_dir)
@@ -79,15 +83,16 @@ class EulerFlow(nn.Module):
 
         self.timer = dztimer.Timing()
         self.timer.start("EulerFlow Model Inference")
-        print(f"\n---LOG [model]: EulerFlow setup num_layers: {num_layers}, window: {window}, k_step: {k_step}, epochs: {epochs}, lr: {lr}, fits saved in {self.ckpt_dir}.")
+        print(f"\n---LOG [model]: EulerFlow setup num_layers: {num_layers}, window: {window}, k_step: {k_step}, epochs: {epochs}, schedule: {self.schedule}, fits saved in {self.ckpt_dir}.")
 
     def in_range(self, pc):
         return ((pc >= self.pc_range[:3]) & (pc <= self.pc_range[3:])).all(dim=1)
 
-    def window_loss(self, net, pcs, times):
+    def window_loss(self, net, pcs, targets, times):
         """
-        The loss of one optimization step.
-        pcs: the points of `window` frames next to each other, in the same coordinate. times: the time of these frames.
+        The loss of one optimization step, on `window` frames next to each other.
+        pcs: the points of these frames that are moved along the flow, in the same coordinate (all points, or the random ones of this step).
+        targets: all points of these frames, the moved points are compared with them. times: the time of these frames.
         """
         loss = 0
         one_step = {} # (frame, direction): the points of the frame moved one step, and their distance to the frame they arrive at
@@ -97,7 +102,7 @@ class EulerFlow(nn.Module):
                 flow = query_flow(net, pcs[i], times[i], direction)
                 pc = pcs[i] + flow
                 # squared distance to the nearest point, both ways. A distance >= 2.0 counts as 0.
-                distance = MyCUDAChamferDis.truncated_dis(pc, pcs[i + direction], truncate_dist=2.0)
+                distance = MyCUDAChamferDis.truncated_dis(pc, targets[i + direction], truncate_dist=2.0)
                 too_fast = F.relu(flow.norm(dim=1) - self.speed_threshold)
                 loss = loss + distance + too_fast.mean() + 0.5 * (too_fast ** 2).mean()
                 one_step[i, direction] = (pc, distance)
@@ -111,7 +116,7 @@ class EulerFlow(nn.Module):
                         # NOTE: SceneFlowZoo asks the flow at the time of the start frame in every step (not times[i + direction * (step - 1)]),
                         # we keep it to have the same loss as the released code.
                         pc = pc + query_flow(net, pc, times[i], direction)
-                        loss = loss + MyCUDAChamferDis.truncated_dis(pc, pcs[i + direction * step], truncate_dist=2.0)
+                        loss = loss + MyCUDAChamferDis.truncated_dis(pc, targets[i + direction * step], truncate_dist=2.0)
 
         # cycle consistency: a point that goes to the next frame and comes back should be where it started
         for i in range(len(pcs) - 1):
@@ -140,7 +145,7 @@ class EulerFlow(nn.Module):
         times = list(self.time.values())
 
         net = time_mlp(self.num_layers, self.width).to(device)
-        optimizer = torch.optim.Adam(net.parameters(), lr=self.lr, weight_decay=0)
+        optimizer = torch.optim.Adam(net.parameters(), lr=self.schedule[0][1], weight_decay=0)
         early_stopping = EarlyStopping(patience=self.early_patience, min_delta=self.min_delta)
         state = {'epoch': 0, 'best_loss': torch.inf, 'best_net': None, 'early_stopped': False, 'hparams': self.hparams}
 
@@ -165,16 +170,18 @@ class EulerFlow(nn.Module):
         start_time = time.time()
         with torch.inference_mode(False), torch.enable_grad():
             while state['epoch'] < self.epochs and not state['early_stopped']:
+                # the stage of this epoch: the last one of the schedule that has started
+                _, lr, points = [stage for stage in self.schedule if stage[0] <= state['epoch']][-1]
+                for group in optimizer.param_groups:
+                    group['lr'] = lr
                 # one epoch: one step on every window of the scene, in random order (same order as SceneFlowZoo)
                 epoch_loss = 0
-                for group in optimizer.param_groups:
-                    group['lr'] = self.lr * self.lr_gamma ** state['epoch']
+                random_points = torch.Generator(device=device).manual_seed(state['epoch']) # seeded by the epoch as the order, a continued fit takes the same points
                 for start in np.random.default_rng(state['epoch']).permutation(num_windows):
-                    window_pcs = pcs[start:start + self.window]
-                    if self.points_per_frame > 0:
-                        window_pcs = [pc[torch.randperm(len(pc), device=device)[:self.points_per_frame]] for pc in window_pcs]
+                    targets = pcs[start:start + self.window]
+                    moved = targets if points == 0 else [pc[torch.randperm(len(pc), device=device, generator=random_points)[:points]] for pc in targets]
                     optimizer.zero_grad()
-                    loss = self.window_loss(net, window_pcs, times[start:start + self.window])
+                    loss = self.window_loss(net, moved, targets, times[start:start + self.window])
                     loss.backward()
                     optimizer.step()
                     epoch_loss += loss.item()
