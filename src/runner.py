@@ -15,7 +15,7 @@
 # 
 """
 
-import os, sys, random
+import os, sys, random, datetime
 import numpy as np
 import torch
 import torch.distributed as dist
@@ -230,7 +230,9 @@ def _setup_distributed_environment(cfg):
     
     # Let torch.distributed handle the rest, it will use the environment variables.
     # The ranks only gather the metrics at the end; NCCL refuses two ranks on one GPU, so gloo when procs_per_gpu > 1.
-    dist.init_process_group("gloo" if cfg.get('procs_per_gpu', 1) > 1 else "nccl")
+    # A rank that finished its scenes waits there for the slowest rank, hours with EulerFlow on many scenes:
+    # the default timeout (NCCL 10 min, gloo 30 min) would stop the run, so the timeout is 7 days.
+    dist.init_process_group("gloo" if cfg.get('procs_per_gpu', 1) > 1 else "nccl", timeout=datetime.timedelta(days=7))
     return dist.get_rank(), dist.get_world_size()
 
 
