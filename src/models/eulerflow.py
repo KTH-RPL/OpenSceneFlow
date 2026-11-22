@@ -28,7 +28,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 import numpy as np
 
-from .basic import cal_pose0to1
+from .basic import cal_pose0to1, in_range
 from .basic.opt_module import EarlyStopping
 from assets.cuda.chamfer3D import nnChamferDis
 MyCUDAChamferDis = nnChamferDis()
@@ -85,9 +85,6 @@ class EulerFlow(nn.Module):
         self.timer.start("EulerFlow Model Inference")
         print(f"\n---LOG [model]: EulerFlow setup num_layers: {num_layers}, window: {window}, k_step: {k_step}, epochs: {epochs}, schedule: {self.schedule}, fits saved in {self.ckpt_dir}.")
 
-    def in_range(self, pc):
-        return ((pc >= self.pc_range[:3]) & (pc <= self.pc_range[3:])).all(dim=1)
-
     def window_loss(self, net, pcs, targets, times):
         """
         The loss of one optimization step, on `window` frames next to each other.
@@ -141,7 +138,7 @@ class EulerFlow(nn.Module):
             self.to_global[str(frame['timestamp'])] = to_global
             self.time[str(frame['timestamp'])] = i / (len(frames) - 1) - 0.5
             pc = torch.from_numpy(frame['pc'][~frame['gm']]).float().to(device)
-            pcs.append(pc[self.in_range(pc)] @ to_global[:3, :3].T + to_global[:3, 3])
+            pcs.append(pc[in_range(pc, self.pc_range)] @ to_global[:3, :3].T + to_global[:3, 3])
         times = list(self.time.values())
 
         net = time_mlp(self.num_layers, self.width).to(device)
@@ -205,7 +202,7 @@ class EulerFlow(nn.Module):
             if timestamp not in self.to_global:
                 raise RuntimeError(f"Frame {timestamp} is not in the scene EulerFlow is fitted on, fit_scene() has to be called first.")
             pc0 = batch["pc0"][batch_id]
-            pc0_in_range = self.in_range(pc0)
+            pc0_in_range = in_range(pc0, self.pc_range)
             to_global = self.to_global[timestamp]
             global_flow = query_flow(self.net, pc0[pc0_in_range] @ to_global[:3, :3].T + to_global[:3, 3], self.time[timestamp], 1)
 

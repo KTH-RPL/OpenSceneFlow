@@ -20,7 +20,7 @@ with our modification to have unified format with our codebase running.
 import dztimer, torch, copy
 import torch.nn as nn
 
-from .basic import cal_pose0to1
+from .basic import cal_pose0to1, in_range
 from .basic.opt_module import Neural_Prior, EarlyStopping
 from assets.cuda.chamfer3D import nnChamferDis
 MyCUDAChamferDis = nnChamferDis()
@@ -130,15 +130,6 @@ class NSFP(nn.Module):
 
         return best_forward
     
-    def range_limit_(self, pc):
-        """
-        Limit the point cloud to the given range.
-        """
-        mask = (pc[:, 0] >= self.point_cloud_range[0]) & (pc[:, 0] <= self.point_cloud_range[3]) & \
-               (pc[:, 1] >= self.point_cloud_range[1]) & (pc[:, 1] <= self.point_cloud_range[4]) & \
-               (pc[:, 2] >= self.point_cloud_range[2]) & (pc[:, 2] <= self.point_cloud_range[5])
-        return pc[mask], mask
-    
     def forward(self, batch):
         batch_sizes = len(batch["pose0"])
 
@@ -148,8 +139,8 @@ class NSFP(nn.Module):
             self.timer[0].start("Data Processing")
             pc0 = batch["pc0"][batch_id]
             pc1 = batch["pc1"][batch_id]
-            selected_pc0, rm0 = self.range_limit_(pc0)
-            selected_pc1, rm1 = self.range_limit_(pc1)
+            rm0, rm1 = in_range(pc0, self.point_cloud_range), in_range(pc1, self.point_cloud_range)
+            selected_pc0, selected_pc1 = pc0[rm0], pc1[rm1]
             self.timer[0][0].start("pose")
             if 'ego_motion' in batch:
                 pose_0to1 = batch['ego_motion'][batch_id]

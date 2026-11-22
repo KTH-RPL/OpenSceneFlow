@@ -21,7 +21,7 @@ from sklearn.cluster import DBSCAN
 import FastGeodis # extra package, the distance transform (DT) needs it
 
 from .basic.opt_module import EarlyStopping, DT
-from .basic import cal_pose0to1
+from .basic import cal_pose0to1, in_range
 
 
 class VoxelGrid(nn.Module):
@@ -143,10 +143,6 @@ class Floxels(nn.Module):
             self.timer.print(random_colors=True, bold=True)
         return best
 
-    def in_range(self, pc):
-        pc_range = pc.new_tensor(list(self.point_cloud_range))
-        return ((pc >= pc_range[:3]) & (pc <= pc_range[3:])).all(dim=1)
-
     def forward(self, batch):
         batch_flow, batch_loss = [], []
         for batch_id in range(len(batch["pose0"])):
@@ -162,13 +158,13 @@ class Floxels(nn.Module):
                 pose_to_pc1 = cal_pose0to1(batch[key.replace('pc', 'pose')][batch_id], batch["pose1"][batch_id])
                 frames[k] = batch[key][batch_id] @ pose_to_pc1[:3, :3].T + pose_to_pc1[:3, 3]
             pc0 = frames.pop(0)
-            pc0_in_range = self.in_range(pc0)
+            pc0_in_range = in_range(pc0, self.point_cloud_range)
             self.timer[0].stop()
 
             # since the runner disables the gradient in eval.
             with torch.inference_mode(False):
                 with torch.enable_grad():
-                    other_frames = {k: frames[k][self.in_range(frames[k])].clone() for k in sorted(frames)}
+                    other_frames = {k: frames[k][in_range(frames[k], self.point_cloud_range)].clone() for k in sorted(frames)}
                     best = self.optimize(pc0[pc0_in_range].clone(), other_frames)
 
             flow = torch.zeros_like(pc0)

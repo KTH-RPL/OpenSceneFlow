@@ -29,6 +29,11 @@ def cal_pose0to1(pose0: torch.Tensor, pose1: torch.Tensor):
     pose_0to1 = pose1_inv @ pose0.type(torch.float64)
     return pose_0to1.type(torch.float32)
 
+def in_range(pc: torch.Tensor, point_cloud_range):
+    """Mask of the points (N, 3) inside point_cloud_range: [x_min, y_min, z_min, x_max, y_max, z_max]."""
+    low, high = torch.as_tensor(point_cloud_range, dtype=pc.dtype, device=pc.device).split(3)
+    return ((pc >= low) & (pc <= high)).all(dim=1)
+
 def wrap_batch_pcs(batch, num_frames=2):
     batch_sizes = len(batch["pose0"])
 
