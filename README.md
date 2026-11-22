@@ -91,16 +91,30 @@ There are two ways to install the codebase: directly on your [local machine](#en
 
 ### Environment Setup
 
-We use conda to manage the environment, you can install it follow [here](assets/README.md#system). Then create the base environment with the following command [5~15 minutes]:
+We use conda to manage the environment, you can install it follow [here](assets/README.md#system). The environment is Python 3.10 + torch 2.6.0 + CUDA 11.8, for RTX 20/30/40 series, A100 and H100 (tested on an RTX 3090). Create it and compile our CUDA extensions with the following commands [around 5 minutes]:
 
 ```bash
 git clone --recursive https://github.com/KTH-RPL/OpenSceneFlow.git
-cd OpenSceneFlow && conda env create -f environment.yaml
+cd OpenSceneFlow && mamba env create -f environment.yaml
+conda activate opensf
+pip install --no-build-isolation --no-deps ./assets/cuda/chamfer3D ./assets/cuda/mmcv
 
 # You may need export your LD_LIBRARY_PATH with env lib
 # export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/home/kin/mambaforge/lib
 ```
-We also provide [requirements.txt](requirements.txt), please check usage through [Dockerfile](Dockerfile).
+
+Some methods need extra packages, which are compiled on your machine [around 8 minutes for all]:
+
+```bash
+# FastNSF, Floxels
+pip install --no-build-isolation --no-cache-dir FastGeodis==1.0.5
+# VoteFlow, ICP-Flow
+pip install --no-build-isolation --no-cache-dir "git+https://github.com/facebookresearch/pytorch3d.git@v0.7.9"
+pip install --no-build-isolation --no-deps ./assets/cuda/histlib # ICP-Flow
+pip install --no-build-isolation --no-deps ./src/models/basic/voteflow_plugin/hough_transformation/cpp_im2ht # VoteFlow
+```
+
+If something fails, check [the known issues](assets/README.md#other-issues).
 
 ### Docker (Recommended for Isolation)
 
@@ -113,12 +127,10 @@ docker pull zhangkin/opensf:full
 # run container
 docker run -it --net=host --gpus all -v /dev/shm:/dev/shm -v /home/kin/data:/home/kin/data --name opensf zhangkin/opensf:full /bin/zsh
 
-# and better to read your own gpu device info to compile the cuda extension again:
+# update the code, and compile the cuda extensions again in case they changed:
 cd /home/kin/workspace/OpenSceneFlow && git pull
-cd /home/kin/workspace/OpenSceneFlow/assets/cuda/mmcv && /opt/conda/envs/opensf/bin/python ./setup.py install
-cd /home/kin/workspace/OpenSceneFlow/assets/cuda/chamfer3D && /opt/conda/envs/opensf/bin/python ./setup.py install
-cd /home/kin/workspace/OpenSceneFlow
 conda activate opensf
+pip install --no-build-isolation --no-deps ./assets/cuda/chamfer3D ./assets/cuda/mmcv
 ```
 
 If you prefer to build the Docker image by yourself, Check [build-docker-image](assets/README.md#build-docker-image) section for more details.
@@ -182,11 +194,7 @@ wget https://huggingface.co/kin-zhang/OpenSceneFlow/resolve/main/flow4d_best.ckp
 
 #### SSF
 
-Extra packages needed for SSF model:
-```bash
-pip install mmengine-lite
-pip install torch-scatter -f https://data.pyg.org/whl/torch-2.0.0+cu117.html
-```
+The extra packages of SSF (mmengine-lite and torch-scatter) are already in `environment.yaml`.
 
 Train SSF with the leaderboard submit config. [Runtime: Around 6 hours in 8x A100 GPUs.]
 
@@ -245,15 +253,7 @@ wget https://huggingface.co/kin-zhang/OpenSceneFlow/resolve/main/seflow_best.ckp
 
 #### VoteFlow
 
-Extra pakcges needed for VoteFlow, [pytorch3d](https://pytorch3d.org/) (prefer 0.7.7) and [torch-scatter](https://github.com/rusty1s/pytorch_scatter?tab=readme-ov-file) (prefer 2.1.2):
-
-```bash
-# Install Pytorch3d
-conda install pytorch3d -c pytorch3d
-
-# Install torch-scatter
-pip install torch-scatter -f https://data.pyg.org/whl/torch-2.0.0+cu117.html
-```
+VoteFlow needs [pytorch3d](https://pytorch3d.org/) and its own CUDA extension `cpp_im2ht`, see the extra packages in [Environment Setup](#environment-setup).
 
 Train VoteFlow with the leaderboard submit config. [Runtime: Around 32 hours in 4 x V100 GPUs.]
 ```bash
