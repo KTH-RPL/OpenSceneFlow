@@ -76,7 +76,7 @@ Additionally, *OpenSceneFlow* integrates following excellent works: [ICLR'24 Zer
 - [x] [NSFP](https://arxiv.org/abs/2111.01253): NeurIPS 2021, faster 3x than original version because of [our CUDA speed up](assets/cuda/README.md), same (slightly better) performance.
 - [x] [FastNSF](https://arxiv.org/abs/2304.09121): ICCV 2023. SSL Optimization-based.
 - [x] [ICP-Flow](https://arxiv.org/abs/2402.17351): CVPR 2024. SSL Optimization-based.
-- [ ] [Floxels](https://arxiv.org/abs/2503.04718): CVPR 2025. SSL optimization-based. coding now but not yet ready for release as lower performance than reported. check [branch code](https://github.com/Kin-Zhang/OpenSceneFlow/tree/feature/floxels) for more details.
+- [x] [Floxels](https://arxiv.org/abs/2503.04718): CVPR 2025. SSL optimization-based. Our re-implementation: with 5 frames, mean Dynamic 0.191 on the AV2 val set (0.217 in the paper), about 4.4s per frame on an RTX 3090.
 - [ ] [EulerFlow](https://arxiv.org/abs/2410.02031): ICLR 2025. SSL optimization-based. In my plan, haven't coding yet.
 
 </details>
@@ -287,7 +287,7 @@ python eval.py model=fastnsf
 python save.py model=fastnsf
 ```
 
-Floxels (our re-implementation, the numbers are not checked against the paper yet) also uses the frames before and after:
+Floxels (our re-implementation: with 5 frames, mean Dynamic 0.191 on the AV2 val set, 0.217 in the paper) also uses the frames before and after:
 `num_frames` counts pc0, pc1 and the frames before pc0, `future_frames` counts the frames after pc0.
 
 ```bash
