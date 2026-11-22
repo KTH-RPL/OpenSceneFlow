@@ -120,7 +120,7 @@ class InferenceRunner:
         self.cfg = cfg
         self.rank = rank
         self.world_size = world_size
-        self.device = torch.device(f"cuda:{self.rank}")
+        self.device = torch.device(f"cuda:{self.rank % torch.cuda.device_count()}") # procs_per_gpu > 1: several ranks on one GPU
         # 'val' for validation, 'test' for test submission, 'save' for h5 writing
         self.mode = mode
 
@@ -211,7 +211,7 @@ class InferenceRunner:
             child.terminate()
 
 
-def _setup_distributed_environment():
+def _setup_distributed_environment(cfg):
     """
     Sets up the distributed environment. Prioritizes Slurm variables if available,
     otherwise assumes torchrun/mp.spawn and initializes based on environment variables.
@@ -228,13 +228,14 @@ def _setup_distributed_environment():
         os.environ['MASTER_ADDR'] = master_addr
         os.environ['MASTER_PORT'] = os.environ.get('MASTER_PORT', '12355')
     
-    # Let torch.distributed handle the rest, it will use the environment variables
-    dist.init_process_group("nccl")
+    # Let torch.distributed handle the rest, it will use the environment variables.
+    # The ranks only gather the metrics at the end; NCCL refuses two ranks on one GPU, so gloo when procs_per_gpu > 1.
+    dist.init_process_group("gloo" if cfg.get('procs_per_gpu', 1) > 1 else "nccl")
     return dist.get_rank(), dist.get_world_size()
 
 
 def _run_process(cfg, mode):
-    rank, world_size = _setup_distributed_environment()
+    rank, world_size = _setup_distributed_environment(cfg)
     
     runner = InferenceRunner(cfg, rank, world_size, mode)
     runner.run()
@@ -254,7 +255,7 @@ def _run_process(cfg, mode):
     if rank == 0:
         if mode in ['val', 'eval', 'valid']:
             final_metrics = OfficialMetrics()
-            print(f"\n--- [LOG] Finished processing. Aggregating results from {world_size} GPUs with {len(gathered_metrics_objects)} metrics objects...")
+            print(f"\n--- [LOG] Finished processing. Aggregating results from {world_size} processes with {len(gathered_metrics_objects)} metrics objects...")
             for metrics_obj in gathered_metrics_objects:
                 if metrics_obj is not None:
                     final_metrics.merge(metrics_obj)
@@ -282,7 +283,7 @@ def _spawn_wrapper(rank, world_size, cfg, mode, output_dir):
             print(f"---LOG[eval]: Run optimization-based method: {cfg.model.name} on {data_path} set.\n")
         else:
             print(f"---LOG[eval]: Run {cfg.model.name} with checkpoint {cfg.checkpoint} on {data_path} set.\n")
-    torch.cuda.set_device(rank)
+    torch.cuda.set_device(rank % torch.cuda.device_count())
     os.environ['RANK'] = str(rank)
     os.environ['WORLD_SIZE'] = str(world_size)
     os.environ['MASTER_ADDR'] = 'localhost'
@@ -293,9 +294,9 @@ def launch_runner(cfg, mode, output_dir):
     is_slurm_job = 'SLURM_PROCID' in os.environ
     
     if not is_slurm_job and not dist.is_initialized():
-        world_size = torch.cuda.device_count()
-        if world_size == 0:
+        if torch.cuda.device_count() == 0:
             raise SystemError("No CUDA devices found.")
+        world_size = torch.cuda.device_count() * cfg.get('procs_per_gpu', 1)
         
         if mode == 'test':
             cfg.save_res_path = Path(cfg.dataset_path).parent / "results" / cfg.output
