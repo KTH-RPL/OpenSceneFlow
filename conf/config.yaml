@@ -8,7 +8,7 @@ slurm_id: 00000
 wandb_mode: disabled # [offline, disabled, online]
 wandb_project_name: seflow
 
-train_data: /home/kin/data/av2/h5py/demo/train
+train_data: /home/kin/data/av2/h5py/demo/train # or a list of folders trained together: "train_data=[<dir1>, <dir2>]", optional +train_percentage=0.5 or [1.0, 0.5]
 train_aug: False # involved by deltaflow
 val_data: /home/kin/data/av2/h5py/demo/val
 

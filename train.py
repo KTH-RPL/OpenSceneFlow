@@ -12,7 +12,7 @@
 """
 
 import torch
-from torch.utils.data import DataLoader
+from torch.utils.data import DataLoader, ConcatDataset, Subset
 import lightning.pytorch as pl
 from lightning.pytorch.loggers import TensorBoardLogger, WandbLogger
 from lightning.pytorch.callbacks import (
@@ -61,12 +61,29 @@ def main(cfg):
     pl.seed_everything(cfg.seed, workers=True)
 
     train_aug = transforms.Compose([RandomHeight(p=0.8), RandomFlip(p=0.2), RandomJitter(), ToTensor()] if cfg.get('train_aug', False) else [ToTensor()])
-    train_dataset = HDF5Dataset(cfg.train_data, 
-                    n_frames=cfg.num_frames,
-                    ssl_label=cfg.get('ssl_label', None),
-                    loss_frames=cfg.get('loss_frames', None),
-                    layers=cfg.get('layers', None),
-                    transform=train_aug)
+    # train_data: one folder, or a list of folders that are trained together, e.g. "train_data=[/data/av2/train, /data/av2/val]"
+    train_dirs = list(cfg.train_data) if OmegaConf.is_list(cfg.train_data) else [cfg.train_data]
+    # train_percentage: the first part of each folder's frames, one value for all folders or one per folder. Default: all.
+    percentages = cfg.get('train_percentage', None)
+    if percentages is None or not OmegaConf.is_list(percentages):
+        percentages = [percentages] * len(train_dirs)
+    assert len(percentages) == len(train_dirs), f"train_percentage has {len(percentages)} values for {len(train_dirs)} train_data folders."
+    datasets = []
+    for data_dir, percentage in zip(train_dirs, percentages):
+        dataset = HDF5Dataset(data_dir,
+                        n_frames=cfg.num_frames,
+                        ssl_label=cfg.get('ssl_label', None),
+                        loss_frames=cfg.get('loss_frames', None),
+                        layers=cfg.get('layers', None),
+                        transform=train_aug)
+        if percentage is not None and percentage < 1.0:
+            total_len = len(dataset)
+            dataset = Subset(dataset, range(int(total_len * percentage)))
+            print(f"[LOG]: {percentage*100:.1f}% of {data_dir}: {len(dataset)}/{total_len} samples")
+        datasets.append(dataset)
+    if len(datasets) > 1:
+        print(f"[LOG]: {len(datasets)} training data folders: {', '.join(f'{d} ({len(ds)})' for d, ds in zip(train_dirs, datasets))}")
+    train_dataset = datasets[0] if len(datasets) == 1 else ConcatDataset(datasets)
     train_loader = DataLoader(train_dataset,
                               batch_size=cfg.batch_size,
                               shuffle=True,
