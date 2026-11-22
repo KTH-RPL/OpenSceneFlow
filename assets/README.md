@@ -138,7 +138,9 @@ python -c "from av2.utils.io import read_feather; print('av2 package ok') "
    The torch-scatter wheels for torch 2.7 need GLIBC 2.32 (Ubuntu 20.04 has 2.31), that is why `environment.yaml` has torch 2.6.0.
 
 7. `ImportError: libgthread-2.0.so.0: cannot open shared object file` (or `libGL.so.1`) when importing cv2, on a server or in a container:
-   opencv-python, which av2 installs, needs two system libraries that a desktop already has: `sudo apt install libglib2.0-0 libgl1`
+   opencv-python, which av2 installs, needs two system libraries that a desktop already has: `sudo apt install libglib2.0-0 libgl1`.
+   Training and evaluation do not import cv2; scripts that use `av2.utils.io` do (e.g. `dataprocess/extract_av2.py`).
+   Without root (e.g. a cluster node): `pip install opencv-python-headless==4.11.0.86`.
 
 Issues of the previous environment (Python 3.8 + torch 2.0.0 + CUDA 11.7):
 

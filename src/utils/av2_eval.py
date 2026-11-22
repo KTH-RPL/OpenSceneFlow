@@ -77,7 +77,6 @@ BUCKETED_METACATAGORIES = {
 import av2.geometry.geometry as geometry_utils
 from av2.geometry.se3 import SE3
 from av2.utils.typing import NDArrayFloat
-from av2.utils.io import read_feather
 
 # Mapping from egovehicle time in nanoseconds to egovehicle pose.
 TimestampedCitySE3EgoPoses = Dict[int, SE3]
@@ -118,7 +117,7 @@ def read_ego_SE3_sensor(log_dir: Path) -> SensorPosesMapping:
         Mapping from sensor name to sensor pose.
     """
     ego_SE3_sensor_path = Path(log_dir, "calibration", "egovehicle_SE3_sensor.feather")
-    ego_SE3_sensor = read_feather(ego_SE3_sensor_path)
+    ego_SE3_sensor = pd.read_feather(ego_SE3_sensor_path) # not av2.utils.io.read_feather: av2.utils.io imports cv2, which needs libGL.so.1
     rotations = geometry_utils.quat_to_mat(
         ego_SE3_sensor.loc[:, ["qw", "qx", "qy", "qz"]].to_numpy()
     )
