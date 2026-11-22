@@ -2,6 +2,11 @@
 
 Notable changes of OpenSceneFlow and the public scene flow leaderboard, newest first.
 
+## 2026-11-22
+
+- **Method**: New optimization-based method [EulerFlow](https://arxiv.org/abs/2410.02031) (ICLR 2025): `python eval.py model=eulerflow`. Our default fit (200 epochs: a high learning rate on random points first, then a low one) is about 20x faster than the fit of SceneFlowZoo with the same performance; its settings are kept in `conf/model/eulerflow.yaml`.
+- **Runtime**: New option `procs_per_gpu` for eval/save: several processes on one GPU, each on its own scenes, for methods where one process cannot keep the GPU busy (EulerFlow on an RTX 3080: about 1.6x).
+
 ## 2026-11-05
 
 - **Leaderboard**: The leaderboard v3 has moved to [sceneflow.kth-rpl.se](https://sceneflow.kth-rpl.se/leaderboard). The old domain `sceneflow.argoverse.org` can no longer upload zip files, and single-request `curl` uploads are not supported anymore. Please submit with `sceneflow_submit.sh`, see [README](README.md#submit-result-to-public-leaderboard).

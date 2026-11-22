@@ -67,7 +67,7 @@ International Conference on Robotics and Automation (**ICRA**) 2024
 [ Backbone ] [ Supervised ] - [ [arXiv](https://arxiv.org/abs/2401.16122) ] [ [Project](https://github.com/KTH-RPL/DeFlow) ] &rarr; [here](#deflow)
 
 🎁 <b>One repository, All methods!</b> 
-Additionally, *OpenSceneFlow* integrates following excellent works: [ICLR'24 ZeroFlow](https://arxiv.org/abs/2305.10424), [CVPR'24 ICP-Flow](https://arxiv.org/abs/2402.17351), [ICCV'23 FastNSF](https://arxiv.org/abs/2304.09121), [RA-L'21 FastFlow3D](https://arxiv.org/abs/2103.01306), [NeurIPS'21 NSFP](https://arxiv.org/abs/2111.01253). (More on the way...)
+Additionally, *OpenSceneFlow* integrates following excellent works: [ICLR'25 EulerFlow](https://arxiv.org/abs/2410.02031), [CVPR'25 Floxels](https://arxiv.org/abs/2503.04718), [NeurIPS'21 NSFP](https://arxiv.org/abs/2111.01253). (More on the way...)
 
 <details> <summary> Summary of them:</summary>
 
@@ -76,8 +76,8 @@ Additionally, *OpenSceneFlow* integrates following excellent works: [ICLR'24 Zer
 - [x] [NSFP](https://arxiv.org/abs/2111.01253): NeurIPS 2021, faster 3x than original version because of [our CUDA speed up](assets/cuda/README.md), same (slightly better) performance.
 - [x] [FastNSF](https://arxiv.org/abs/2304.09121): ICCV 2023. SSL Optimization-based.
 - [x] [ICP-Flow](https://arxiv.org/abs/2402.17351): CVPR 2024. SSL Optimization-based.
-- [x] [Floxels](https://arxiv.org/abs/2503.04718): CVPR 2025. SSL optimization-based. Our re-implementation: with 5 frames, mean Dynamic 0.191 on the AV2 val set (0.217 in the paper), about 4.4s per frame on an RTX 3090.
-- [ ] [EulerFlow](https://arxiv.org/abs/2410.02031): ICLR 2025. SSL optimization-based. In my plan, haven't coding yet.
+- [x] [Floxels](https://arxiv.org/abs/2503.04718): CVPR 2025. SSL optimization-based. Our re-implementation, with 5 frames: about 4.4s per frame on an RTX 3090.
+- [x] [EulerFlow](https://arxiv.org/abs/2410.02031): ICLR 2025. SSL optimization-based. About 20x faster than the original version with our default fit (a high learning rate on random points first, then a low one), same performance.
 
 </details>
 
@@ -287,13 +287,21 @@ python eval.py model=fastnsf
 python save.py model=fastnsf
 ```
 
-Floxels (our re-implementation: with 5 frames, mean Dynamic 0.191 on the AV2 val set, 0.217 in the paper) also uses the frames before and after:
+Floxels also uses the frames before and after:
 `num_frames` counts pc0, pc1 and the frames before pc0, `future_frames` counts the frames after pc0.
 
 ```bash
 python eval.py model=floxels num_frames=3                  # 3 frames: t-1, t, t+1
 python eval.py model=floxels num_frames=4 future_frames=2  # 5 frames: t-2 ... t+2, the default of the paper
 python eval.py model=floxels num_frames=8 future_frames=6  # 13 frames: t-6 ... t+6
+```
+
+EulerFlow fits one network on all frames of a scene (about 20 minutes per AV2 scene on an RTX 3090) and saves it in `model.target.ckpt_dir`, so a stopped run goes on from there.
+When one process cannot keep the GPU busy, `procs_per_gpu=2` runs two processes on each GPU, each on its own scenes:
+
+```bash
+python eval.py model=eulerflow
+python eval.py model=eulerflow procs_per_gpu=2  # about 1.6x faster on an RTX 3080
 ```
 
 

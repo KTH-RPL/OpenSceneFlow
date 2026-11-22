@@ -3,6 +3,8 @@ checkpoint: /home/kin/model_zoo/seflow_best.ckpt
 res_name: # if None will directly be the `model_name.ckpt` in checkpoint path
 val_index_only: False # [True, False]
 timer_sync: False # True: sync cuda in the timer to get the real runtime table (slower)
+num_workers: 4 # data loading processes of each GPU process
+procs_per_gpu: 1 # processes per GPU, each on its own scenes, see conf/eval.yaml
 
 # no need to change
 num_frames: 2

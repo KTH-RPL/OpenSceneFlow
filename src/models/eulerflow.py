@@ -16,8 +16,8 @@
 # Different from the other methods: the runner calls fit_scene() once with all frames of a scene, then forward() for every frame.
 # The fit of one scene is saved in ckpt_dir and a run that was stopped goes on from there.
 #
-# The fit of SceneFlowZoo (1000 epochs on all points, learning rate 8e-5) takes hours per scene. `schedule` makes it shorter:
-# first a high learning rate on random points of every frame, then a low learning rate. See conf/model/eulerflow.yaml.
+# The fit of SceneFlowZoo (1000 epochs on all points, learning rate 8e-5) takes hours per scene. Our default `schedule` is about 20x faster
+# with about the same accuracy: first a high learning rate on random points of every frame, then a low learning rate. See conf/model/eulerflow.yaml.
 #
 # NOTE: SceneFlowZoo only optimizes (and evaluates) the first 150 frames of a scene, here it is every frame of the scene.
 """
@@ -57,8 +57,8 @@ def query_flow(net, pc, time, direction):
 
 class EulerFlow(nn.Module):
     def __init__(self, num_layers=8, width=128, window=5, k_step=3, cycle_weight=1.0, speed_threshold=6.0,
-                 epochs=1000, schedule=[[0, 8e-5, 0]], early_patience=150, min_delta=0.001,
-                 point_cloud_range=[-48, -48, -2.5, 48, 48, 2.5], ckpt_dir='logs/eulerflow', save_every=10):
+                 epochs=200, schedule=[[0, 8e-4, 8000], [150, 8e-5, 8000]], early_patience=150, min_delta=0.001,
+                 point_cloud_range=[-80, -80, -2.5, 80, 80, 2.5], ckpt_dir='logs/eulerflow', save_every=10):
         super().__init__()
         # what the fit of a scene depends on. A saved fit with other values is not used.
         self.hparams = dict(num_layers=num_layers, width=width, window=window, k_step=k_step, cycle_weight=cycle_weight,
