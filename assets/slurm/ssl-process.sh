@@ -1,24 +1,23 @@
 #!/bin/bash
 #SBATCH -J ssl-label
+#SBATCH -A berzelius-2026-200
 #SBATCH -p berzelius-cpu
-#SBATCH --cpus-per-task 64
-#SBATCH --mem 128G
-#SBATCH --mincpus=64
+#SBATCH --cpus-per-task 16
+#SBATCH --mem 64G
 #SBATCH -t 2-00:00:00
-#SBATCH --array=0-5
-#SBATCH --mail-type=END,FAIL
-#SBATCH --mail-user=qingwen@kth.se
-#SBATCH --output /proj/berzelius-2023-154/users/x_qinzh/OpenSceneFlow/logs/slurm/data/%A-%a.out
-#SBATCH --error  /proj/berzelius-2023-154/users/x_qinzh/OpenSceneFlow/logs/slurm/data/%A-%a.err
+#SBATCH --array=0-9
+#SBATCH --output /proj/berzelius-2023-364/users/x_qinzh/workspace/OpenSceneFlow/logs/slurm/data/%A-%a.out
+#SBATCH --error  /proj/berzelius-2023-364/users/x_qinzh/workspace/OpenSceneFlow/logs/slurm/data/%A-%a.err
 
 
 PYTHON=/proj/berzelius-2023-154/users/x_qinzh/mambaforge/envs/sftool/bin/python
 export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/proj/berzelius-2023-154/users/x_qinzh/mambaforge/lib
-cd /proj/berzelius-2023-154/users/x_qinzh/OpenSceneFlow
+cd /proj/berzelius-2023-364/users/x_qinzh/workspace/OpenSceneFlow
 
 
 # data directory containing the extracted h5py files
-DATA_DIR="/proj/berzelius-2023-364/data/av2/h5py/sensor/train"
+# Usage: sbatch assets/slurm/ssl-process.sh /path/to/train
+DATA_DIR=$1
 
 TOTAL_SCENES=$(ls ${DATA_DIR}/*.h5 | wc -l)
 # Process every n-th frame into DUFOMap, no need to change at least for now.
@@ -41,4 +40,6 @@ fi
 
 echo "Running job for task id ${SLURM_ARRAY_TASK_ID}"
 echo "Processing scene range: ${START_SCENE} to ${END_SCENE}"
-$PYTHON process.py --data_dir ${DATA_DIR} --interval ${INTERVAL} --scene_range ${START_SCENE},${END_SCENE}
+# MAX_RANGE: points farther than this get no dufo label (process.py default 50), 70 matches the range of leaderboard v3.
+MAX_RANGE=70
+$PYTHON process.py --data_dir ${DATA_DIR} --interval ${INTERVAL} --scene_range ${START_SCENE},${END_SCENE} --max_range ${MAX_RANGE}

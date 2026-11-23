@@ -29,7 +29,6 @@ from dufomap import dufomap
 from linefit import ground_seg
 
 MIN_AXIS_RANGE = 2 # HARD CODED: remove ego vehicle points
-MAX_AXIS_RANGE = 50 # HARD CODED: remove far away points
 BASE_DIR = os.path.abspath(os.path.join( os.path.dirname( __file__ )))
 
 LABEL_LAYER = 'ssl_labels'
@@ -74,6 +73,7 @@ def run_dufocluster(
     tag: str = "av2", # [nus, zod, man, sca] etc
     run_gm: bool = False, # run ground segmentation
     min_nnd: float = 0.14, # min nnd distance 1.4m/s pedestrain speed; For Scania data, we set 0.32 here.
+    max_range: float = 50, # [m] points farther than this are not put into dufomap, so they get dufo=0. Leaderboard v3 evaluates up to 70m.
 ):
     data_path = Path(data_dir)
     dataset = HDF5Data(data_path) # single frame reading.
@@ -129,6 +129,7 @@ def run_nnd(
     tag: str = "av2", # [nus, zod, man, sca] etc
     run_gm: bool = False, # run ground segmentation
     min_nnd: float = 0.14, # min nnd distance 1.4m/s pedestrain speed; For Scania data, we set 0.32 here.
+    max_range: float = 50, # [m] points farther than this are not put into dufomap, so they get dufo=0. Leaderboard v3 evaluates up to 70m.
 ):
     # nnd function
     from assets.cuda.chamfer3D import nnChamferDis
@@ -193,6 +194,7 @@ def main(
     tag: str = "av2", # [zod, nuscenes, truckscenes, sca] etc
     run_gm: bool = False, # run ground segmentation
     min_nnd: float = 0.14, # min nnd distance 1.4m/s pedestrain speed; For Scania data, we set 0.32 here.
+    max_range: float = 50, # [m] points farther than this are not put into dufomap, so they get dufo=0. Leaderboard v3 evaluates up to 70m.
 ):
     gm_config_path = f"{BASE_DIR}/conf/ground/{tag}.toml"
     if not os.path.exists(gm_config_path) and run_gm:
@@ -252,7 +254,7 @@ def main(
                 norm_pc0 = np.linalg.norm(data['pc0'][:, :3], axis=1)
                 range_mask = (
                         (norm_pc0>MIN_AXIS_RANGE) & 
-                        (norm_pc0<MAX_AXIS_RANGE)
+                        (norm_pc0<max_range)
                 )
                 pose0 = npcal_pose0to1(data['pose0'], ego_pose_norm)
                 if 'lidar_center' not in data:
