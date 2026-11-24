@@ -48,8 +48,9 @@ def load_model(cfg):
     # NOTE: same setting as src/trainer.py, to have the same scores as before on the released checkpoints.
     torch.set_float32_matmul_precision('medium')
     target = cfg.model.target
-    with open_dict(target):
-        target['grid_feature_size'] = [abs(int((target.point_cloud_range[i] - target.point_cloud_range[i+3]) / target.voxel_size[i])) for i in range(3)]
+    if 'point_cloud_range' in target and 'voxel_size' in target: # voxel-based models; a point-based model has no grid
+        with open_dict(target):
+            target['grid_feature_size'] = [abs(int((target.point_cloud_range[i] - target.point_cloud_range[i+3]) / target.voxel_size[i])) for i in range(3)]
     model = instantiate(target)
     # the checkpoint is saved by lightning in train.py, the model weights are under 'model.'
     # weights_only=False: it also has the training config (omegaconf objects), which torch>=2.6 refuses to load by default.

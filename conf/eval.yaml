@@ -8,11 +8,13 @@ leaderboard_version: 3 # only 3 now (https://sceneflow.kth-rpl.se/leaderboard), 
 timer_sync: False # True: sync cuda in the timer to get the real runtime table (slower)
 num_workers: 4 # data loading processes of each GPU process
 procs_per_gpu: 1 # processes per GPU, each on its own scenes. 2 helps when one process can't keep the GPU busy (EulerFlow on an RTX 3080: about 1.6x)
+# frames around pc0 the model takes, see src/dataset.py. A model yaml can set its own (floxels.yaml), a feed-forward model
+# takes num_frames from its checkpoint. Change them on the command line, e.g. num_frames=8 future_frames=6.
+num_frames: ${oc.select:model.num_frames,2}
+future_frames: ${oc.select:model.future_frames,1}
 
 # no need to change
 save_res_path: 
-num_frames: 2
-future_frames: 1 # frames after pc0 the model takes. 1: pc1 only. Floxels can use more, e.g. num_frames=4 future_frames=2: pch2, pch1, pc0, pc1, pc2.
 slurm_id: 00000
 output: ${model.name}-${slurm_id}
 seed: 42069

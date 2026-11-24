@@ -11,7 +11,7 @@
     python tools/readh5pkl.py --file_path /home/kin/data/av2/h5py/sensor/test/0c6e62d7-bdfa-3061-8d3d-03b13aa21f68.h5
 """
 
-import os, pickle
+import os, pickle, glob
 os.environ["OMP_NUM_THREADS"] = "1"
 import fire, time, h5py
 
@@ -29,6 +29,13 @@ def readfile(
                 if cnt >= 10:
                     break
             print(f"\nTotal {len(f.keys())} timestamps in the file.")
+        # labels and saved flows of the same scene in the layer files next to the dataset: {data_dir}/layers/*/{scene_id}.h5
+        data_dir, scene_file = os.path.split(os.path.abspath(file_path))
+        for layer_file in sorted(glob.glob(os.path.join(data_dir, 'layers', '**', scene_file), recursive=True)):
+            with h5py.File(layer_file, 'r') as f:
+                k = next(iter(f.keys()))
+                print(f"Layer {os.path.relpath(os.path.dirname(layer_file), data_dir)}: {len(f.keys())} timestamps, "
+                      f"keys: {', '.join(f'{sub_k} {f[k][sub_k].shape} {f[k][sub_k].dtype}' for sub_k in f[k].keys())}")
     elif file_path.endswith('.pkl'):
         with open(file_path, 'rb') as f:
             data_index = pickle.load(f)

@@ -1,6 +1,7 @@
 # Python 3.10 + CUDA 11.8 + torch 2.6.0, for RTX 20/30/40 series, A100 and H100.
 #   mamba env create -f environment.yaml && conda activate opensf
 # then compile the CUDA extensions, see the installation section of README.md.
+# The pip part below is the same as requirements.txt (pip only, without conda): change both files together.
 name: opensf
 channels:
   # The label channel must come before conda-forge. Otherwise the parts of the CUDA toolkit that are also on

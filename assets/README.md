@@ -100,6 +100,18 @@ pip install --no-build-isolation --no-deps ./assets/cuda/chamfer3D ./assets/cuda
 
 The extra packages that only some methods need (FastGeodis, pytorch3d, histlib, cpp_im2ht) are listed in [the main README](../README.md#environment-setup).
 
+### pip only
+
+Without conda, [requirements.txt](../requirements.txt) has the same Python packages as `environment.yaml`. The CUDA extensions are then compiled with the CUDA toolkit of your machine,
+which has to match the CUDA of torch: nvcc 11.8 and gcc <= 11 (check with `nvcc --version` and `gcc --version`).
+
+```bash
+python3.10 -m venv .venv && source .venv/bin/activate
+pip install -r requirements.txt
+export TORCH_CUDA_ARCH_LIST="7.5;8.0;8.6;8.9;9.0"   # compile for every supported GPU, not only the one of this machine
+pip install --no-build-isolation --no-deps ./assets/cuda/chamfer3D ./assets/cuda/mmcv
+```
+
 Checking important packages in our environment now:
 ```bash
 mamba activate opensf

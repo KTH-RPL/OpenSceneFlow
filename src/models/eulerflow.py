@@ -8,6 +8,7 @@
 # listed on the above website.
 #
 # Description: Re-implementation of EulerFlow (ICLR 2025): Neural Eulerian Scene Flow Fields.
+#              Paper: https://arxiv.org/abs/2410.02031
 #              One MLP is optimized for a whole scene: [x, y, z, time, direction] -> flow to the next / previous frame.
 #              Follows the released code https://github.com/kylevedder/SceneFlowZoo (MIT license, Copyright (c) Kyle Vedder),
 #              models/mini_batch_optimization/eulerflow.py with configs/eulerflow/argo/noncausal_minibatched/val.py,
@@ -17,7 +18,8 @@
 # The fit of one scene is saved in ckpt_dir and a run that was stopped goes on from there.
 #
 # The fit of SceneFlowZoo (1000 epochs on all points, learning rate 8e-5) takes hours per scene. Our default `schedule` is about 20x faster
-# with about the same accuracy: first a high learning rate on random points of every frame, then a low learning rate. See conf/model/eulerflow.yaml.
+# with about the same accuracy: first a high learning rate on random points of every frame, then a low learning rate.
+# The settings and how they were chosen are in assets/docs/reproduce.md.
 #
 # NOTE: SceneFlowZoo only optimizes (and evaluates) the first 150 frames of a scene, here it is every frame of the scene.
 """

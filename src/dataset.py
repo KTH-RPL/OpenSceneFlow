@@ -227,13 +227,16 @@ class HDF5Dataset(Dataset):
 
             Following are optional:
             * transform: for data augmentation, default is None.
-            * n_frames: the number of frames we use, default is 2: current (pc0), next (pc1); if it's more than 2, then it read the history from current.
+            * n_frames, future_frames, loss_frames: which frames around pc0 are read, pchK is K frames before pc0 and pcK K frames after.
+                The model input is pch{n_frames-2} .. pch1, pc0, pc1 .. pc{future_frames}:
+                    n_frames=2 (default)               pc0, pc1
+                    n_frames=5 (e.g. Flow4D)           pch3, pch2, pch1, pc0, pc1
+                    n_frames=4, future_frames=2        pch2, pch1, pc0, pc1, pc2  (Floxels)
+                loss_frames={past: P, future: F}, self-supervised training only (teflowLoss): pchP .. pch1 and pc1 .. pcF are read
+                as well, with their labels, for the loss. The dataset reads the frames of both, the model input does not change.
             * ssl_label: if attr, it will read the dynamic cluster label. Otherwise, no dynamic cluster label in data dict.
-            * loss_frames: {past: P, future: F}, frames around pc0 that the self-supervised loss uses: pch1..pchP and pc1..pcF with their labels.
-                           The model input still follows n_frames. Default None: only the frames from n_frames.
             * eval: if True, use the eval index (only used it for leaderboard evaluation)
-            * future_frames: the number of frames after pc0 to read, default is 1: pc1. 3 means pc1, pc2, pc3.
-            * pad_frames: what to do with a history frame before the start of the scene. True: repeat the first frame of the scene,
+            * pad_frames: what to do with a frame before the start of the scene. True: repeat the first frame of the scene,
                           so the number of frames is always the same. False: leave it out. A frame after the end of the scene is always left out.
             * vis_name: the data of the visualization, default is ''.
             * index_flow: if True, use the flow index for training or visualization.
@@ -257,13 +260,15 @@ class HDF5Dataset(Dataset):
 
         self.eval_index = False
         self.ssl_label = import_func(f"src.autolabel.{ssl_label}") if ssl_label is not None else None
-        self.history_frames = n_frames - 2
-        self.future_frames, self.pad_frames = future_frames, pad_frames
-        self.loss_past, self.loss_future = 0, 1
-        if loss_frames is not None:
-            if ssl_label is None or eval:
-                raise ValueError("loss_frames is only for self-supervised training: it needs ssl_label and eval=False.")
-            self.loss_past, self.loss_future = int(loss_frames['past']), int(loss_frames['future'])
+        if loss_frames is not None and (ssl_label is None or eval):
+            raise ValueError("loss_frames is only for self-supervised training: it needs ssl_label and eval=False.")
+        loss_past, loss_future = (int(loss_frames['past']), int(loss_frames['future'])) if loss_frames is not None else (0, 1)
+        # the frames read around pc0 (model input and loss frames together): pch1 .. pch{past_frames}, pc1 .. pc{future_frames}
+        # n_frames=1: pc0 only. pc1 is always read otherwise.
+        self.read_pc1 = n_frames >= 2
+        self.past_frames = max(n_frames - 2, loss_past)
+        self.future_frames = max(future_frames, loss_future)
+        self.pad_frames = pad_frames
         self.vis_name = vis_name if isinstance(vis_name, list) else [vis_name]
         # a saved flow may be in its own layer: {directory}/layers/pred/{vis_name}/
         pred_dirs = [os.path.join(directory, 'layers', 'pred', name) for name in self.vis_name if name]
@@ -349,8 +354,8 @@ class HDF5Dataset(Dataset):
             min_idx = self.scene_id_bounds[scene_id]["min_index"]
 
             # keep every frame we read (model input and loss frames) inside the scene
-            max_valid_index_for_flow = max_idx - max(self.future_frames, self.loss_future)
-            min_valid_index_for_flow = min_idx + max(self.history_frames, self.loss_past)
+            max_valid_index_for_flow = max_idx - self.future_frames
+            min_valid_index_for_flow = min_idx + self.past_frames
             if not self.pad_frames: # the frames outside the scene are left out in __getitem__, only pc1 has to be there
                 max_valid_index_for_flow, min_valid_index_for_flow = max_idx - 1, min_idx
             index_ = max(min_valid_index_for_flow, min(max_valid_index_for_flow, index_))
@@ -383,7 +388,7 @@ class HDF5Dataset(Dataset):
             if self.ssl_label is not None:
                 data_dict['pc0_dynamic'] = self.ssl_label(f[key])
 
-            if self.history_frames >= 0: 
+            if self.read_pc1:
                 next_timestamp = str(self.data_index[index_ + 1][1])
                 data_dict['pose1'] = f[next_timestamp]['pose'][:]
                 data_dict['pc1'] = f[next_timestamp]['lidar'][:][:,:3]
@@ -391,8 +396,8 @@ class HDF5Dataset(Dataset):
                 if self.ssl_label is not None:
                     data_dict['pc1_dynamic'] = self.ssl_label(f[next_timestamp])
                 
-                past_frames = []
-                for i in range(1, max(self.history_frames, self.loss_past) + 1):
+                past_data = []
+                for i in range(1, self.past_frames + 1):
                     frame_index = index_ - i
                     if frame_index < self.scene_id_bounds[scene_id]["min_index"]: 
                         if not self.pad_frames:
@@ -404,17 +409,17 @@ class HDF5Dataset(Dataset):
                     past_gm = f[past_timestamp]['ground_mask'][:]
                     past_pose = f[past_timestamp]['pose'][:]
 
-                    past_frames.append((past_pc, past_gm, past_pose))
+                    past_data.append((past_pc, past_gm, past_pose))
                     if self.ssl_label is not None: # every history frame is supervised in the multi-frame loss
                         data_dict[f'pch{i}_dynamic'] = self.ssl_label(f[past_timestamp])
 
-                for i, (past_pc, past_gm, past_pose) in enumerate(past_frames):
+                for i, (past_pc, past_gm, past_pose) in enumerate(past_data):
                     data_dict[f'pch{i+1}'] = past_pc
                     data_dict[f'gmh{i+1}'] = past_gm
                     data_dict[f'poseh{i+1}'] = past_pose
 
                 # frames after pc1: pc2, pc3, ... as model input (future_frames) or only for the loss (loss_frames)
-                for i in range(2, max(self.future_frames, self.loss_future) + 1):
+                for i in range(2, self.future_frames + 1):
                     if index_ + i > self.scene_id_bounds[scene_id]["max_index"]:
                         break # end of the scene, only happens in eval: the training index is kept inside in valid_index()
                     future_timestamp = str(self.data_index[index_ + i][1])

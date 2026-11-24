@@ -3,13 +3,14 @@
 # Copyright (C) 2024-now, RPL, KTH Royal Institute of Technology
 # Author: Qingwen Zhang  (https://kin-zhang.github.io/)
 # 
-# This file is part of 
-# * TODO
-# If you find this repo helpful, please cite the respective publication as 
+# This file is part of OpenSceneFlow (https://github.com/KTH-RPL/OpenSceneFlow).
+# If you find this repo helpful, please cite the respective publication as
 # listed on the above website.
-# 
+#
 # Description: Re-implementation of Floxels (CVPR 2025): Fast Unsupervised Voxel Based Scene Flow Estimation.
+#              Paper: https://arxiv.org/abs/2503.04718
 #              The flow of one frame is a voxel grid, optimized against the frames before and after it.
+#              The settings and our results are in assets/docs/reproduce.md.
 # one more package need install: pip install FastGeodis --no-build-isolation --no-cache-dir
 """
 

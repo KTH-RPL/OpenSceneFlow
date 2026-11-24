@@ -224,25 +224,6 @@ class ModelWrapper(LightningModule):
         # self.model.timer.print(random_colors=False, bold=False)
         return total_loss
 
-    def train_validation_step_(self, batch, res_dict):
-        # means there are ground truth flow so we can evaluate the EPE-3 Way metric
-        if batch['flow'][0].shape[0] > 0:
-            pose_flows = res_dict['pose_flow']
-            for batch_id, gt_flow in enumerate(batch["flow"]):
-                valid_from_pc2res = res_dict['pc0_valid_point_idxes'][batch_id]
-                pose_flow = pose_flows[batch_id][valid_from_pc2res]
-
-                final_flow_ = pose_flow.clone() + res_dict['flow'][batch_id]
-                v1_dict= evaluate_leaderboard(final_flow_, pose_flow, batch['pc0'][batch_id][valid_from_pc2res], gt_flow[valid_from_pc2res], \
-                                           batch['flow_is_valid'][batch_id][valid_from_pc2res], batch['flow_category_indices'][batch_id][valid_from_pc2res])
-                v2_dict = evaluate_leaderboard_v2(final_flow_, pose_flow, batch['pc0'][batch_id][valid_from_pc2res], gt_flow[valid_from_pc2res], \
-                                        batch['flow_is_valid'][batch_id][valid_from_pc2res], batch['flow_category_indices'][batch_id][valid_from_pc2res])
-                ssf_dict = evaluate_ssf(final_flow_, pose_flow, batch['pc0'][batch_id][valid_from_pc2res], gt_flow[valid_from_pc2res], \
-                                        batch['flow_is_valid'][batch_id][valid_from_pc2res], batch['flow_category_indices'][batch_id][valid_from_pc2res])
-                self.metrics.step(v1_dict, v2_dict, ssf_dict)
-        else:
-            pass
-
     def configure_optimizers(self):
         optimizers_ = {}
         # default Adam
@@ -289,7 +270,21 @@ class ModelWrapper(LightningModule):
     def validation_step(self, batch, batch_idx):
         try:
             res_dict = self.model(batch)
-            self.train_validation_step_(batch, res_dict)
+            if batch['flow'][0].shape[0] == 0: # no ground truth flow, nothing to evaluate
+                return
+            pose_flows = res_dict['pose_flow']
+            for batch_id, gt_flow in enumerate(batch["flow"]):
+                valid_from_pc2res = res_dict['pc0_valid_point_idxes'][batch_id]
+                pose_flow = pose_flows[batch_id][valid_from_pc2res]
+
+                final_flow_ = pose_flow.clone() + res_dict['flow'][batch_id]
+                v1_dict= evaluate_leaderboard(final_flow_, pose_flow, batch['pc0'][batch_id][valid_from_pc2res], gt_flow[valid_from_pc2res], \
+                                           batch['flow_is_valid'][batch_id][valid_from_pc2res], batch['flow_category_indices'][batch_id][valid_from_pc2res])
+                v2_dict = evaluate_leaderboard_v2(final_flow_, pose_flow, batch['pc0'][batch_id][valid_from_pc2res], gt_flow[valid_from_pc2res], \
+                                        batch['flow_is_valid'][batch_id][valid_from_pc2res], batch['flow_category_indices'][batch_id][valid_from_pc2res])
+                ssf_dict = evaluate_ssf(final_flow_, pose_flow, batch['pc0'][batch_id][valid_from_pc2res], gt_flow[valid_from_pc2res], \
+                                        batch['flow_is_valid'][batch_id][valid_from_pc2res], batch['flow_category_indices'][batch_id][valid_from_pc2res])
+                self.metrics.step(v1_dict, v2_dict, ssf_dict)
         except Exception as e:
             print(f"==> Exception occur during training/validation step: {e}. Skip this batch.")
             print(f"Batch info: scene_id: {batch['scene_id']}, timestamp: {batch['timestamp']}, pc0 size: {batch['pc0']}")

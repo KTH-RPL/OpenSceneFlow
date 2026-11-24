@@ -14,4 +14,7 @@ target:
   cluster_weight: 0.6
 
 iter_only: True
-pad_frames: False # a history frame before the start of the scene is left out, instead of repeating the first frame.
+# 5 frames as in the paper: pch2, pch1, pc0, pc1, pc2 (see src/dataset.py). E.g. num_frames=3 future_frames=1 for t-1, t, t+1.
+num_frames: 4
+future_frames: 2
+pad_frames: False # a frame before the start of the scene is left out, instead of repeating the first frame.

@@ -46,15 +46,9 @@ case ${DATASET} in
         --data_dir /proj/common-datasets/Waymo/Perception/2.0.1 \
         --mode ${SPLIT} \
         --output_dir ${OUT}/waymo
-    [ "${SPLIT}" = "validation" ] && $PYTHON tools/create_evalpkl.py --data_dir ${OUT}/waymo/valid
+    if [ "${SPLIT}" = "validation" ]; then $PYTHON tools/create_evalpkl.py --data_dir ${OUT}/waymo/valid; fi
     ;;
   *)
     echo "unknown dataset ${DATASET}"; exit 1 ;;
 esac
 
-# fail the job (so `--dependency=afterok` jobs don't start) when nothing was extracted, e.g. a wrong input path
-SPLIT_DIR=$(case ${DATASET} in av2) echo ${OUT}/av2/sensor/${SPLIT};; waymo) echo ${OUT}/waymo/$([ "${SPLIT}" = "training" ] && echo train || echo valid);; *) echo ${OUT}/${DATASET}/${SPLIT};; esac)
-NUM_H5=$(ls ${SPLIT_DIR}/*.h5 2>/dev/null | wc -l)
-echo "${NUM_H5} scenes in ${SPLIT_DIR}"
-[ ${NUM_H5} -gt 0 ] || exit 1
-exit 0

@@ -76,8 +76,8 @@ Additionally, *OpenSceneFlow* integrates following excellent works: [ICLR'25 Eul
 - [x] [NSFP](https://arxiv.org/abs/2111.01253): NeurIPS 2021, faster 3x than original version because of [our CUDA speed up](assets/cuda/README.md), same (slightly better) performance.
 - [x] [FastNSF](https://arxiv.org/abs/2304.09121): ICCV 2023. SSL Optimization-based.
 - [x] [ICP-Flow](https://arxiv.org/abs/2402.17351): CVPR 2024. SSL Optimization-based.
-- [x] [Floxels](https://arxiv.org/abs/2503.04718): CVPR 2025. SSL optimization-based. Our re-implementation, with 5 frames: about 4.4s per frame on an RTX 3090.
-- [x] [EulerFlow](https://arxiv.org/abs/2410.02031): ICLR 2025. SSL optimization-based. About 20x faster than the original version with our default fit (a high learning rate on random points first, then a low one), same performance.
+- [x] [Floxels](https://arxiv.org/abs/2503.04718): CVPR 2025. SSL optimization-based. Our re-implementation, with 5 frames: about 4.4s per frame on an RTX 3090, [reproduce details](assets/docs/reproduce.md#floxels).
+- [x] [EulerFlow](https://arxiv.org/abs/2410.02031): ICLR 2025. SSL optimization-based. About 20x faster than the original version with our default fit (a high learning rate on random points first, then a low one), same performance, [reproduce details](assets/docs/reproduce.md#eulerflow).
 
 </details>
 
@@ -114,7 +114,7 @@ pip install --no-build-isolation --no-deps ./assets/cuda/histlib # ICP-Flow
 pip install --no-build-isolation --no-deps ./src/models/basic/voteflow_plugin/hough_transformation/cpp_im2ht # VoteFlow
 ```
 
-If something fails, check [the known issues](assets/README.md#other-issues).
+Without conda, use `requirements.txt`, see [pip only](assets/README.md#pip-only). If something fails, check [the known issues](assets/README.md#other-issues).
 
 ### Docker (Recommended for Isolation)
 
@@ -287,12 +287,12 @@ python eval.py model=fastnsf
 python save.py model=fastnsf
 ```
 
-Floxels also uses the frames before and after:
-`num_frames` counts pc0, pc1 and the frames before pc0, `future_frames` counts the frames after pc0.
+Floxels also uses the frames before and after pc0:
+`num_frames` counts pc0, pc1 and the frames before pc0, `future_frames` counts the frames after pc0 (see `HDF5Dataset` in [src/dataset.py](src/dataset.py)).
 
 ```bash
-python eval.py model=floxels num_frames=3                  # 3 frames: t-1, t, t+1
-python eval.py model=floxels num_frames=4 future_frames=2  # 5 frames: t-2 ... t+2, the default of the paper
+python eval.py model=floxels                               # 5 frames: t-2 ... t+2, the default of the paper (num_frames=4 future_frames=2)
+python eval.py model=floxels num_frames=3 future_frames=1  # 3 frames: t-1, t, t+1
 python eval.py model=floxels num_frames=8 future_frames=6  # 13 frames: t-6 ... t+6
 ```
 
@@ -307,7 +307,7 @@ python eval.py model=eulerflow procs_per_gpu=2  # about 1.6x faster on an RTX 30
 
 ## 3. Evaluation
 
-The evaluation prints all metrics in the terminal, or you can upload the result to the online leaderboard. 
+On the val set, `eval.py` prints all metrics in the terminal. The test set has no public ground truth: run `eval.py` with `data_mode=test` to save the result as a zip file, and upload it to the [online leaderboard](#submit-result-to-public-leaderboard) to get the test score.
 <!-- Three-way EPE and Dynamic Bucket-normalized are evaluated within a 70x70m range (followed Argoverse 2 online leaderboard). No ground points are considered in the evaluation. -->
 
 Since in training, we save all hyper-parameters and model checkpoints, the only thing you need to do is to specify the checkpoint path. Remember to set the data path correctly also.
@@ -329,7 +329,7 @@ huggingface-cli download kin-zhang/multidata-sf-challenge --local-dir /home/kin/
 python eval.py checkpoint=/home/kin/seflow_best.ckpt data_mode=test dataset_path=/home/kin/data/multidata-sf-challenge/challenge_public save_res=True
 ```
 
-### **📊 Range-Wise Metric (New!)**
+<details> <summary>📊 Range-Wise Metric</summary>
 
 In [SSF paper](https://arxiv.org/abs/2501.17821), we introduce a new distance-based evaluation metric for scene flow estimation. Below is an example output for SSF with point_cloud_range to 204.8m and voxel_size=0.2m. Check more long-range result in [SSF paper](https://arxiv.org/abs/2501.17821).
 
@@ -342,10 +342,12 @@ In [SSF paper](https://arxiv.org/abs/2501.17821), we introduce a new distance-ba
 | 100-inf   | 0.01970  | 0.30536  | 1.32e+07        | 171865           |
 | **Mean**  | 0.01259  | 0.20693  | NaN             | NaN              |
 
+</details>
+
 
 ### Submit result to public leaderboard
 
-To submit your result to the public Leaderboard, select `data_mode=test` and you will get a zip file to submit to the [multi-dataset leaderboard](https://sceneflow.kth-rpl.se/leaderboard). The previous AV2 leaderboards on EvalAI (version 1 and 2) are closed, the results in DeFlow & SeFlow papers are version 1. Leaderboard updates are recorded in [CHANGELOG.md](CHANGELOG.md).
+To submit your result to the public Leaderboard, select `data_mode=test` and you will get a zip file to submit to the [multi-dataset leaderboard](https://sceneflow.kth-rpl.se/leaderboard). The previous AV2 leaderboards on EvalAI (version 1 and 2) are closed. Leaderboard updates are recorded in [CHANGELOG.md](CHANGELOG.md).
 
 [Register](https://sceneflow.kth-rpl.se/auth/register) at [sceneflow.kth-rpl.se](https://sceneflow.kth-rpl.se/leaderboard), create an API key on your profile page, then submit:
 ```bash

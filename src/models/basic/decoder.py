@@ -180,9 +180,7 @@ class SimpleLinearDecoder(nn.Module):
 class ConvGRU(nn.Module):
     def __init__(self, input_dim=64, hidden_dim=128):
         super(ConvGRU, self).__init__()
-        # NOTE: a Conv1d with kernel size 1 is a linear layer on every point. The layers stay Conv1d since the released
-        # checkpoints have their weights, but forward() runs them as linear: with the N points as the batch of a
-        # convolution, cuDNN is much slower in backward (and cuDNN 9 also takes GBs of memory).
+        # Conv1d to load the released checkpoints, run as linear layers in forward() (much faster than cuDNN conv1d in backward)
         self.convz = nn.Conv1d(input_dim+hidden_dim, hidden_dim, 1)
         self.convr = nn.Conv1d(input_dim+hidden_dim, hidden_dim, 1)
         self.convq = nn.Conv1d(input_dim+hidden_dim, hidden_dim, 1)

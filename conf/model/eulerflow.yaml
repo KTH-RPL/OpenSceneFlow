@@ -6,12 +6,9 @@ target:
   width: 128
   window: 5 # frames in one optimization step
   k_step: 3 # multi-step loss: the points are moved up to k frames along the flow. 1: off.
-  cycle_weight: 1.0 # 0: off. NOTE: the SceneFlowZoo code has 0.01 written but it is not applied there, see src/models/eulerflow.py.
+  cycle_weight: 1.0 # 0: off
   speed_threshold: 6.0 # meter per frame (60 m/s at 10Hz)
-  # Our faster fit: about 20x faster than the fit of SceneFlowZoo (19-21 min instead of 5.8-7.5 h per AV2 scene on an RTX 3090),
-  # with about the same accuracy: mean Dynamic 0.172 on 15 AV2 val scenes (SceneFlowZoo reports 0.159 on the whole val set);
-  # on two AV2 demo scenes it is even lower than the 1000 epochs of SceneFlowZoo (0.118 vs 0.180, 0.245 vs 0.290).
-  # The fit of SceneFlowZoo: epochs: 1000, schedule: [[0, 8e-5, 0]], point_cloud_range: [-48, -48, -2.5, 48, 48, 2.5]
+  # Our faster fit, about 20x faster than the one of SceneFlowZoo; how it compares: assets/docs/reproduce.md
   epochs: 200
   # Stages of the fit: [from epoch, learning rate, points per frame].
   #   points per frame: 0: every step moves all points of a frame along the flow. N: N random points of it (faster, less memory).
@@ -22,8 +19,7 @@ target:
   # stop when the loss of an epoch did not get 0.001 lower in the last 150 epochs
   early_patience: 150
   min_delta: 0.001
-  # points outside get the ego-motion flow. On 15 AV2 val scenes, the dynamic error at 50-75 m is 0.74 with ±48 m and about 0.1 with ±80 m;
-  # within 35 m both are about the same.
+  # points outside get the ego-motion flow
   point_cloud_range: [-80, -80, -2.5, 80, 80, 2.5]
   # one file per scene with the fitted network, saved every save_every epochs. A stopped run goes on from it.
   ckpt_dir: logs/eulerflow
