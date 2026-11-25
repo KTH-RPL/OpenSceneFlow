@@ -7,7 +7,11 @@
 # Description: Preprocess Data, save as h5df format for faster loading
 """
 
-import fire, time, os, sys, json, h5py
+import os
+# Limit thread count for NumPy/OpenBLAS/MKL - prevents single process from using all cores
+for _k in ("OMP_NUM_THREADS", "OPENBLAS_NUM_THREADS", "MKL_NUM_THREADS", "NUMEXPR_MAX_THREADS"):
+    os.environ[_k] = "1"
+import fire, time, sys, json, h5py
 from pathlib import Path
 from multiprocessing import current_process
 from tqdm import tqdm

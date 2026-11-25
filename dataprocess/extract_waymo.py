@@ -15,7 +15,9 @@
 """
 
 import os
-os.environ["OMP_NUM_THREADS"] = "1"
+# Limit thread count for NumPy/OpenBLAS/MKL - prevents single process from using all cores
+for _k in ("OMP_NUM_THREADS", "OPENBLAS_NUM_THREADS", "MKL_NUM_THREADS", "NUMEXPR_MAX_THREADS"):
+    os.environ[_k] = "1"
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 # NOTE(2023/02/29): it's really important to set this! otherwise, the point cloud will be wrong. really wried.
 os.environ["CUDA_VISIBLE_DEVICES"] = "-1"
