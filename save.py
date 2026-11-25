@@ -4,58 +4,44 @@
 # Author: Qingwen Zhang  (https://kin-zhang.github.io/)
 #
 # This file is part of DeFlow (https://github.com/KTH-RPL/DeFlow).
-# If you find this repo helpful, please cite the respective publication as 
+# If you find this repo helpful, please cite the respective publication as
 # listed on the above website.
 
-# Description: produce flow based on model predict and write into the dataset, 
+# Description: produce flow based on model predict and write into the dataset,
 #              then use `tools/visualization.py` to visualize the flow.
 """
 
 import torch
-from torch.utils.data import DataLoader
-import lightning.pytorch as pl
-from lightning.pytorch.loggers import TensorBoardLogger
-from omegaconf import DictConfig, OmegaConf
-import hydra, wandb, os, sys
+from omegaconf import DictConfig
+import hydra, os, sys
 from hydra.core.hydra_config import HydraConfig
-from src.dataset import HDF5Dataset
-from src.trainer import ModelWrapper
+from src.runner import launch_runner
 from src.utils import bc
 
 @hydra.main(version_base=None, config_path="conf", config_name="save")
 def main(cfg):
-    pl.seed_everything(cfg.seed, workers=True)
     output_dir = HydraConfig.get().runtime.output_dir
 
-    if 'iter_only' in cfg.model and cfg.model.iter_only:
-        from src.runner import launch_runner
+    if cfg.model.get('iter_only', False):
         print(f"---LOG[eval]: Run optmization-based method: {cfg.model.name}")
         cfg.res_name = cfg.model.name if (cfg.res_name is None) else cfg.res_name
-        launch_runner(cfg, 'save')
-        return
-    
-    if not os.path.exists(cfg.checkpoint):
-        print(f"Checkpoint {cfg.checkpoint} does not exist. Need checkpoints for evaluation.")
-        sys.exit(1)
+    else:
+        # feed-forward model: its model config is inside the checkpoint.
+        if not os.path.exists(cfg.checkpoint):
+            print(f"Checkpoint {cfg.checkpoint} does not exist. Need checkpoints for evaluation.")
+            sys.exit(1)
 
-    if cfg.res_name is None:
-        cfg.res_name = cfg.checkpoint.split("/")[-1].split(".")[0]
-        print(f"{bc.BOLD}NOTE{bc.ENDC}: res_name is not specified, use {bc.OKBLUE}{cfg.res_name}{bc.ENDC} as default.")
+        if cfg.res_name is None:
+            cfg.res_name = cfg.checkpoint.split("/")[-1].split(".")[0]
+            print(f"{bc.BOLD}NOTE{bc.ENDC}: res_name is not specified, use {bc.OKBLUE}{cfg.res_name}{bc.ENDC} as default.")
 
-    checkpoint_params = DictConfig(torch.load(cfg.checkpoint)["hyper_parameters"])
-    cfg.output = checkpoint_params.cfg.output
-    cfg.model.update(checkpoint_params.cfg.model)
-    cfg.num_frames = cfg.model.target.get('num_frames', checkpoint_params.cfg.get('num_frames', cfg.get('num_frames', 2)))
-    mymodel = ModelWrapper.load_from_checkpoint(cfg.checkpoint, cfg=cfg, eval=True)
+        checkpoint_params = DictConfig(torch.load(cfg.checkpoint, map_location="cpu", weights_only=False)["hyper_parameters"])
+        cfg.output = checkpoint_params.cfg.output
+        cfg.model.update(checkpoint_params.cfg.model)
+        cfg.num_frames = cfg.model.target.get('num_frames', checkpoint_params.cfg.get('num_frames', cfg.get('num_frames', 2)))
 
-    logger = TensorBoardLogger(save_dir=output_dir, name="logs")
-
-    trainer = pl.Trainer(logger=logger, devices=1)
-    # NOTE(Qingwen): search & check in pl_model.py : def test_step(self, batch, res_dict)
-    trainer.test(model = mymodel, \
-                 dataloaders = DataLoader(\
-                     HDF5Dataset(cfg.dataset_path, n_frames=cfg.num_frames, eval=cfg.val_index_only), \
-                    batch_size=1, shuffle=False))
+    # NOTE(Qingwen): search & check: def _process_step(self, batch) in src/runner.py
+    launch_runner(cfg, 'save', output_dir)
 
 if __name__ == "__main__":
     main()

@@ -1,5 +1,6 @@
 import torch
 import torch.nn as nn
+import torch.nn.functional as F
 from typing import List, Dict
 
 from . import gather_sparse_feats
@@ -179,17 +180,23 @@ class SimpleLinearDecoder(nn.Module):
 class ConvGRU(nn.Module):
     def __init__(self, input_dim=64, hidden_dim=128):
         super(ConvGRU, self).__init__()
+        # Conv1d to load the released checkpoints, run as linear layers in forward() (much faster than cuDNN conv1d in backward)
         self.convz = nn.Conv1d(input_dim+hidden_dim, hidden_dim, 1)
         self.convr = nn.Conv1d(input_dim+hidden_dim, hidden_dim, 1)
         self.convq = nn.Conv1d(input_dim+hidden_dim, hidden_dim, 1)
 
+    @staticmethod
+    def linear(conv, x):
+        return F.linear(x, conv.weight.squeeze(2), conv.bias)
+
     def forward(self, h, x):
+        # h: [N, hidden_dim], x: [N, input_dim]
         hx = torch.cat([h, x], dim=1)
 
-        z = torch.sigmoid(self.convz(hx))
-        r = torch.sigmoid(self.convr(hx))
+        z = torch.sigmoid(self.linear(self.convz, hx))
+        r = torch.sigmoid(self.linear(self.convr, hx))
         rh_x = torch.cat([r*h, x], dim=1)
-        q = torch.tanh(self.convq(rh_x))
+        q = torch.tanh(self.linear(self.convq, rh_x))
 
         h = (1 - z) * h + z * q
         return h
@@ -229,13 +236,10 @@ class ConvGRUDecoder(nn.Module):
         # [N, 3] -> [N, 64]
         point_offsets_feature = self.offset_encoder(point_offsets)
         
-        # [N, 128] -> [N, 128, 1]
-        concatenated_vectors = concatenated_vectors.unsqueeze(2)
-
         for itr in range(self.num_iters):
-            concatenated_vectors = self.gru(concatenated_vectors, point_offsets_feature.unsqueeze(2))
+            concatenated_vectors = self.gru(concatenated_vectors, point_offsets_feature)
 
-        flow = self.decoder(torch.cat([concatenated_vectors.squeeze(2), point_offsets_feature], dim=1))
+        flow = self.decoder(torch.cat([concatenated_vectors, point_offsets_feature], dim=1))
         return flow
 
     def forward(
@@ -292,12 +296,11 @@ class SparseGRUHead(ConvGRUDecoder):
             nn.Linear(32, 3))
         
     def forward_single(self, voxel_feat, point_offsets):
-        # [N, voxel_feat_dim] -> [N, voxel_feat_dim, 1]
-        concatenated_vectors = voxel_feat.unsqueeze(2)
+        concatenated_vectors = voxel_feat
         for itr in range(self.num_iters):
-            concatenated_vectors = self.gru(concatenated_vectors, point_offsets.unsqueeze(2))
+            concatenated_vectors = self.gru(concatenated_vectors, point_offsets)
 
-        flow = self.decoder(torch.cat([concatenated_vectors.squeeze(2), point_offsets], dim=1))
+        flow = self.decoder(torch.cat([concatenated_vectors, point_offsets], dim=1))
         return flow
     
     def forward(self, sparse_tensor, voxelizer_infos, pc0_point_feats_lst): 

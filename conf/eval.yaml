@@ -4,19 +4,20 @@ checkpoint: /home/kin/data/model_zoo/deltaflow_public/deltaflow-av2.ckpt
 data_mode: val # [val, test]
 save_res: False # [True, False]
 
-leaderboard_version: 1 # [1, 2, 3]
-supervised_flag: True # [True, False], whether you use any label from the dataset
+leaderboard_version: 3 # only 3 now (https://sceneflow.kth-rpl.se/leaderboard), the v1 and v2 leaderboards are closed.
 timer_sync: False # True: sync cuda in the timer to get the real runtime table (slower)
+num_workers: 4 # data loading processes of each GPU process
+procs_per_gpu: 1 # processes per GPU, each on its own scenes. 2 helps when one process can't keep the GPU busy (EulerFlow on an RTX 3080: about 1.6x)
+# frames around pc0 the model takes, see src/dataset.py. A model yaml can set its own (floxels.yaml), a feed-forward model
+# takes num_frames from its checkpoint. Change them on the command line, e.g. num_frames=8 future_frames=6.
+num_frames: ${oc.select:model.num_frames,2}
+future_frames: ${oc.select:model.future_frames,1}
 
 # no need to change
 save_res_path: 
-num_frames: 2
 slurm_id: 00000
 output: ${model.name}-${slurm_id}
-gpus: 1
 seed: 42069
-eval_only: True
-wandb_mode: disabled # [offline, disabled, online]
 defaults:
   - hydra: default
   - model: deflow

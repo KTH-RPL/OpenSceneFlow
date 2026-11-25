@@ -97,6 +97,21 @@ To download the Waymo dataset, you need to register an account at [Waymo Open Da
 
 For cluster without root user, check [here sdk tar gz](https://cloud.google.com/sdk/docs/downloads-versioned-archives).
 
+`extract_waymo_v2.py` reads the [Waymo Open Dataset v2.0.1](https://waymo.com/open/download/) parquet files (`lidar`, `lidar_box`, `lidar_pose`, `lidar_calibration`, `vehicle_pose` of `training` / `validation`), no separate flow labels or maps needed.
+The flow comes from the tracked lidar boxes, the same way as `extract_av2.py`; the ground mask from [linefit](https://github.com/Kin-Zhang/linefit).
+Points, poses and ego motion are the same as `extract_waymo.py` (TOP lidar, first return), the flow differs from the official Waymo flow labels by ~1cm on average.
+It needs its own environment (python 3.10):
+
+```bash
+mamba create -n waymo2 python=3.10 && mamba activate waymo2
+pip install waymo-open-dataset-tf-2-12-0==1.6.4 h5py fire tqdm linefit
+python dataprocess/extract_waymo_v2.py --data_dir /home/kin/data/waymo/2.0.1 --mode validation --output_dir /home/kin/data/waymo/h5py --nproc 32
+python dataprocess/extract_waymo_v2.py --data_dir /home/kin/data/waymo/2.0.1 --mode training --output_dir /home/kin/data/waymo/h5py --nproc 32
+python tools/create_evalpkl.py --data_dir /home/kin/data/waymo/h5py/valid
+```
+
+<details> <summary>Waymo v1.4 with the official scene flow labels (<code>extract_waymo.py</code>)</summary>
+
 Website to check their file: [https://console.cloud.google.com/storage/browser/waymo_open_dataset_scene_flow](https://console.cloud.google.com/storage/browser/waymo_open_dataset_scene_flow)
 
 The thing we need is all things about `lidar`, to download the data, you can use the following command:
@@ -115,6 +130,12 @@ tar -xvf waymo_map.tar.gz -C /home/kin/data/waymo/flowlabel
 ```
 
 <!-- Another way to have ground mask is to use [linefit](https://github.com/Kin-Zhang/linefit) to generate the ground mask without effort. -->
+
+```bash
+python dataprocess/extract_waymo.py --mode train --flow_data_dir /home/kin/data/waymo/flowlabel --map_dir /home/kin/data/waymo/flowlabel/map --output_dir /home/kin/data/waymo/h5py  --nproc 48
+```
+
+</details>
 
 #### Dataset frames
 
@@ -178,27 +199,21 @@ truckscene/
 
 ## Process
 
-This directory contains the scripts to preprocess the datasets into `.h5` files. 
-
-- `extract_av2.py`: Process the datasets in Argoverse 2.0.
-- `extract_nus.py`: Process the datasets in nuScenes.
-- `extract_waymo.py`: Process the datasets in Waymo.
-- `extract_zod.py`: Process the datasets in ZOD.
-- `extract_truckscene.py`: Process the datasets in TruckScene.
+This directory contains the scripts to preprocess the datasets into `.h5` files, one `extract_*.py` per dataset.
 
 Example Running command, you can also check our [slurm data-process script](../assets/slurm/data-process.sh) for more details.:
 ```bash
 # av2:
 python dataprocess/extract_av2.py --av2_type sensor --data_mode train --argo_dir /home/kin/data/av2 --output_dir /home/kin/data/av2/h5py
 
-# waymo:
-python dataprocess/extract_waymo.py --mode train --flow_data_dir /home/kin/data/waymo/flowlabel --map_dir /home/kin/data/waymo/flowlabel/map --output_dir /home/kin/data/waymo/h5py  --nproc 48
+# waymo (v2.0.1):
+python dataprocess/extract_waymo_v2.py --data_dir /home/kin/data/waymo/2.0.1 --mode training --output_dir /home/kin/data/waymo/h5py --nproc 32
 
 # nus:
 python dataprocess/extract_nus.py --mode v1.0-trainval --output_dir /home/kin/data/nus/h5py/full --nproc 24
 
 # truckscene:
-python dataprocess/extract_truckscene.py --data_dir /home/kin/data/man-truckscenes --mode v1.0-mini --output_dir /home/kin/data/nus/h5py
+python dataprocess/extract_truckscenes.py --data_dir /home/kin/data/man-truckscenes --mode v1.0-mini --output_dir /home/kin/data/nus/h5py
 ```
 
 
@@ -234,9 +249,9 @@ Or you can run testing file to visualize the data.
 
 ```bash
 # view gt flow
-python tools/visualization.py --data_dir /home/kin/data/av2/h5py/sensor/mini --res_name flow
+python tools/visualization.py vis --data_dir /home/kin/data/av2/h5py/sensor/mini --res_name flow
 
-python tools/visualization.py --data_dir /home/kin/data/waymo/h5py/val --res_name flow
+python tools/visualization.py vis --data_dir /home/kin/data/waymo/h5py/valid --res_name flow
 ```
 
 ### Self-Supervised Process
@@ -246,7 +261,12 @@ Process train data for self-supervised learning. Only training data needs this s
 
 ```bash
 python process.py --data_dir /home/kin/data/av2/h5py/sensor/train --scene_range 0,701
+# leaderboard v3 evaluates up to 70m, points farther than --max_range (default 50m) get no dufo label:
+python process.py --data_dir /home/kin/data/av2/h5py/sensor/train --scene_range 0,701 --max_range 70
 ```
+
+The labels are written to `{data_dir}/layers/ssl_labels/{scene_id}.h5`, the dataset `.h5` files are not changed, and the dataloader reads that folder when it is there.
+To make the labels again (e.g. with other parameters), remove or rename the folder and run the command again.
 
 As some users must have multi-nodes for running, here I provide an example SLURM script to run the data process in parallel. 
 Check [assets/slurm/ssl-process.sh](../assets/slurm/ssl-process.sh) for more details.

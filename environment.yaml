@@ -1,52 +1,62 @@
+# Python 3.10 + CUDA 11.8 + torch 2.6.0, for RTX 20/30/40 series, A100 and H100.
+#   mamba env create -f environment.yaml && conda activate opensf
+# then compile the CUDA extensions, see the installation section of README.md.
+# The pip part below is the same as requirements.txt (pip only, without conda): change both files together.
 name: opensf
 channels:
+  # The label channel must come before conda-forge. Otherwise the parts of the CUDA toolkit that are also on
+  # conda-forge (cuda-cccl, ...) are installed in their newest 12.x version and the thrust headers do not match nvcc 11.8.
+  - nvidia/label/cuda-11.8.0
   - conda-forge
-  - pytorch
 dependencies:
-  - python=3.8
-  - pytorch::pytorch=2.0.0
-  - pytorch::torchvision
-  - pytorch::pytorch-cuda=11.7
-  - nvidia/label/cuda-11.7.0::cuda
-  - lightning==2.0.1
-  - mkl==2024.0.0
-  - tensorboard
-  - numba
-  - numpy
-  - pandas
+  - python=3.10
   - pip
-  - scipy
-  - tqdm
-  - h5py
-  - wandb
-  - omegaconf
-  - hydra-core
-  - fire
-  - tabulate
-  - scikit-learn==1.3.2
-  - hdbscan
-  - setuptools==69.5.1
-  - gxx_linux-64==11.4.0
-  - pathtools
-  - rerun-sdk
+  - setuptools<81             # the env was tested with 80.x. setuptools 81 removes pkg_resources, newer versions are not tested
+  - wheel
+  - ninja                     # torch BuildExtension compiles the CUDA extensions in parallel with it
+  - gxx_linux-64=11.4.0       # CUDA 11.8 supports gcc <= 11
+  - cuda-nvcc=11.8.89
+  - cuda-libraries-dev=11.8.0 # cuda_runtime.h, thrust (cuda-cccl 11.8.89) and the cublas/cusparse/cusolver headers that ATen/cuda/CUDAContext.h includes
+  - cuda-cuobjdump=11.8.86    # optional: only to list the sm_xx inside the compiled extensions
   - pip:
-    - assets/cuda/chamfer3D
-    - assets/cuda/mmcv
-    - open3d==0.18.0
-    - av2==0.2.1
-    - spconv-cu117==2.3.6
-    
+    - --extra-index-url https://download.pytorch.org/whl/cu118
+    - --find-links https://data.pyg.org/whl/torch-2.6.0+cu118.html
+    # torch 2.6.0: newest torch whose PyG torch-scatter wheel loads on glibc 2.31 (Ubuntu 20.04).
+    # torch 2.7.1 is the last one with cu118 wheels, but torch_scatter-2.1.2+pt27cu118 needs GLIBC_2.32.
+    - torch==2.6.0+cu118
+    - torchvision==0.21.0+cu118
+    - torch-scatter==2.1.2+pt26cu118
+    - lightning==2.6.6
+    # the versions below without a comment are simply the newest ones pip resolved on 2026-11-20. All import in the env;
+    # wandb, rerun-sdk and open3d were only imported / smoke-tested, not used in a real run.
+    - numpy==1.26.4           # numpy<2 is required by spconv 2.3.6 / cumm 0.4.11: with numpy 2.2.6 the Flow4D forward dies with SIGFPE in tv::array2tensor
+    - numba==0.68.1
+    - pandas==2.3.3
+    - scipy==1.15.3
+    - tqdm==4.70.1
+    - h5py==3.16.0
+    - tensorboard==2.21.0
+    - wandb==0.31.1
+    - omegaconf==2.3.1
+    - hydra-core==1.3.8
+    - fire==0.7.1
+    - tabulate==0.10.0
+    - scikit-learn==1.7.2
+    - hdbscan==0.8.44
+    - rerun-sdk==0.22.1       # newest rerun-sdk that still accepts numpy 1.x (>=0.23 requires numpy>=2)
+    - open3d==0.18.0          # pin kept from environment.yaml
+    - av2==0.2.1              # pin kept from environment.yaml
+    - spconv-cu118==2.3.6     # same spconv version as env A (spconv-cu117==2.3.6), pin kept from environment.yaml (2.3.8 also passed DeltaFlow/Flow4D eval, same speed)
+    - mmengine-lite==0.10.7   # SSF
+    - iopath==0.1.10   # pytorch3d
+    - fvcore==0.1.5.post20221221   # pytorch3d
+
     # Qingwen's public pkg:
-    - dztimer
+    - dztimer==1.1.1
     - dufomap==1.1.0
     - linefit==1.1.0
-    
-# Reason about the version fixed:
-# setuptools==68.5.1: https://github.com/aws-neuron/aws-neuron-sdk/issues/893
-# mkl==2024.0.0: https://github.com/pytorch/pytorch/issues/123097#issue-2218541307
-# av2==0.2.1: in case other version deleted some functions.
-# lightning==2.0.1: https://stackoverflow.com/questions/76647518/how-to-fix-error-cannot-import-name-modelmetaclass-from-pydantic-main
-# open3d==0.18.0: because 0.17.0 have bug on set the view json file
-# dufomap==1.0.0: in case later updating may not compatible with the code.
-# spconv-cu117==2.3.6: avoid error: KeyError: ((16, 8, 8), float, float)
-# torch-scatter==2.1.2: in case later updating may not compatible with the code.
+
+variables:
+  # compile the CUDA extensions for every supported GPU, not only for the GPU of the machine that compiles (torch default):
+  # on a cluster the login node is often not the node that trains.
+  TORCH_CUDA_ARCH_LIST: "7.5;8.0;8.6;8.9;9.0"

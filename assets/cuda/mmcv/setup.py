@@ -1,5 +1,4 @@
 import os
-from pkg_resources import DistributionNotFound, get_distribution, parse_version
 from setuptools import find_packages, setup
 from torch.utils.cpp_extension import BuildExtension, CUDAExtension
 

@@ -9,6 +9,7 @@ Here we introduce some tools to help you:
 ## Visualization
 
 run `tools/visualization.py` to view the scene flow dataset with ground truth flow. Note the color wheel in under world coordinate.
+`--res_name` can be any key of the dataset files, a label of `layers/ssl_labels/` (e.g. `dufo`) or a flow saved by `save.py` in `layers/pred/{res_name}/`.
 
 ```bash
 # Visualize flow with color coding
@@ -35,10 +36,10 @@ https://github.com/user-attachments/assets/f031d1a2-2d2f-4947-a01f-834ed1c146e6
 
 ## Quick Read .h5 Files
 
-You can quickly read all keys and shapes in a .h5 file by:
+You can quickly read all keys and shapes in a .h5 file (and in the layer files of the same scene) by:
 
 ```bash
-python tools/read_h5.py --file_path /path/to/file.h5
+python tools/readh5pkl.py --file_path /path/to/file.h5
 ```
 
 ## Conversion

@@ -13,6 +13,7 @@ warnings.simplefilter(action="ignore", category=FutureWarning)
 from .deflow import DeFlow, DeFlowPP
 from .fastflow3d import FastFlow3D
 from .nsfp import NSFP
+from .eulerflow import EulerFlow
 
 # check README for package:
 try:
@@ -42,8 +43,9 @@ except ImportError as e:
 # * pip install FastGeodis --no-build-isolation --no-cache-dir
 try:
     from .fastnsf import FastNSF
+    from .floxels import Floxels
 except ImportError:
-    print("--- WARNING [model]: FastNSF is not imported, as it requires FastGeodis lib which is not installed.")
+    print("--- WARNING [model]: FastNSF and Floxels are not imported, as they require FastGeodis lib which is not installed.")
 
 # following need install extra package:
 # * pip install pytorch3d assets/cuda/histlib

@@ -8,7 +8,7 @@ class BaseModel(nn.Module):
         super(BaseModel, self).__init__()
         
     def load_from_checkpoint(self, ckpt_path):
-        ckpt = torch.load(ckpt_path, map_location="cpu")["state_dict"]
+        ckpt = torch.load(ckpt_path, map_location="cpu", weights_only=False)["state_dict"]
         state_dict = {
             k[len("model.") :]: v for k, v in ckpt.items() if k.startswith("model.")
         }
@@ -28,6 +28,11 @@ def cal_pose0to1(pose0: torch.Tensor, pose1: torch.Tensor):
     pose1_inv[:3,3] = (pose1[:3,:3].T * -pose1[:3,3]).sum(axis=1)
     pose_0to1 = pose1_inv @ pose0.type(torch.float64)
     return pose_0to1.type(torch.float32)
+
+def in_range(pc: torch.Tensor, point_cloud_range):
+    """Mask of the points (N, 3) inside point_cloud_range: [x_min, y_min, z_min, x_max, y_max, z_max]."""
+    low, high = torch.as_tensor(point_cloud_range, dtype=pc.dtype, device=pc.device).split(3)
+    return ((pc >= low) & (pc <= high)).all(dim=1)
 
 def wrap_batch_pcs(batch, num_frames=2):
     batch_sizes = len(batch["pose0"])

@@ -67,7 +67,7 @@ International Conference on Robotics and Automation (**ICRA**) 2024
 [ Backbone ] [ Supervised ] - [ [arXiv](https://arxiv.org/abs/2401.16122) ] [ [Project](https://github.com/KTH-RPL/DeFlow) ] &rarr; [here](#deflow)
 
 🎁 <b>One repository, All methods!</b> 
-Additionally, *OpenSceneFlow* integrates following excellent works: [ICLR'24 ZeroFlow](https://arxiv.org/abs/2305.10424), [CVPR'24 ICP-Flow](https://arxiv.org/abs/2402.17351), [ICCV'23 FastNSF](https://arxiv.org/abs/2304.09121), [RA-L'21 FastFlow3D](https://arxiv.org/abs/2103.01306), [NeurIPS'21 NSFP](https://arxiv.org/abs/2111.01253). (More on the way...)
+Additionally, *OpenSceneFlow* integrates following excellent works: [ICLR'25 EulerFlow](https://arxiv.org/abs/2410.02031), [CVPR'25 Floxels](https://arxiv.org/abs/2503.04718), [NeurIPS'21 NSFP](https://arxiv.org/abs/2111.01253). (More on the way...)
 
 <details> <summary> Summary of them:</summary>
 
@@ -76,8 +76,8 @@ Additionally, *OpenSceneFlow* integrates following excellent works: [ICLR'24 Zer
 - [x] [NSFP](https://arxiv.org/abs/2111.01253): NeurIPS 2021, faster 3x than original version because of [our CUDA speed up](assets/cuda/README.md), same (slightly better) performance.
 - [x] [FastNSF](https://arxiv.org/abs/2304.09121): ICCV 2023. SSL Optimization-based.
 - [x] [ICP-Flow](https://arxiv.org/abs/2402.17351): CVPR 2024. SSL Optimization-based.
-- [ ] [Floxels](https://arxiv.org/abs/2503.04718): CVPR 2025. SSL optimization-based. coding now but not yet ready for release as lower performance than reported. check [branch code](https://github.com/Kin-Zhang/OpenSceneFlow/tree/feature/floxels) for more details.
-- [ ] [EulerFlow](https://arxiv.org/abs/2410.02031): ICLR 2025. SSL optimization-based. In my plan, haven't coding yet.
+- [x] [Floxels](https://arxiv.org/abs/2503.04718): CVPR 2025. SSL optimization-based. Our re-implementation, with 5 frames: about 4.4s per frame on an RTX 3090, [reproduce details](assets/docs/reproduce.md#floxels).
+- [x] [EulerFlow](https://arxiv.org/abs/2410.02031): ICLR 2025. SSL optimization-based. About 20x faster than the original version with our default fit (a high learning rate on random points first, then a low one), same performance, [reproduce details](assets/docs/reproduce.md#eulerflow).
 
 </details>
 
@@ -91,16 +91,30 @@ There are two ways to install the codebase: directly on your [local machine](#en
 
 ### Environment Setup
 
-We use conda to manage the environment, you can install it follow [here](assets/README.md#system). Then create the base environment with the following command [5~15 minutes]:
+We use conda to manage the environment, you can install it follow [here](assets/README.md#system). The environment is Python 3.10 + torch 2.6.0 + CUDA 11.8, for RTX 20/30/40 series, A100 and H100 (tested on an RTX 3090). Create it and compile our CUDA extensions with the following commands [around 5 minutes]:
 
 ```bash
 git clone --recursive https://github.com/KTH-RPL/OpenSceneFlow.git
-cd OpenSceneFlow && conda env create -f environment.yaml
+cd OpenSceneFlow && mamba env create -f environment.yaml
+conda activate opensf
+pip install --no-build-isolation --no-deps ./assets/cuda/chamfer3D ./assets/cuda/mmcv
 
 # You may need export your LD_LIBRARY_PATH with env lib
 # export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/home/kin/mambaforge/lib
 ```
-We also provide [requirements.txt](requirements.txt), please check usage through [Dockerfile](Dockerfile).
+
+Some methods need extra packages, which are compiled on your machine [around 8 minutes for all]:
+
+```bash
+# FastNSF, Floxels
+pip install --no-build-isolation --no-cache-dir FastGeodis==1.0.5
+# VoteFlow, ICP-Flow
+pip install --no-build-isolation --no-cache-dir "git+https://github.com/facebookresearch/pytorch3d.git@v0.7.9"
+pip install --no-build-isolation --no-deps ./assets/cuda/histlib # ICP-Flow
+pip install --no-build-isolation --no-deps ./src/models/basic/voteflow_plugin/hough_transformation/cpp_im2ht # VoteFlow
+```
+
+Without conda, use `requirements.txt`, see [pip only](assets/README.md#pip-only). If something fails, check [the known issues](assets/README.md#other-issues).
 
 ### Docker (Recommended for Isolation)
 
@@ -113,12 +127,10 @@ docker pull zhangkin/opensf:full
 # run container
 docker run -it --net=host --gpus all -v /dev/shm:/dev/shm -v /home/kin/data:/home/kin/data --name opensf zhangkin/opensf:full /bin/zsh
 
-# and better to read your own gpu device info to compile the cuda extension again:
+# update the code, and compile the cuda extensions again in case they changed:
 cd /home/kin/workspace/OpenSceneFlow && git pull
-cd /home/kin/workspace/OpenSceneFlow/assets/cuda/mmcv && /opt/conda/envs/opensf/bin/python ./setup.py install
-cd /home/kin/workspace/OpenSceneFlow/assets/cuda/chamfer3D && /opt/conda/envs/opensf/bin/python ./setup.py install
-cd /home/kin/workspace/OpenSceneFlow
 conda activate opensf
+pip install --no-build-isolation --no-deps ./assets/cuda/chamfer3D ./assets/cuda/mmcv
 ```
 
 If you prefer to build the Docker image by yourself, Check [build-docker-image](assets/README.md#build-docker-image) section for more details.
@@ -182,11 +194,7 @@ wget https://huggingface.co/kin-zhang/OpenSceneFlow/resolve/main/flow4d_best.ckp
 
 #### SSF
 
-Extra packages needed for SSF model:
-```bash
-pip install mmengine-lite
-pip install torch-scatter -f https://data.pyg.org/whl/torch-2.0.0+cu117.html
-```
+The extra packages of SSF (mmengine-lite and torch-scatter) are already in `environment.yaml`.
 
 Train SSF with the leaderboard submit config. [Runtime: Around 6 hours in 8x A100 GPUs.]
 
@@ -245,15 +253,7 @@ wget https://huggingface.co/kin-zhang/OpenSceneFlow/resolve/main/seflow_best.ckp
 
 #### VoteFlow
 
-Extra pakcges needed for VoteFlow, [pytorch3d](https://pytorch3d.org/) (prefer 0.7.7) and [torch-scatter](https://github.com/rusty1s/pytorch_scatter?tab=readme-ov-file) (prefer 2.1.2):
-
-```bash
-# Install Pytorch3d
-conda install pytorch3d -c pytorch3d
-
-# Install torch-scatter
-pip install torch-scatter -f https://data.pyg.org/whl/torch-2.0.0+cu117.html
-```
+VoteFlow needs [pytorch3d](https://pytorch3d.org/) and its own CUDA extension `cpp_im2ht`, see the extra packages in [Environment Setup](#environment-setup).
 
 Train VoteFlow with the leaderboard submit config. [Runtime: Around 32 hours in 4 x V100 GPUs.]
 ```bash
@@ -287,10 +287,27 @@ python eval.py model=fastnsf
 python save.py model=fastnsf
 ```
 
+Floxels also uses the frames before and after pc0:
+`num_frames` counts pc0, pc1 and the frames before pc0, `future_frames` counts the frames after pc0 (see `HDF5Dataset` in [src/dataset.py](src/dataset.py)).
+
+```bash
+python eval.py model=floxels                               # 5 frames: t-2 ... t+2, the default of the paper (num_frames=4 future_frames=2)
+python eval.py model=floxels num_frames=3 future_frames=1  # 3 frames: t-1, t, t+1
+python eval.py model=floxels num_frames=8 future_frames=6  # 13 frames: t-6 ... t+6
+```
+
+EulerFlow fits one network on all frames of a scene (about 20 minutes per AV2 scene on an RTX 3090) and saves it in `model.target.ckpt_dir`, so a stopped run goes on from there.
+When one process cannot keep the GPU busy, `procs_per_gpu=2` runs two processes on each GPU, each on its own scenes:
+
+```bash
+python eval.py model=eulerflow
+python eval.py model=eulerflow procs_per_gpu=2  # about 1.6x faster on an RTX 3080
+```
+
 
 ## 3. Evaluation
 
-You can view Wandb dashboard for the training and evaluation results or upload result to online leaderboard. 
+On the val set, `eval.py` prints all metrics in the terminal. The test set has no public ground truth: run `eval.py` with `data_mode=test` to save the result as a zip file, and upload it to the [online leaderboard](#submit-result-to-public-leaderboard) to get the test score.
 <!-- Three-way EPE and Dynamic Bucket-normalized are evaluated within a 70x70m range (followed Argoverse 2 online leaderboard). No ground points are considered in the evaluation. -->
 
 Since in training, we save all hyper-parameters and model checkpoints, the only thing you need to do is to specify the checkpoint path. Remember to set the data path correctly also.
@@ -309,10 +326,10 @@ For online testing, first download multidata-sf-challenge dataset (~150Gb) from 
 huggingface-cli download kin-zhang/multidata-sf-challenge --local-dir /home/kin/data/multidata-sf-challenge
 
 # eval with results saved to submit to leaderboard
-python eval.py checkpoint=/home/kin/seflow_best.ckpt data_mode=test leaderboard_version=3 dataset_path=/home/kin/data/multidata-sf-challenge/challenge_public save_res=True
+python eval.py checkpoint=/home/kin/seflow_best.ckpt data_mode=test dataset_path=/home/kin/data/multidata-sf-challenge/challenge_public save_res=True
 ```
 
-### **📊 Range-Wise Metric (New!)**
+<details> <summary>📊 Range-Wise Metric</summary>
 
 In [SSF paper](https://arxiv.org/abs/2501.17821), we introduce a new distance-based evaluation metric for scene flow estimation. Below is an example output for SSF with point_cloud_range to 204.8m and voxel_size=0.2m. Check more long-range result in [SSF paper](https://arxiv.org/abs/2501.17821).
 
@@ -325,10 +342,12 @@ In [SSF paper](https://arxiv.org/abs/2501.17821), we introduce a new distance-ba
 | 100-inf   | 0.01970  | 0.30536  | 1.32e+07        | 171865           |
 | **Mean**  | 0.01259  | 0.20693  | NaN             | NaN              |
 
+</details>
+
 
 ### Submit result to public leaderboard
 
-To submit your result to the public Leaderboard, if you select `data_mode=test`, it should be a zip file for you to submit to the leaderboard. Set `leaderboard_version` in the config to select the format: `3` for the current [multi-dataset leaderboard](https://sceneflow.kth-rpl.se/leaderboard), `1` or `2` for the previous AV2 leaderboards on EvalAI ([version 1](https://eval.ai/web/challenges/challenge-page/2010/evaluation), [version 2](https://eval.ai/web/challenges/challenge-page/2210/overview)), and the results in DeFlow & SeFlow papers are version 1. Leaderboard updates are recorded in [CHANGELOG.md](CHANGELOG.md).
+To submit your result to the public Leaderboard, select `data_mode=test` and you will get a zip file to submit to the [multi-dataset leaderboard](https://sceneflow.kth-rpl.se/leaderboard). The previous AV2 leaderboards on EvalAI (version 1 and 2) are closed. Leaderboard updates are recorded in [CHANGELOG.md](CHANGELOG.md).
 
 [Register](https://sceneflow.kth-rpl.se/auth/register) at [sceneflow.kth-rpl.se](https://sceneflow.kth-rpl.se/leaderboard), create an API key on your profile page, then submit:
 ```bash
@@ -356,13 +375,17 @@ python eval.py model=nsfp dataset_path=/home/kin/data/av2/h5py/demo/val
 
 # The output of above command will be like:
 Model: DeFlow, Checkpoint from: /home/kin/model_zoo/v2/seflow_best.ckpt
-We already write the flow_est into the dataset, please run following commend to visualize the flow. Copy and paste it to your terminal:
+We already write the seflow_best into /home/kin/data/av2/preprocess_v2/sensor/vis/layers/pred/seflow_best, please run following commend to visualize the flow. Copy and paste it to your terminal:
 python tools/visualization.py vis --res_name 'seflow_best' --data_dir /home/kin/data/av2/preprocess_v2/sensor/vis
 Enjoy! ^v^ ------ 
 
 # Then run the command in the terminal:
 python tools/visualization.py vis --res_name 'seflow_best' --data_dir /home/kin/data/av2/preprocess_v2/sensor/vis
 ```
+
+The saved flow is not written into the dataset files: it goes to `{dataset_path}/layers/pred/{res_name}/{scene_id}.h5` (float16), so you can remove it with `rm -r` when you no longer need it.
+If your dataset files still have flows saved by an older version inside (each one is as big as the lidar points), `python tools/h5_split_layers.py --data_dir /path/to/val` shows how much space they take and can move them out, check the header of that file.
+
 
 https://github.com/user-attachments/assets/f031d1a2-2d2f-4947-a01f-834ed1c146e6
 

@@ -176,43 +176,107 @@ class ToTensor(object):
                 print(f"Warning: {key} is not a numpy array. Type: {type(data_dict[key])}")
         return data_dict
 
+class LayeredFrame:
+    """One frame of a scene: its group in the base h5 file, and its groups in the layer h5 files.
+
+    frame['dufo'] reads the key from the layer that has it, otherwise from the base file.
+    So a dataset that still has everything inside the base file reads the same as before.
+    """
+    def __init__(self, base, layers):
+        self.base, self.layers = base, layers
+
+    def __contains__(self, name):
+        return name in self.base or any(name in layer for layer in self.layers)
+
+    def __getitem__(self, name):
+        found = [layer for layer in self.layers if name in layer]
+        if len(found) > 1:
+            raise KeyError(f"'{name}' is in more than one layer: {[layer.file.filename for layer in found]}")
+        if not found and name not in self.base:
+            raise KeyError(f"'{name}' is not in {self.base.file.filename}, nor in its layers: {[layer.file.filename for layer in self.layers]}")
+        return found[0][name] if found else self.base[name]
+
+class LayeredScene:
+    """The h5 files of one scene, opened read-only: {directory}/{scene_id}.h5 and the same file name in every layer folder.
+
+    scene[timestamp] is the LayeredFrame of that frame. A layer may only have some of the scenes or frames.
+    """
+    def __init__(self, directory, layer_dirs, scene_id):
+        self.base = h5py.File(os.path.join(directory, f'{scene_id}.h5'), 'r')
+        layer_files = [os.path.join(layer_dir, f'{scene_id}.h5') for layer_dir in layer_dirs]
+        self.layers = [h5py.File(path, 'r') for path in layer_files if os.path.exists(path)]
+
+    def __getitem__(self, timestamp):
+        return LayeredFrame(self.base[timestamp], [layer[timestamp] for layer in self.layers if timestamp in layer])
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *args):
+        for file in [self.base] + self.layers:
+            file.close()
+
 class HDF5Dataset(Dataset):
     def __init__(self, directory, \
-                transform=None, n_frames=2, ssl_label=None, \
-                eval = False, leaderboard_version=1, \
-                vis_name='', index_flow=False):
+                transform=None, n_frames=2, ssl_label=None, loss_frames=None, \
+                eval = False, future_frames=1, pad_frames=True, \
+                vis_name='', index_flow=False, layers=None):
         '''
         Args:
             directory: the directory of the dataset, the folder should contain some .h5 file and index_total.pkl.
 
             Following are optional:
             * transform: for data augmentation, default is None.
-            * n_frames: the number of frames we use, default is 2: current (pc0), next (pc1); if it's more than 2, then it read the history from current.
+            * n_frames, future_frames, loss_frames: which frames around pc0 are read, pchK is K frames before pc0 and pcK K frames after.
+                The model input is pch{n_frames-2} .. pch1, pc0, pc1 .. pc{future_frames}:
+                    n_frames=2 (default)               pc0, pc1
+                    n_frames=5 (e.g. Flow4D)           pch3, pch2, pch1, pc0, pc1
+                    n_frames=4, future_frames=2        pch2, pch1, pc0, pc1, pc2  (Floxels)
+                loss_frames={past: P, future: F}, self-supervised training only (teflowLoss): pchP .. pch1 and pc1 .. pcF are read
+                as well, with their labels, for the loss. The dataset reads the frames of both, the model input does not change.
             * ssl_label: if attr, it will read the dynamic cluster label. Otherwise, no dynamic cluster label in data dict.
             * eval: if True, use the eval index (only used it for leaderboard evaluation)
-            * leaderboard_version: 1st or 2nd, default is 1. If '2', we will use the index_eval_v2.pkl from assets/docs.
+            * pad_frames: what to do with a frame before the start of the scene. True: repeat the first frame of the scene,
+                          so the number of frames is always the same. False: leave it out. A frame after the end of the scene is always left out.
             * vis_name: the data of the visualization, default is ''.
             * index_flow: if True, use the flow index for training or visualization.
+            * layers: names of the layers to read on top of the base .h5 files.
+                      A layer is the folder {directory}/layers/{name}/ with one {scene_id}.h5 per scene: data that is not
+                      part of the dataset itself (labels, predictions, ...), so it can be made again or removed without touching the base files.
+                      Default None: 'ssl_labels' (where process.py writes the labels) if that folder exists.
         '''
         super(HDF5Dataset, self).__init__()
         self.directory = directory
+        if layers is None:
+            layers = ['ssl_labels'] if os.path.isdir(os.path.join(directory, 'layers', 'ssl_labels')) else []
+        self.layer_dirs = [os.path.join(directory, 'layers', name) for name in layers]
+        for layer_dir in self.layer_dirs:
+            if not os.path.isdir(layer_dir):
+                raise FileNotFoundError(f"Layer folder {layer_dir} does not exist.")
         if (torch.distributed.is_initialized() and torch.distributed.get_rank() == 0) or not torch.distributed.is_initialized():
-            print(f"----[Debug] Loading data with num_frames={n_frames}, ssl_label={ssl_label}, eval={eval}, leaderboard_version={leaderboard_version}")
+            print(f"----[Debug] Loading data with num_frames={n_frames}, ssl_label={ssl_label}, eval={eval}")
         with open(os.path.join(self.directory, 'index_total.pkl'), 'rb') as f:
             self.data_index = pickle.load(f)
 
         self.eval_index = False
         self.ssl_label = import_func(f"src.autolabel.{ssl_label}") if ssl_label is not None else None
-        self.history_frames = n_frames - 2
+        if loss_frames is not None and (ssl_label is None or eval):
+            raise ValueError("loss_frames is only for self-supervised training: it needs ssl_label and eval=False.")
+        loss_past, loss_future = (int(loss_frames['past']), int(loss_frames['future'])) if loss_frames is not None else (0, 1)
+        # the frames read around pc0 (model input and loss frames together): pch1 .. pch{past_frames}, pc1 .. pc{future_frames}
+        # n_frames=1: pc0 only. pc1 is always read otherwise.
+        self.read_pc1 = n_frames >= 2
+        self.past_frames = max(n_frames - 2, loss_past)
+        self.future_frames = max(future_frames, loss_future)
+        self.pad_frames = pad_frames
         self.vis_name = vis_name if isinstance(vis_name, list) else [vis_name]
+        # a saved flow may be in its own layer: {directory}/layers/pred/{vis_name}/
+        pred_dirs = [os.path.join(directory, 'layers', 'pred', name) for name in self.vis_name if name]
+        self.layer_dirs += [pred_dir for pred_dir in pred_dirs if os.path.isdir(pred_dir)]
         self.transform = transform
 
         if eval:
             eval_index_file = os.path.join(self.directory, 'index_eval.pkl')
-            if leaderboard_version == 2:
-                print("Using index to leaderboard version 2!!")
-                eval_index_file = os.path.join(BASE_DIR, 'assets/docs/index_eval_v2.pkl')
-
             if not os.path.exists(eval_index_file):
                 print(f"Warning: No {eval_index_file} file found! We will try {'index_flow.pkl'}")
                 eval_index_file = os.path.join(self.directory, 'index_flow.pkl')
@@ -289,11 +353,23 @@ class HDF5Dataset(Dataset):
             max_idx = self.scene_id_bounds[scene_id]["max_index"]
             min_idx = self.scene_id_bounds[scene_id]["min_index"]
 
-            max_valid_index_for_flow = max_idx - 1
-            min_valid_index_for_flow = min_idx + self.history_frames
+            # keep every frame we read (model input and loss frames) inside the scene
+            max_valid_index_for_flow = max_idx - self.future_frames
+            min_valid_index_for_flow = min_idx + self.past_frames
+            if not self.pad_frames: # the frames outside the scene are left out in __getitem__, only pc1 has to be there
+                max_valid_index_for_flow, min_valid_index_for_flow = max_idx - 1, min_idx
             index_ = max(min_valid_index_for_flow, min(max_valid_index_for_flow, index_))
         return eval_flag, index_
     
+    def scene_frames(self, scene_id):
+        """Every frame of one scene in time order: [{'timestamp', 'pc', 'gm', 'pose'}, ...].
+        For the methods that optimize on the whole scene (EulerFlow), see fit_scene in src/runner.py."""
+        bounds = self.scene_id_bounds[scene_id]
+        with LayeredScene(self.directory, self.layer_dirs, scene_id) as f:
+            return [{'timestamp': timestamp, 'pc': f[str(timestamp)]['lidar'][:][:, :3],
+                     'gm': f[str(timestamp)]['ground_mask'][:], 'pose': f[str(timestamp)]['pose'][:]}
+                    for _, timestamp in self.data_index[bounds['min_index']:bounds['max_index'] + 1]]
+
     def __getitem__(self, index_):
         eval_flag, index_ = self.valid_index(index_)
         scene_id, timestamp = self.data_index[index_]
@@ -304,7 +380,7 @@ class HDF5Dataset(Dataset):
             'timestamp': timestamp,
             'eval_flag': eval_flag
         }
-        with h5py.File(os.path.join(self.directory, f'{scene_id}.h5'), 'r') as f:
+        with LayeredScene(self.directory, self.layer_dirs, scene_id) as f:
             # original data
             data_dict['pc0'] = f[key]['lidar'][:][:,:3]
             data_dict['gm0'] = f[key]['ground_mask'][:]
@@ -312,7 +388,7 @@ class HDF5Dataset(Dataset):
             if self.ssl_label is not None:
                 data_dict['pc0_dynamic'] = self.ssl_label(f[key])
 
-            if self.history_frames >= 0: 
+            if self.read_pc1:
                 next_timestamp = str(self.data_index[index_ + 1][1])
                 data_dict['pose1'] = f[next_timestamp]['pose'][:]
                 data_dict['pc1'] = f[next_timestamp]['lidar'][:][:,:3]
@@ -320,10 +396,12 @@ class HDF5Dataset(Dataset):
                 if self.ssl_label is not None:
                     data_dict['pc1_dynamic'] = self.ssl_label(f[next_timestamp])
                 
-                past_frames = []
-                for i in range(1, self.history_frames + 1):
+                past_data = []
+                for i in range(1, self.past_frames + 1):
                     frame_index = index_ - i
                     if frame_index < self.scene_id_bounds[scene_id]["min_index"]: 
+                        if not self.pad_frames:
+                            break
                         frame_index = self.scene_id_bounds[scene_id]["min_index"] 
 
                     past_timestamp = str(self.data_index[frame_index][1])
@@ -331,14 +409,25 @@ class HDF5Dataset(Dataset):
                     past_gm = f[past_timestamp]['ground_mask'][:]
                     past_pose = f[past_timestamp]['pose'][:]
 
-                    past_frames.append((past_pc, past_gm, past_pose))
+                    past_data.append((past_pc, past_gm, past_pose))
                     if self.ssl_label is not None: # every history frame is supervised in the multi-frame loss
                         data_dict[f'pch{i}_dynamic'] = self.ssl_label(f[past_timestamp])
 
-                for i, (past_pc, past_gm, past_pose) in enumerate(past_frames):
+                for i, (past_pc, past_gm, past_pose) in enumerate(past_data):
                     data_dict[f'pch{i+1}'] = past_pc
                     data_dict[f'gmh{i+1}'] = past_gm
                     data_dict[f'poseh{i+1}'] = past_pose
+
+                # frames after pc1: pc2, pc3, ... as model input (future_frames) or only for the loss (loss_frames)
+                for i in range(2, self.future_frames + 1):
+                    if index_ + i > self.scene_id_bounds[scene_id]["max_index"]:
+                        break # end of the scene, only happens in eval: the training index is kept inside in valid_index()
+                    future_timestamp = str(self.data_index[index_ + i][1])
+                    data_dict[f'pose{i}'] = f[future_timestamp]['pose'][:]
+                    data_dict[f'pc{i}'] = f[future_timestamp]['lidar'][:][:,:3]
+                    data_dict[f'gm{i}'] = f[future_timestamp]['ground_mask'][:]
+                    if self.ssl_label is not None:
+                        data_dict[f'pc{i}_dynamic'] = self.ssl_label(f[future_timestamp])
 
             for data_key in self.vis_name + ['ego_motion', 'lidar_dt', 'lidar_center',
                              # ground truth information:

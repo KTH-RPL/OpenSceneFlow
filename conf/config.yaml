@@ -8,7 +8,7 @@ slurm_id: 00000
 wandb_mode: disabled # [offline, disabled, online]
 wandb_project_name: seflow
 
-train_data: /home/kin/data/av2/h5py/demo/train
+train_data: /home/kin/data/av2/h5py/demo/train # or a list of folders trained together: "train_data=[<dir1>, <dir2>]", optional +train_percentage=0.5 or [1.0, 0.5]
 train_aug: False # involved by deltaflow
 val_data: /home/kin/data/av2/h5py/demo/val
 
@@ -34,6 +34,8 @@ optimizer:
 loss_fn: deflowLoss # choices: [ff3dLoss, zeroflowLoss, deflowLoss, seflowLoss]
 # add_seloss: {chamfer_dis: 1.0, static_flow_loss: 1.0, dynamic_chamfer_dis: 1.0, cluster_based_pc0pc1: 1.0}
 # ssl_label:
+# layers: [my_labels] # read the labels from ${train_data}/layers/my_labels/{scene_id}.h5. Default: layers/ssl_labels (written by process.py) if it exists.
+# loss_frames: {past: 2, future: 2} # teflowLoss only: supervise with pch1, pch2 and pc1, pc2 around pc0. The model input still follows num_frames.
 
 # log settings
 seed: 42069

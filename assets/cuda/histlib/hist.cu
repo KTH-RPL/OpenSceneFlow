@@ -72,7 +72,7 @@ hist_cuda(const at::Tensor &X, const at::Tensor &Y,
             mini_batch_ = batch - i * mini_batch; 
         }
         // printf("iter: %d %d %d %d %d \n", i, iters, mini_batch_, mini_batch, batch);
-        AT_DISPATCH_FLOATING_TYPES(X.type(), "hist_cuda_core", ([&] {
+        AT_DISPATCH_FLOATING_TYPES(X.scalar_type(), "hist_cuda_core", ([&] {
             hist_cuda_core(at::cuda::getCurrentCUDAStream(),
                                             X.data<scalar_t>() + i*mini_batch*num_X*dim, 
                                             Y.data<scalar_t>() + i*mini_batch*num_Y*dim, 

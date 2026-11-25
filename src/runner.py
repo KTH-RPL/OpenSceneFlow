@@ -15,7 +15,8 @@
 # 
 """
 
-import os, sys
+import os, sys, random, datetime
+import numpy as np
 import torch
 import torch.distributed as dist
 import torch.multiprocessing as mp
@@ -24,17 +25,39 @@ from torch.utils.data import Sampler
 from collections import defaultdict
 from tqdm import tqdm
 from pathlib import Path
-import h5py
-import numpy as np
 from hydra.utils import instantiate
+from omegaconf import open_dict
 import shutil
 
 from .dataset import HDF5Dataset
-from .models.basic import cal_pose0to1
-from .utils.eval_metric import OfficialMetrics, evaluate_leaderboard, evaluate_leaderboard_v2, evaluate_ssf
-from .utils.av2_eval import write_output_file
-from .utils.mics import zip_res
+from .utils.eval_metric import OfficialMetrics
+from .utils.mics import zip_res, enable_timer_sync
 from .utils import InlineTee
+from .postprocess import run_model_wo_ground, flow_on_all_points, eval_frame, write_flow_to_h5, write_leaderboard_file
+
+def seed_everything(seed):
+    random.seed(seed)
+    np.random.seed(seed)
+    torch.manual_seed(seed) # cpu and all gpus
+
+def load_model(cfg):
+    """Optimization-based methods (iter_only) have no weights, feed-forward ones load them from cfg.checkpoint."""
+    if cfg.model.get('iter_only', False):
+        return instantiate(cfg.model.target)
+
+    # NOTE: same setting as src/trainer.py, to have the same scores as before on the released checkpoints.
+    torch.set_float32_matmul_precision('medium')
+    target = cfg.model.target
+    if 'point_cloud_range' in target and 'voxel_size' in target: # voxel-based models; a point-based model has no grid
+        with open_dict(target):
+            target['grid_feature_size'] = [abs(int((target.point_cloud_range[i] - target.point_cloud_range[i+3]) / target.voxel_size[i])) for i in range(3)]
+    model = instantiate(target)
+    # the checkpoint is saved by lightning in train.py, the model weights are under 'model.'
+    # weights_only=False: it also has the training config (omegaconf objects), which torch>=2.6 refuses to load by default.
+    state_dict = torch.load(cfg.checkpoint, map_location="cpu", weights_only=False)["state_dict"]
+    model.load_state_dict({k[len("model."):]: v for k, v in state_dict.items() if k.startswith("model.")})
+    return model.eval()
+
 class SceneDistributedSampler(Sampler):
     """
     A DistributedSampler that distributes data based on scene IDs, not individual indices.
@@ -90,13 +113,15 @@ class SceneDistributedSampler(Sampler):
 class InferenceRunner:
     def __init__(self, cfg, rank, world_size, mode):
         try:
-            self.model = instantiate(cfg.model.target)
+            self.model = load_model(cfg)
         except Exception as e:
             raise RuntimeError(f"Failed to instantiate model with target '{cfg.model.target}'. Error: {e}") from e
+        if cfg.get('timer_sync', False):
+            enable_timer_sync(self.model)
         self.cfg = cfg
         self.rank = rank
         self.world_size = world_size
-        self.device = torch.device(f"cuda:{self.rank}")
+        self.device = torch.device(f"cuda:{self.rank % torch.cuda.device_count()}") # procs_per_gpu > 1: several ranks on one GPU
         # 'val' for validation, 'test' for test submission, 'save' for h5 writing
         self.mode = mode
 
@@ -111,12 +136,13 @@ class InferenceRunner:
             is_eval_mode = True
         else: # 'save'
             dataset_path = self.cfg.dataset_path
-            is_eval_mode = False
+            is_eval_mode = self.cfg.get('val_index_only', False)
 
         dataset = HDF5Dataset(dataset_path,
                               n_frames=self.cfg.num_frames,
-                              eval=is_eval_mode,
-                              leaderboard_version=self.cfg.leaderboard_version if 'leaderboard_version' in self.cfg else 1)
+                              future_frames=self.cfg.get('future_frames', 1),
+                              pad_frames=self.cfg.model.get('pad_frames', True),
+                              eval=is_eval_mode)
 
         sampler = SceneDistributedSampler(dataset, num_replicas=self.world_size, rank=self.rank)
         
@@ -135,61 +161,18 @@ class InferenceRunner:
             elif isinstance(val, list) and len(val) > 0 and isinstance(val[0], torch.Tensor):
                 batch[key] = [item.to(self.device) for item in val]
 
-        batch['origin_pc0'] = batch['pc0'].clone()
-        batch['pc0'] = batch['pc0'][~batch['gm0']].unsqueeze(0)
-        batch['pc1'] = batch['pc1'][~batch['gm1']].unsqueeze(0)
-        self.model.timer[12].start("One Scan")
-        res_dict = self.model(batch)
-        self.model.timer[12].stop()
-
-        # NOTE (Qingwen): Since val and test, we will force set batch_size = 1 
-        batch = {key: batch[key][0] for key in batch if len(batch[key])>0}
-        res_dict = {key: res_dict[key][0] for key in res_dict if (res_dict[key]!=None and len(res_dict[key])>0) }
-
-        pc0 = batch['origin_pc0']
-        pose_0to1 = cal_pose0to1(batch["pose0"], batch["pose1"])
-        transform_pc0 = pc0 @ pose_0to1[:3, :3].T + pose_0to1[:3, 3]
-        pose_flow = transform_pc0 - pc0
-        
-        final_flow = pose_flow.clone()
-        final_flow[~batch['gm0']] = res_dict['flow'] + pose_flow[~batch['gm0']]
+        batch, res_dict = run_model_wo_ground(self.model, batch)
+        final_flow, pose_flow = flow_on_all_points(batch, res_dict)
 
         if self.mode in ['val', 'eval', 'valid']:
-            eval_mask = batch['eval_mask'].squeeze()
-            gt_flow = batch["flow"]
-            v1_dict = evaluate_leaderboard(final_flow[eval_mask], pose_flow[eval_mask], pc0[eval_mask], \
-                                       gt_flow[eval_mask], batch['flow_is_valid'][eval_mask], \
-                                       batch['flow_category_indices'][eval_mask])
-            v2_dict = evaluate_leaderboard_v2(final_flow[eval_mask], pose_flow[eval_mask], pc0[eval_mask],
-                                                gt_flow[eval_mask], batch['flow_is_valid'][eval_mask], 
-                                                batch['flow_category_indices'][eval_mask])
-            ssf_dict = evaluate_ssf(final_flow[eval_mask], pose_flow[eval_mask], pc0[eval_mask], \
-                                    gt_flow[eval_mask], batch['flow_is_valid'][eval_mask], batch['flow_category_indices'][eval_mask])
-            self.metrics.step(v1_dict, v2_dict, ssf_dict)
-
+            self.metrics.step(*eval_frame(batch, final_flow, pose_flow))
+            if self.cfg.get('save_res', False):
+                data_dir = os.path.join(self.cfg.dataset_path, self.cfg.data_mode)
+                write_flow_to_h5(data_dir, batch['scene_id'], batch['timestamp'], self.res_name, final_flow)
         elif self.mode == 'test':
-            eval_mask = batch['eval_mask'].squeeze()
-            save_pred_flow = final_flow[eval_mask, :3].cpu().detach().numpy()
-            rigid_flow = pose_flow[eval_mask, :3].cpu().detach().numpy()
-            is_dynamic = np.linalg.norm(save_pred_flow - rigid_flow, axis=1, ord=2) >= 0.05
-            sweep_uuid = (batch['scene_id'], batch['timestamp'])
-
-            if self.cfg.leaderboard_version == 2:
-                save_pred_flow = (final_flow - pose_flow).cpu().detach().numpy()
-
-            write_output_file(save_pred_flow, is_dynamic, sweep_uuid, self.save_res_path, self.cfg.leaderboard_version)
-            
+            write_leaderboard_file(batch, final_flow, pose_flow, self.save_res_path)
         elif self.mode == 'save':
-            key = str(batch['timestamp'])
-            scene_id = batch['scene_id']
-            h5_path = os.path.join(self.cfg.dataset_path, f'{scene_id}.h5')
-            try:
-                with h5py.File(h5_path, 'r+') as f:
-                    if self.cfg.res_name in f[key]:
-                        del f[key][self.cfg.res_name]
-                    f[key].create_dataset(self.cfg.res_name, data=final_flow.cpu().detach().numpy().astype(np.float32))
-            except Exception as e:
-                print(f"Rank {self.rank} failed to write to {h5_path}: {e}")
+            write_flow_to_h5(self.cfg.dataset_path, batch['scene_id'], batch['timestamp'], self.res_name, final_flow)
 
     def run(self):
         dataloader = self._setup_dataloader()
@@ -203,10 +186,18 @@ class InferenceRunner:
             dynamic_ncols=True
         )
 
+        fitted_scene_id = None
         for batch in iter_bar:
             current_scene_id = batch['scene_id'][0] 
             
             iter_bar.set_description(f"[GPU {self.rank}] Processing {current_scene_id}")
+            # same random state for every frame: the result of a frame doesn't depend on the frames before it or on how many GPUs we use.
+            seed_everything(self.cfg.seed)
+
+            # a method that optimizes on the whole scene (EulerFlow) gets all its frames once, before the first frame of the scene
+            if hasattr(self.model, 'fit_scene') and current_scene_id != fitted_scene_id:
+                self.model.fit_scene(current_scene_id, dataloader.dataset.scene_frames(current_scene_id))
+                fitted_scene_id = current_scene_id
 
             with torch.no_grad():
                 self._process_step(batch)
@@ -215,9 +206,13 @@ class InferenceRunner:
 
     def cleanup(self):
         dist.destroy_process_group()
+        # worker processes that a library left behind (joblib inside hdbscan, for ICP-Flow) keep this process alive
+        # until they time out (300s with joblib>=1.3), so stop them here.
+        for child in mp.active_children():
+            child.terminate()
 
 
-def _setup_distributed_environment():
+def _setup_distributed_environment(cfg):
     """
     Sets up the distributed environment. Prioritizes Slurm variables if available,
     otherwise assumes torchrun/mp.spawn and initializes based on environment variables.
@@ -234,13 +229,16 @@ def _setup_distributed_environment():
         os.environ['MASTER_ADDR'] = master_addr
         os.environ['MASTER_PORT'] = os.environ.get('MASTER_PORT', '12355')
     
-    # Let torch.distributed handle the rest, it will use the environment variables
-    dist.init_process_group("nccl")
+    # Let torch.distributed handle the rest, it will use the environment variables.
+    # The ranks only gather the metrics at the end; NCCL refuses two ranks on one GPU, so gloo when procs_per_gpu > 1.
+    # A rank that finished its scenes waits there for the slowest rank, hours with EulerFlow on many scenes:
+    # the default timeout (NCCL 10 min, gloo 30 min) would stop the run, so the timeout is 7 days.
+    dist.init_process_group("gloo" if cfg.get('procs_per_gpu', 1) > 1 else "nccl", timeout=datetime.timedelta(days=7))
     return dist.get_rank(), dist.get_world_size()
 
 
 def _run_process(cfg, mode):
-    rank, world_size = _setup_distributed_environment()
+    rank, world_size = _setup_distributed_environment(cfg)
     
     runner = InferenceRunner(cfg, rank, world_size, mode)
     runner.run()
@@ -260,38 +258,16 @@ def _run_process(cfg, mode):
     if rank == 0:
         if mode in ['val', 'eval', 'valid']:
             final_metrics = OfficialMetrics()
-            print(f"\n--- [LOG] Finished processing. Aggregating results from {world_size} GPUs with {len(gathered_metrics_objects)} metrics objects...")
+            print(f"\n--- [LOG] Finished processing. Aggregating results from {world_size} processes with {len(gathered_metrics_objects)} metrics objects...")
             for metrics_obj in gathered_metrics_objects:
-                if metrics_obj is None: continue
+                if metrics_obj is not None:
+                    final_metrics.merge(metrics_obj)
 
-                for key, val_list in metrics_obj.epe_3way.items():
-                    final_metrics.epe_3way[key].extend(val_list)
-
-                for class_idx, class_name in enumerate(metrics_obj.bucketedMatrix.class_names):
-                    # NOTE(Qingwen): for bucketedMatrix range_buckets = speed_buckets
-                    for speed_idx, speed_bucket in enumerate(metrics_obj.bucketedMatrix.range_buckets):
-                        count = metrics_obj.bucketedMatrix.count_storage_matrix[class_idx, speed_idx]
-                        if count > 0:
-                            avg_epe = metrics_obj.bucketedMatrix.epe_storage_matrix[class_idx, speed_idx]
-                            avg_speed = metrics_obj.bucketedMatrix.range_storage_matrix[class_idx, speed_idx]
-                            final_metrics.bucketedMatrix.accumulate_value(
-                                class_name, speed_bucket, avg_epe, avg_speed, count
-                            )
-                for class_idx, class_name in enumerate(metrics_obj.distanceMatrix.class_names):
-                    # NOTE(Qingwen): for distanceMatrix range_buckets = distance_buckets
-                    for range_idx, range_bucket in enumerate(metrics_obj.distanceMatrix.range_buckets):
-                        count = metrics_obj.distanceMatrix.count_storage_matrix[class_idx, range_idx]
-                        if count > 0:
-                            avg_epe = metrics_obj.distanceMatrix.epe_storage_matrix[class_idx, range_idx]
-                            avg_range = metrics_obj.distanceMatrix.range_storage_matrix[class_idx, range_idx]
-                            final_metrics.distanceMatrix.accumulate_value(
-                                class_name, range_bucket, avg_epe, avg_range, count
-                            )
-
-            final_metrics.print() 
-        else:
-            print(f"\nWe already write the {cfg.res_name} into the dataset, please run following commend to visualize the flow. Copy and paste it to your terminal:")
-            print(f"python tools/visualization.py --res_name '{cfg.res_name}' --data_dir {cfg.dataset_path}")
+            final_metrics.print()
+        if mode == 'save' or (cfg.get('save_res', False) and mode != 'test'):
+            data_dir = cfg.dataset_path if mode == 'save' else f"{cfg.dataset_path}/{cfg.data_mode}"
+            print(f"\nWe already write the {runner.res_name} into {data_dir}/layers/pred/{runner.res_name}, please run following commend to visualize the flow. Copy and paste it to your terminal:")
+            print(f"python tools/visualization.py --res_name '{runner.res_name}' --data_dir {data_dir}")
             print(f"Enjoy! ^v^ ------ \n")
         runner.model.timer.print(random_colors=False, bold=False)
 
@@ -305,8 +281,12 @@ def _spawn_wrapper(rank, world_size, cfg, mode, output_dir):
     if log_filepath and rank==0:
         sys.stdout = InlineTee(log_filepath, append=True)
     if rank == 0:
-        print(f"---LOG[eval]: Run optimization-based method: {cfg.model.name} on {cfg.dataset_path}/{cfg.data_mode} set.\n")
-    torch.cuda.set_device(rank)
+        data_path = cfg.dataset_path if mode == 'save' else f"{cfg.dataset_path}/{cfg.data_mode}" # save.py has no data_mode
+        if cfg.model.get('iter_only', False):
+            print(f"---LOG[eval]: Run optimization-based method: {cfg.model.name} on {data_path} set.\n")
+        else:
+            print(f"---LOG[eval]: Run {cfg.model.name} with checkpoint {cfg.checkpoint} on {data_path} set.\n")
+    torch.cuda.set_device(rank % torch.cuda.device_count())
     os.environ['RANK'] = str(rank)
     os.environ['WORLD_SIZE'] = str(world_size)
     os.environ['MASTER_ADDR'] = 'localhost'
@@ -317,9 +297,9 @@ def launch_runner(cfg, mode, output_dir):
     is_slurm_job = 'SLURM_PROCID' in os.environ
     
     if not is_slurm_job and not dist.is_initialized():
-        world_size = torch.cuda.device_count()
-        if world_size == 0:
+        if torch.cuda.device_count() == 0:
             raise SystemError("No CUDA devices found.")
+        world_size = torch.cuda.device_count() * cfg.get('procs_per_gpu', 1)
         
         if mode == 'test':
             cfg.save_res_path = Path(cfg.dataset_path).parent / "results" / cfg.output
@@ -331,13 +311,13 @@ def launch_runner(cfg, mode, output_dir):
         
         if mode == 'test':
             print("\nAll workers finished. Aggregating results into submission file...")
-            final_zip_file = zip_res(
-                cfg.save_res_path, 
-                leaderboard_version=cfg.leaderboard_version, 
-                is_supervised=False,  # all optimization-based now is ssl.
-                output_file=str(cfg.save_res_path) + ".zip"
-            )
+            final_zip_file = zip_res(cfg.save_res_path, output_file=str(cfg.save_res_path) + ".zip")
             print(f"--- [LOG] Submission file successfully created at: {final_zip_file}")
+            print(f"""
+curl -O https://sceneflow.kth-rpl.se/download/sceneflow_submit.sh
+export SCENEFLOW_API_KEY=your_api_key
+bash sceneflow_submit.sh {cfg.save_res_path}.zip --method-name {cfg.save_res_path.name} --wait
+""")
         return
     else:
         _run_process(cfg, mode)

@@ -1,64 +1,54 @@
 #!/bin/bash
 #SBATCH -J dataprocess
+#SBATCH -A berzelius-2026-200
 #SBATCH -p berzelius-cpu
-#SBATCH --cpus-per-task 64
+#SBATCH --cpus-per-task 32
 #SBATCH --mem 128G
-#SBATCH --mincpus=64
 #SBATCH -t 2-00:00:00
-#SBATCH --mail-type=END,FAIL
-#SBATCH --mail-user=qingwen@kth.se
-#SBATCH --output /proj/berzelius-2023-154/users/x_qinzh/OpenSceneFlow/logs/slurm/%J_data.out
-#SBATCH --error  /proj/berzelius-2023-154/users/x_qinzh/OpenSceneFlow/logs/slurm/%J_data.err
+#SBATCH --output /proj/berzelius-2023-364/users/x_qinzh/workspace/OpenSceneFlow/logs/slurm/%j_data.out
+#SBATCH --error  /proj/berzelius-2023-364/users/x_qinzh/workspace/OpenSceneFlow/logs/slurm/%j_data.err
+
+# Usage: sbatch assets/slurm/data-process.sh {nus|man|av2} {train|val}  or  waymo {training|validation}
+DATASET=$1
+SPLIT=$2
 
 PYTHON=/proj/berzelius-2023-154/users/x_qinzh/mambaforge/envs/sftool/bin/python
 export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/proj/berzelius-2023-154/users/x_qinzh/mambaforge/lib
-cd /proj/berzelius-2023-154/users/x_qinzh/OpenSceneFlow/
-# export HYDRA_FULL_ERROR=1
+cd /proj/berzelius-2023-364/users/x_qinzh/workspace/OpenSceneFlow/
+OUT=/proj/berzelius-2023-364/data/opensf-h5py-v2
+NPROC=$((SLURM_CPUS_PER_TASK - 2))
+echo "Job ${SLURM_JOB_ID}: ${DATASET} ${SPLIT} with ${NPROC} processes"
 
+case ${DATASET} in
+  nus)
+    $PYTHON dataprocess/extract_nus.py --nproc ${NPROC} \
+        --data_dir /proj/berzelius-2023-364/users/x_qinzh/data/nus/raw \
+        --mode v1.0-trainval --split_name ${SPLIT} \
+        --output_dir ${OUT}/nus
+    ;;
+  man)
+    $PYTHON dataprocess/extract_truckscenes.py --nproc ${NPROC} \
+        --data_dir /proj/common-datasets/MAN-TruckScenes/v1.0 \
+        --mode v1.0-trainval --split_name ${SPLIT} \
+        --output_dir ${OUT}/man
+    ;;
+  av2)
+    # argo_dir/sensor -> /proj/common-datasets/Argoverse/v2.0/Sensor
+    $PYTHON dataprocess/extract_av2.py --nproc ${NPROC} \
+        --av2_type sensor --data_mode ${SPLIT} \
+        --argo_dir /proj/berzelius-2023-364/users/x_qinzh/workspace/av2-raw \
+        --mask_dir /proj/berzelius-2023-364/users/x_qinzh/workspace/av2-raw/3d_scene_flow \
+        --output_dir ${OUT}/av2
+    ;;
+  waymo)
+    # Waymo v2.0.1 parquet, SPLIT: training | validation, needs the waymo2 env (py3.10 + waymo-open-dataset-tf-2-12-0==1.6.4)
+    /proj/berzelius-2023-154/users/x_qinzh/mambaforge/envs/waymo2/bin/python dataprocess/extract_waymo_v2.py --nproc ${NPROC} \
+        --data_dir /proj/common-datasets/Waymo/Perception/2.0.1 \
+        --mode ${SPLIT} \
+        --output_dir ${OUT}/waymo
+    if [ "${SPLIT}" = "validation" ]; then $PYTHON tools/create_evalpkl.py --data_dir ${OUT}/waymo/valid; fi
+    ;;
+  *)
+    echo "unknown dataset ${DATASET}"; exit 1 ;;
+esac
 
-# =============== Argoverse2
-# $PYTHON dataprocess/extract_av2.py --nproc 64 \
-#     --av2_type sensor \
-#     --data_mode train \
-#     --argo_dir /proj/berzelius-2023-154/users/x_qinzh/av2 \
-#     --output_dir /proj/berzelius-2023-364/users/x_qinzh/data/av2/h5py
-
-# $PYTHON dataprocess/extract_av2.py --nproc 64 \
-#     --av2_type sensor \
-#     --data_mode val \
-#     --argo_dir /proj/berzelius-2023-154/users/x_qinzh/av2 \
-#     --output_dir /proj/berzelius-2023-364/users/x_qinzh/data/av2/h5py \
-#     --mask_dir /proj/berzelius-2023-154/users/x_qinzh/av2/3d_scene_flow
-
-# $PYTHON dataprocess/extract_av2.py --nproc 64 \
-#     --av2_type sensor \
-#     --data_mode test \
-#     --argo_dir /proj/berzelius-2023-154/users/x_qinzh/av2 \
-#     --output_dir /proj/berzelius-2023-364/users/x_qinzh/data/av2/h5py \
-#     --mask_dir /proj/berzelius-2023-154/users/x_qinzh/av2/3d_scene_flow
-
-# =============== Waymo Open Dataset
-# $PYTHON dataprocess/extract_waymo.py --nproc 12 \
-#     --map_dir /proj/berzelius-2023-154/users/x_qinzh/dataset/waymo/flowlabel/map \
-#     --flow_data_dir /proj/berzelius-2023-154/users/x_qinzh/dataset/waymo/flowlabel \
-#     --output_dir /proj/berzelius-2023-154/users/x_qinzh/dataset/waymo/h5py \
-#     --mode train
-
-$PYTHON dataprocess/extract_waymo.py --nproc 12 \
-    --map_dir /proj/berzelius-2023-154/users/x_qinzh/dataset/waymo/flowlabel/map \
-    --flow_data_dir /proj/berzelius-2023-154/users/x_qinzh/dataset/waymo/flowlabel \
-    --output_dir /proj/berzelius-2023-154/users/x_qinzh/dataset/waymo/h5py \
-    --mode valid
-
-# =============== MAN-Truckscenes
-# $PYTHON dataprocess/extract_truckscenes.py --nproc 12 \
-#     --data_dir /proj/common-datasets/MAN-TruckScenes/v1.0 \
-#     --mode v1.0-trainval \
-#     --output_dir /proj/berzelius-2023-364/data/truckscenes/h5py \
-#     --split_name val
-
-# $PYTHON dataprocess/extract_truckscenes.py --nproc 12 \
-#     --data_dir /proj/common-datasets/MAN-TruckScenes/v1.0 \
-#     --mode v1.0-trainval \
-#     --output_dir /proj/berzelius-2023-364/data/truckscenes/h5py \
-#     --split_name train

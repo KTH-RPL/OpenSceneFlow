@@ -11,8 +11,8 @@ def main(
     # new output weight file
     output_path: str = "/home/kin/zeroflow3x.ckpt",
 ):
-    model = torch.load(model_path)
-    reference = torch.load(reference_path)
+    model = torch.load(model_path, weights_only=False)
+    reference = torch.load(reference_path, weights_only=False)
 
     ref_model_weight = reference['state_dict']
     real_model_weight = model['state_dict']
