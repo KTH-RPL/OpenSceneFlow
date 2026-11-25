@@ -15,7 +15,9 @@
 
 from collections import defaultdict
 import os
-# os.environ["OMP_NUM_THREADS"] = "1"
+# Limit thread count for NumPy/OpenBLAS/MKL - prevents single process from using all cores
+for _k in ("OMP_NUM_THREADS", "OPENBLAS_NUM_THREADS", "MKL_NUM_THREADS", "NUMEXPR_MAX_THREADS"):
+    os.environ[_k] = "1"
 
 from pathlib import Path
 import multiprocessing
